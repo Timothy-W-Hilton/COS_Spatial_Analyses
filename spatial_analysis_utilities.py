@@ -78,7 +78,7 @@ def plot_site_altitude_histograms(data, savefig=False):
                                  'altitude_histograms_by_site.pdf'))
     return(g)
 
-def plot_site_mean_drawdown(dd_df, all_data, cmap=None, norm=None):
+def plot_site_mean_drawdown(dd_df, all_data, cmap=None, norm=None, dd_map=None):
 
     agg_vars = ['sample_latitude', 'sample_longitude', 'sample_site_code']
     data_agg = all_data.obs[agg_vars].groupby(['sample_site_code']).aggregate(np.mean)
@@ -86,12 +86,15 @@ def plot_site_mean_drawdown(dd_df, all_data, cmap=None, norm=None):
     dd_df = dd_df.reset_index().groupby('sample_site_code').mean()
 
     df = pd.merge(dd_df, data_agg, left_index=True, right_index=True)
-
-    dd_map = na_map.NAMapFigure(t_str='mean OCS drawdown')
+    
+    if dd_map is None:
+        dd_map = na_map.NAMapFigure(t_str='mean OCS drawdown')
     dd_map.map.scatter(df.sample_longitude.values,
                        df.sample_latitude.values,
                        c = cmap(norm(df.ocs_dd.values)),
-                       s=200,
+                       edgecolor='blue',
+                       linewidths=1,
+                       s=70,
                        latlon=True)
     return(dd_map, df)
 
@@ -135,9 +138,13 @@ if __name__ == "__main__":
 
     if plot_site_mean_drawdown_switch:
         map_objs, cos_cmap, cos_norm = map_grid_main()
-        # plt.scatter(dd_df.sample_longitude.values, dd_df.sample_latitude.values, c=cos_cmap(cos_norm(dd_df.ocs_dd.values)))
-        dd_map, dd_df = plot_site_mean_drawdown(dd, data,
-                                                cmap=cos_cmap, norm=cos_norm)
+        for i in range(map_objs.shape[1]):
+            dd_map, dd_df = plot_site_mean_drawdown(dd, data,
+                                                    cmap=cos_cmap, 
+                                                    norm=cos_norm, 
+                                                    dd_map=map_objs[2,i])
+        print("saving the figure")
+        plt.gcf().savefig('/tmp/maps.pdf')
 
     if draw_site_drawdown_timeseries:
         plot_site_drawdown_timeseries(dd)

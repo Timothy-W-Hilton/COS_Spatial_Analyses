@@ -246,3 +246,5 @@ def map_grid_main():
     map_objs, cos_cmap, cos_norm = draw_all_panels(cos_conc, cos_conc, cos_conc)
     return(map_objs, cos_cmap, cos_norm)
     
+if __name__ == "__main__":
+    map_grid_main()
