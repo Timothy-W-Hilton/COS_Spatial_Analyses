@@ -10,7 +10,7 @@ from stem_pytools import STEM_parsers
 from stem_pytools import noaa_ocs
 # for plotting observations on a map of N America
 from stem_pytools import na_map
-import brewer2mpl
+from map_grid import map_grid_main
 
 def get_site_mean_cos(data):
     """
@@ -78,7 +78,7 @@ def plot_site_altitude_histograms(data, savefig=False):
                                  'altitude_histograms_by_site.pdf'))
     return(g)
 
-def plot_site_mean_drawdown(dd_df, all_data):
+def plot_site_mean_drawdown(dd_df, all_data, cmap=None, norm=None):
 
     agg_vars = ['sample_latitude', 'sample_longitude', 'sample_site_code']
     data_agg = all_data.obs[agg_vars].groupby(['sample_site_code']).aggregate(np.mean)
@@ -90,9 +90,10 @@ def plot_site_mean_drawdown(dd_df, all_data):
     dd_map = na_map.NAMapFigure(t_str='mean OCS drawdown')
     dd_map.map.scatter(df.sample_longitude.values,
                        df.sample_latitude.values,
+                       c = cmap(norm(df.ocs_dd.values)),
                        s=200,
                        latlon=True)
-    return(dd_map)
+    return(dd_map, df)
 
 def plot_site_drawdown_timeseries(dd_df):
 
@@ -121,6 +122,7 @@ if __name__ == "__main__":
     draw_site_locations_map = False
     draw_observation_altitude_histograms = False
     draw_site_drawdown_timeseries = False
+    plot_site_mean_drawdown_switch = True
     noaa_dir = os.path.join(os.getenv('HOME'), 'work', 'Data', 'NOAA_95244993')
 
     # parse the data and calculate drawdown
@@ -131,7 +133,11 @@ if __name__ == "__main__":
     print 'calculating drawdown'
     dd = ja_data.calculate_OCS_daily_vert_drawdown()
 
-    plot_site_mean_drawdown(dd, data)
+    if plot_site_mean_drawdown_switch:
+        map_objs, cos_cmap, cos_norm = map_grid_main()
+        # plt.scatter(dd_df.sample_longitude.values, dd_df.sample_latitude.values, c=cos_cmap(cos_norm(dd_df.ocs_dd.values)))
+        dd_map, dd_df = plot_site_mean_drawdown(dd, data,
+                                                cmap=cos_cmap, norm=cos_norm)
 
     if draw_site_drawdown_timeseries:
         plot_site_drawdown_timeseries(dd)
