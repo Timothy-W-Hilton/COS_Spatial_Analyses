@@ -1,6 +1,6 @@
 import os, os.path
+import socket
 import pandas as pd
-import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -36,9 +36,11 @@ def get_site_mean_cos(data):
 def preprocess_NOAA_airborne_data_for_JA_spatial_analysis(noaa_dir):
 
     data = noaa_ocs.get_all_NOAA_airborne_data(noaa_dir)
-
-    topo_file = '/Users/tim/work/Data/STEM/input/TOPO-124x124.nc'
-    wrf_height_file = '/Users/tim/work/Data/STEM/input/wrfheight-124x124-22levs.nc'
+    
+    stem_input_dir = os.getenv('SARIKA_INPUT')
+    topo_file = os.path.join(stem_input_dir, 'TOPO-124x124.nc')
+    wrf_height_file = os.path.join(stem_input_dir, 
+                                   'wrfheight-124x124-22levs.nc')
     stem_lon, stem_lat, topo = STEM_parsers.parse_STEM_coordinates(topo_file)
     data.get_stem_xy(stem_lon, stem_lat)
     data.get_stem_z(topo_fname=topo_file,
@@ -60,23 +62,28 @@ def plot_site_altitude_histograms(data, savefig=False):
     """
     plot site-by-site histograms of OCS observation altitudes
     """
-
-    ## plot site-by-site histograms of observation altitudes
-    g = sns.FacetGrid(data.obs,
-                      row="sample_site_code",
-                      size=2,
-                      aspect=5)
-    g.map(plt.hist,
-          "sample_altitude",
-          bins=np.linspace(0,15000,200))
-    g.set_xlabels('obseration altitude (m)')
-    g.set_ylabels('# of obs')  #check those units
-    g.set_titles(row_template='site: {row_name}')
-    if savefig:
-        plt.savefig(os.path.join('/Users', 'tim', 'work', 'Plots',
-                                 'SpatialAnalysisPaper',
-                                 'altitude_histograms_by_site.pdf'))
-    return(g)
+    try:
+        import seaborn as sns
+    except ImportError:
+        print('Seaborn not available on this system; exiting')
+        return(None)
+    else:
+        ## plot site-by-site histograms of observation altitudes
+        g = sns.FacetGrid(data.obs,
+                          row="sample_site_code",
+                          size=2,
+                          aspect=5)
+        g.map(plt.hist,
+              "sample_altitude",
+              bins=np.linspace(0,15000,200))
+        g.set_xlabels('obseration altitude (m)')
+        g.set_ylabels('# of obs')  #check those units
+        g.set_titles(row_template='site: {row_name}')
+        if savefig:
+            plt.savefig(os.path.join('/Users', 'tim', 'work', 'Plots',
+                                     'SpatialAnalysisPaper',
+                                     'altitude_histograms_by_site.pdf'))
+        return(g)
 
 def plot_site_mean_drawdown(dd_df, all_data, cmap=None, norm=None, dd_map=None):
 
@@ -89,34 +96,41 @@ def plot_site_mean_drawdown(dd_df, all_data, cmap=None, norm=None, dd_map=None):
     
     if dd_map is None:
         dd_map = na_map.NAMapFigure(t_str='mean OCS drawdown')
-    dd_map.map.scatter(df.sample_longitude.values,
-                       df.sample_latitude.values,
+
+    x, y = dd_map.map(df.sample_longitude.values,
+                      df.sample_latitude.values)
+    dd_map.map.scatter(x, y,
                        c = cmap(norm(df.ocs_dd.values)),
                        edgecolor='blue',
                        linewidths=1,
-                       s=70,
-                       latlon=True)
+                       s=70)
     return(dd_map, df)
 
 def plot_site_drawdown_timeseries(dd_df):
 
-    dd_df['doy'] = dd.index.get_level_values('date').dayofyear
-    dd_df = dd_df.reset_index().dropna()
-    dd_df.date = pd.to_datetime(dd_df.date)
-    dd_df['jdate'] = np.array([t.to_julian_date() for t in dd_df.date])
-    dd_df['jdate'] = np.array([t.to_julian_date() for t in dd_df.date])
-    # dd_df['dt'] = [datetime.datetime.strptime(np.datetime_as_string(t), 
-    #                                         '%Y-%m-%dT%H:%M:%S.000000000Z') 
-    #                for t in dd_df['date'].values]
-    g = sns.FacetGrid(dd_df,
-                      hue="sample_site_code")
-    g.map(plt.scatter,
-          'doy',
-          'ocs_dd')
-    plt.xlabel('day of year')
-    plt.ylabel('OCS drawdown (ppt)')
-    plt.legend()
-    return(g)
+    try:
+        import seaborn as sns
+    except ImportError:
+        print('Seaborn not available on this system; exiting')
+        return(None)
+    else:
+        dd_df['doy'] = dd.index.get_level_values('date').dayofyear
+        dd_df = dd_df.reset_index().dropna()
+        dd_df.date = pd.to_datetime(dd_df.date)
+        dd_df['jdate'] = np.array([t.to_julian_date() for t in dd_df.date])
+        dd_df['jdate'] = np.array([t.to_julian_date() for t in dd_df.date])
+        # dd_df['dt'] = [datetime.datetime.strptime(np.datetime_as_string(t), 
+        #                                         '%Y-%m-%dT%H:%M:%S.000000000Z') 
+        #                for t in dd_df['date'].values]
+        g = sns.FacetGrid(dd_df,
+                          hue="sample_site_code")
+        g.map(plt.scatter,
+              'doy',
+              'ocs_dd')
+        plt.xlabel('day of year')
+        plt.ylabel('OCS drawdown (ppt)')
+        plt.legend()
+        return(g)
 
 
 if __name__ == "__main__":
@@ -126,7 +140,14 @@ if __name__ == "__main__":
     draw_observation_altitude_histograms = False
     draw_site_drawdown_timeseries = False
     plot_site_mean_drawdown_switch = True
-    noaa_dir = os.path.join(os.getenv('HOME'), 'work', 'Data', 'NOAA_95244993')
+    
+    if 'Timothys-MacBook-Air.local' in socket.gethostname():
+        noaa_dir = os.path.join(os.getenv('HOME'), 'work', 
+                                'Data', 'NOAA_95244993')
+    else:
+        noaa_dir = os.path.join(os.getenv('HOME'), 'projects',
+                                'COS (ecampbell3)', 
+                                'NOAA_95244993')
 
     # parse the data and calculate drawdown
     print 'parsing data'
@@ -152,8 +173,7 @@ if __name__ == "__main__":
     if draw_site_locations_map:
         # draw observation sites map
         location_map = data.plot_obs_site_locations()
-        location_map.fig.savefig(os.path.join('/Users', 'tim', 'work',
-                                              'Plots',
+        location_map.fig.savefig(os.path.join(os.getenv('PLOTS'),
                                               'SpatialAnalysisPaper',
                                               'noaa_obs_sites.pdf'))
         plt.close(location_map.fig)

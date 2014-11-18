@@ -1,5 +1,5 @@
-import matplotlib
-matplotlib.use('Agg')
+# import matplotlib
+# matplotlib.use('Agg')
 
 import os, os.path
 import matplotlib.pyplot as plt
@@ -12,7 +12,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from netCDF4 import Dataset
 
-import LRU_paper_data_structs
+import stem_pytools.ecampbell300_data_paths as edp
 from stem_pytools import STEM_parsers as sp
 from stem_pytools import STEM_vis as sv
 from stem_pytools.na_map import NAMapFigure
@@ -40,8 +40,9 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
     flux: string; {GPP} | fCOS
     models: tuple of strings; model runs for which to calculate
         fluxes.  All elements must be members of
-        LRU_paper_data_structs.get_runs().  If unspecified fluxes are
-        calculated for all models listed by get_runs().
+        stem_pytools.ecampbell300_data_paths.get_runs().  If
+        unspecified fluxes are calculated for all models listed by
+        get_runs().
 
     RETURN VALUE:
     A dict of 124 by 124 arrays containing fluxes.  Dict keys are the
@@ -51,7 +52,7 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
     Jul1 = datetime(2008,7,1)
     Aug31 = datetime(2008,8,31,23,59,59)
 
-    runs = LRU_paper_data_structs.get_runs()
+    runs = edp.get_runs()
 
     if models is None:
         models = runs.keys()
@@ -165,8 +166,7 @@ def assemble_data(aqout_path=None):
     # aggregate daily means to a single July-August mean
     cos_conc = cos_conc_daily['cos_mean']
 
-    #change this back to updated calc_drawdown!
-    cos_conc.update((k, calc_drawdown.calc_drawdown(v)) for
+    cos_conc.update((k, calc_drawdown.calc_STEM_COS_drawdown(v)) for
                     k, v in cos_conc.items())
     cos_conc.update((k, daily_to_JulAug(v)) for k, v in cos_conc.items())
     for k, v in cos_conc.items():
@@ -231,7 +231,8 @@ def map_grid_main():
         aqout_data = (os.path.join(os.getenv('HOME'), 'work', 'Data',
                                    'STEM', 'aq_out_data.cpickle'))
     else:
-        aqout_data = None
+        aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
+                                  'aq_out_data.cpickle')
     cos_conc, gpp, fCOS = assemble_data(aqout_data)
 
     # #convert July-August time-integrated fluxes to flux per month.
