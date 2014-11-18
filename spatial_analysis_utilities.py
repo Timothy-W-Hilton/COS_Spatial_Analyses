@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('pdf')
+
 import os, os.path
 import socket
 import pandas as pd

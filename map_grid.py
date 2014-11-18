@@ -1,6 +1,3 @@
-# import matplotlib
-# matplotlib.use('Agg')
-
 import os, os.path
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -183,30 +180,78 @@ def assemble_data(aqout_path=None):
     return(cos_conc, gpp, fCOS)
 
 def draw_all_panels(cos, gpp, fCOS):
-    models = ['canibis_161',
+    models = ['MPI_161',
+              'canibis_161',
               'kettle_161',
               'casa_m15_161',
               'casa_gfed_161',
               'casa_gfed_135',
               'casa_gfed_187']
-    models_str = ['Can-IBIS',
+    models_str = ['MPI',
+                  'Can-IBIS',
                   'Kettle',
                   'CASA-m15',
                   'CASA-GFED3',
                   'CASA-GFED3',
                   'CASA-GFED3']
-    lru = [1.61, 1.61, 1.61, 1.61, 1.35, 1.87]
+    lru = [1.61, 1.61, 1.61, 1.61, 1.61, 1.35, 1.87]
 
+    gpp_vmin = 0.0
+    gpp_vmax = np.percentile(np.dstack([v for v in gpp.values()]).flatten(), 95)
+    fcos_vmin = 0.0 #np.dstack([v for v in fCOS.values()]).flatten().min()
+    fcos_vmax = np.percentile(np.dstack([v for v in fCOS.values()]).flatten(), 95)
     cos_vmin = 0.0
     cos_vmax = np.percentile(np.dstack([v for v in cos.values()]).flatten(), 95)
 
-    fig, ax, cbar_ax = setup_panel_array()
+    fig, ax, cbar_ax = setup_panel_array(nrows=3, ncols=len(models))
     map_objs = np.empty(ax.shape, dtype='object')
+
+    gpp_cmap, gpp_norm = colormap_nlevs.setup_colormap_with_zeroval(
+        gpp_vmin, gpp_vmax,
+        cmap=plt.get_cmap('Greens'),
+        extend='max')
+    for i, this_mod in enumerate(models):
+        #plot GPP drawdown maps
+        print("plotting {model} GPP".format(model=models_str[i]))
+        map_objs[0,i], cm = draw_map(t_str='{}, LRU={}'.format(models_str[i], 
+                                                               lru[i]),
+                                     ax=ax[0, i],   #axis 0 is left-most on row 3
+                                     data=gpp[this_mod],
+                                     vmin=gpp_vmin,
+                                     vmax=gpp_vmax,
+                                     cmap=gpp_cmap,
+                                     norm=gpp_norm)
+
+    plt.colorbar(cm, cbar_ax[0, 0], format='%0.2f')
+    cbar_ax[0, 0].set_title('GPP (Pg C m$^{-2}$ mon$^{-1}$)')
+
+    fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap_with_zeroval(
+        fcos_vmin, fcos_vmax,
+        cmap=plt.get_cmap('Blues'),
+        extend='max')
+    for i, this_mod in enumerate(models):
+        #plot fCOS drawdown maps
+        print("plotting {model} fCOS".format(model=models_str[i]))
+        map_objs[1, i], cm = draw_map(t_str='{}, LRU={}'.format(models_str[i], 
+                                                                lru[i]),
+                                      ax=ax[1, i],
+                                      data=fCOS[this_mod],
+                                      vmin=fcos_vmin,
+                                      vmax=fcos_vmax,
+                                      cmap=fcos_cmap,
+                                      norm=fcos_norm)
+    cb = plt.colorbar(cm, cbar_ax[1, 0])
+    #format tick labels in scientific notation using "10^X", not
+    #"1eX" notation
+    cb.formatter = FuncFormatter(scinot_format.scinot_format)
+    cb.update_ticks()
+    cbar_ax[1, 0].set_title('$F_{plant}$ (pmol COS m$^{-2}$ mon$^{-1})$')
+
     cos_cmap, cos_norm = colormap_nlevs.setup_colormap(
-            cos_vmin,
-            cos_vmax,
-            cmap=plt.get_cmap('Oranges'),
-            extend='max')
+        cos_vmin,
+        cos_vmax,
+        cmap=plt.get_cmap('Oranges'),
+        extend='max')
     for i, this_mod in enumerate(models):
         #plot [COS] drawdown maps
         print("plotting {model} COS drawdown".format(model=models_str[i]))
@@ -220,8 +265,7 @@ def draw_all_panels(cos, gpp, fCOS):
 
     plt.colorbar(cm, cbar_ax[2,0], format='%0.1f')
     cbar_ax[2,0].set_title('[COS] drawdown (ppt)')
-    # fig.savefig('/tmp/figure_2.png')
-    # plt.close(fig)
+
     return(map_objs, cos_cmap, cos_norm)
 
 
@@ -244,7 +288,7 @@ def map_grid_main():
     #     fCOS[k] = fCOS[k] / n_months
     #     gpp[k] = gpp[k] / n_months
 
-    map_objs, cos_cmap, cos_norm = draw_all_panels(cos_conc, cos_conc, cos_conc)
+    map_objs, cos_cmap, cos_norm = draw_all_panels(gpp, fCOS, cos_conc)
     return(map_objs, cos_cmap, cos_norm)
     
 if __name__ == "__main__":
