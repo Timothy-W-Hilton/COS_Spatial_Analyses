@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('pdf')
+matplotlib.use('AGG')
 
 import os, os.path
 import socket
@@ -168,7 +168,7 @@ if __name__ == "__main__":
                                                     norm=cos_norm, 
                                                     dd_map=map_objs[2,i])
         print("saving the figure")
-        plt.gcf().savefig('/tmp/maps.pdf')
+        plt.gcf().savefig('/tmp/maps.png')
 
     if draw_site_drawdown_timeseries:
         plot_site_drawdown_timeseries(dd)

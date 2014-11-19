@@ -125,9 +125,9 @@ def setup_panel_array(nrows=3, ncols=6):
         matplotlib.axes._subplots.AxesSubplot objects (for colorbars)
     """
     last_gs = (ncols * 4) + 1
-    fig = plt.figure(figsize=(20,10))
+    fig = plt.figure(figsize=(30,10))
     gs = gridspec.GridSpec(nrows, last_gs)
-    gs.update(hspace=0.20, wspace=0.0)
+    gs.update(hspace=0.10, wspace=0.0)
     ax = np.empty((nrows, ncols), dtype='object')
     cbar_ax = np.empty((nrows, 1), dtype='object')
     for this_row in range(nrows):
@@ -166,9 +166,9 @@ def assemble_data(aqout_path=None):
     cos_conc.update((k, calc_drawdown.calc_STEM_COS_drawdown(v)) for
                     k, v in cos_conc.items())
     cos_conc.update((k, daily_to_JulAug(v)) for k, v in cos_conc.items())
-    for k, v in cos_conc.items():
-        print "{} drawdown array: {}".format(k, v.shape)
-    
+    # for k, v in cos_conc.items():
+    #     print "{} drawdown array: {}".format(k, v.shape)
+
     try:
         gpp = get_JulAug_total_flux(which_flux='GPP')
         fCOS = get_JulAug_total_flux(which_flux='fCOS')
@@ -252,6 +252,7 @@ def draw_all_panels(cos, gpp, fCOS):
         cos_vmax,
         cmap=plt.get_cmap('Oranges'),
         extend='max')
+
     for i, this_mod in enumerate(models):
         #plot [COS] drawdown maps
         print("plotting {model} COS drawdown".format(model=models_str[i]))
@@ -288,7 +289,7 @@ def map_grid_main():
     #     fCOS[k] = fCOS[k] / n_months
     #     gpp[k] = gpp[k] / n_months
 
-    map_objs, cos_cmap, cos_norm = draw_all_panels(gpp, fCOS, cos_conc)
+    map_objs, cos_cmap, cos_norm = draw_all_panels(cos_conc, gpp, fCOS)
     return(map_objs, cos_cmap, cos_norm)
     
 if __name__ == "__main__":
