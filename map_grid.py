@@ -126,17 +126,19 @@ def setup_panel_array(nrows=3, ncols=6):
     """
     last_gs = (ncols * 4) + 1
     fig = plt.figure(figsize=(30,10))
-    gs = gridspec.GridSpec(nrows, last_gs)
-    gs.update(hspace=0.10, wspace=0.0)
+    # two gridspects - one for maps, one for colorbars
+    gs_maps = gridspec.GridSpec(nrows, ncols)
+    gs_maps.update(hspace=0.01, wspace=0.0, left=0.0, right=0.87)
+    gs_cb = gridspec.GridSpec(nrows, 1)
+    gs_cb.update(hspace=0.5, wspace=0.0, left=0.93, right=0.96)
+    # arrays to hold axis handles
     ax = np.empty((nrows, ncols), dtype='object')
     cbar_ax = np.empty((nrows, 1), dtype='object')
     for this_row in range(nrows):
         for this_col in range(ncols):
-            this_col_min = this_col * 4
-            this_col_max = (this_col * 4) + 3
-            ax[this_row, this_col] = plt.subplot(gs[this_row, 
-                                                    this_col_min:this_col_max])
-        cbar_ax[this_row] = plt.subplot(gs[this_row, last_gs-1])
+            ax[this_row, this_col] = plt.subplot(
+                gs_maps[this_row, this_col])
+        cbar_ax[this_row] = plt.subplot(gs_cb[this_row, 0])
     return(fig, ax, cbar_ax)
 
 
