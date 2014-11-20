@@ -125,7 +125,7 @@ def setup_panel_array(nrows=3, ncols=6):
         matplotlib.axes._subplots.AxesSubplot objects (for colorbars)
     """
     last_gs = (ncols * 4) + 1
-    fig = plt.figure(figsize=(30,10))
+    fig = plt.figure(figsize=(30,15))
     # two gridspects - one for maps, one for colorbars
     gs_maps = gridspec.GridSpec(nrows, ncols)
     gs_maps.update(hspace=0.01, wspace=0.0, left=0.0, right=0.87)
@@ -208,7 +208,7 @@ def draw_all_panels(cos, gpp, fCOS):
     #cos_vmax = np.percentile(np.dstack([v for v in cos.values()]).flatten(), 99)
     cos_vmax = np.dstack([v for v in cos.values()]).flatten().max()
 
-    fig, ax, cbar_ax = setup_panel_array(nrows=3, ncols=len(models))
+    fig, ax, cbar_ax = setup_panel_array(nrows=4, ncols=len(models))
     map_objs = np.empty(ax.shape, dtype='object')
 
     gpp_cmap, gpp_norm = colormap_nlevs.setup_colormap_with_zeroval(
@@ -268,11 +268,15 @@ def draw_all_panels(cos, gpp, fCOS):
                                      norm=cos_norm)
 
     plt.colorbar(cm, cbar_ax[2,0], format='%0.1f')
-    cbar_ax[2,0].set_title('[COS] drawdown (ppt)')
+    cbar_ax[2,0].set_title('STEM [COS] drawdown (ppt)')
 
+    #show observed drawdown in separate map
+    for i, this_mod in enumerate(models):
+        map_objs[3, i] = NAMapFigure(t_str = None,
+                                    map_axis = ax[3, i])
+    plt.colorbar(cm, cbar_ax[3,0], format='%0.1f')
+    cbar_ax[3,0].set_title('obs [COS] drawdown (ppt)')
     return(map_objs, cos_cmap, cos_norm)
-
-
 
 def map_grid_main():
     if 'Timothys-MacBook-Air.local' in socket.gethostname():

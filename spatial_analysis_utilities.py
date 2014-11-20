@@ -166,7 +166,7 @@ if __name__ == "__main__":
             dd_map, dd_df = plot_site_mean_drawdown(dd, data,
                                                     cmap=cos_cmap, 
                                                     norm=cos_norm, 
-                                                    dd_map=map_objs[2,i])
+                                                    dd_map=map_objs[3,i])
         print("saving the figure")
         plt.gcf().savefig('/tmp/maps.png')
 
