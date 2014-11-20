@@ -199,11 +199,14 @@ def draw_all_panels(cos, gpp, fCOS):
     lru = [1.61, 1.61, 1.61, 1.61, 1.61, 1.35, 1.87]
 
     gpp_vmin = 0.0
-    gpp_vmax = np.percentile(np.dstack([v for v in gpp.values()]).flatten(), 95)
+    #gpp_vmax = np.percentile(np.dstack([v for v in gpp.values()]).flatten(), 99)
+    gpp_vmax = np.dstack([v for v in gpp.values()]).flatten().max()
     fcos_vmin = 0.0 #np.dstack([v for v in fCOS.values()]).flatten().min()
-    fcos_vmax = np.percentile(np.dstack([v for v in fCOS.values()]).flatten(), 95)
+    #fcos_vmax = np.percentile(np.dstack([v for v in fCOS.values()]).flatten(), 99)
+    fcos_vmax = np.dstack([v for v in fCOS.values()]).flatten().max()
     cos_vmin = 0.0
-    cos_vmax = np.percentile(np.dstack([v for v in cos.values()]).flatten(), 95)
+    #cos_vmax = np.percentile(np.dstack([v for v in cos.values()]).flatten(), 99)
+    cos_vmax = np.dstack([v for v in cos.values()]).flatten().max()
 
     fig, ax, cbar_ax = setup_panel_array(nrows=3, ncols=len(models))
     map_objs = np.empty(ax.shape, dtype='object')
@@ -211,7 +214,7 @@ def draw_all_panels(cos, gpp, fCOS):
     gpp_cmap, gpp_norm = colormap_nlevs.setup_colormap_with_zeroval(
         gpp_vmin, gpp_vmax,
         cmap=plt.get_cmap('Greens'),
-        extend='max')
+        extend='neither')
     for i, this_mod in enumerate(models):
         #plot GPP drawdown maps
         print("plotting {model} GPP".format(model=models_str[i]))
@@ -230,7 +233,7 @@ def draw_all_panels(cos, gpp, fCOS):
     fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap_with_zeroval(
         fcos_vmin, fcos_vmax,
         cmap=plt.get_cmap('Blues'),
-        extend='max')
+        extend='neither')
     for i, this_mod in enumerate(models):
         #plot fCOS drawdown maps
         print("plotting {model} fCOS".format(model=models_str[i]))
@@ -244,16 +247,15 @@ def draw_all_panels(cos, gpp, fCOS):
     cb = plt.colorbar(cm, cbar_ax[1, 0])
     #format tick labels in scientific notation using "10^X", not
     #"1eX" notation
-    cb.formatter = FuncFormatter(scinot_format.scinot_format)
-    cb.update_ticks()
-    cbar_ax[1, 0].set_title('$F_{plant}$ (pmol COS m$^{-2}$ mon$^{-1})$')
+    #cb.formatter = FuncFormatter(scinot_format.scinot_format)
+    #cb.update_ticks()
+    cbar_ax[1, 0].set_title('$F_{plant}$ (pmol COS m$^{-2}$ s$^{-1})$')
 
     cos_cmap, cos_norm = colormap_nlevs.setup_colormap(
         cos_vmin,
         cos_vmax,
         cmap=plt.get_cmap('Oranges'),
-        extend='max')
-
+        extend='neither')
     for i, this_mod in enumerate(models):
         #plot [COS] drawdown maps
         print("plotting {model} COS drawdown".format(model=models_str[i]))
@@ -281,13 +283,19 @@ def map_grid_main():
                                   'aq_out_data.cpickle')
     cos_dd, gpp, fCOS = assemble_data(aqout_data)
 
-    #convert July-August time-integrated fluxes to flux per month.
+    #convert July-August GPP time-integrated fluxes to flux per month.
     #This is consistent with e.g. Huntzinger et al (2012) and Beer et
     #al (2010), which allows quick comparisons without unit
-    #conversions.
+    #conversions.  Convert fCOS to pmol m-2 s-1 for east comparison
+    #with Campbell et al 2008.
     n_months = 2.0  #July and August
+    n_days = 62  #days in July and Aug
+    hours_per_day = 24
+    mins_per_hour = 60
+    secs_per_min = 60
+    secs_per_JulAug = n_days * hours_per_day * mins_per_hour * secs_per_min
     for k in cos_dd.keys():
-        fCOS[k] = fCOS[k] / n_months
+        fCOS[k] = fCOS[k] / secs_per_JulAug
         gpp[k] = gpp[k] / n_months
 
     map_objs, cos_cmap, cos_norm = draw_all_panels(cos_dd, gpp, fCOS)
