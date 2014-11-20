@@ -225,7 +225,7 @@ def draw_all_panels(cos, gpp, fCOS):
                                      norm=gpp_norm)
 
     plt.colorbar(cm, cbar_ax[0, 0], format='%0.2f')
-    cbar_ax[0, 0].set_title('GPP (Pg C m$^{-2}$ mon$^{-1}$)')
+    cbar_ax[0, 0].set_title('GPP (Kg C m$^{-2}$ mon$^{-1}$)')
 
     fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap_with_zeroval(
         fcos_vmin, fcos_vmax,
@@ -234,8 +234,7 @@ def draw_all_panels(cos, gpp, fCOS):
     for i, this_mod in enumerate(models):
         #plot fCOS drawdown maps
         print("plotting {model} fCOS".format(model=models_str[i]))
-        map_objs[1, i], cm = draw_map(t_str='{}, LRU={}'.format(models_str[i], 
-                                                                lru[i]),
+        map_objs[1, i], cm = draw_map(t_str=None,
                                       ax=ax[1, i],
                                       data=fCOS[this_mod],
                                       vmin=fcos_vmin,
@@ -258,7 +257,7 @@ def draw_all_panels(cos, gpp, fCOS):
     for i, this_mod in enumerate(models):
         #plot [COS] drawdown maps
         print("plotting {model} COS drawdown".format(model=models_str[i]))
-        map_objs[2,i], cm = draw_map(t_str='{}, LRU={}'.format(models_str[i], lru[i]),
+        map_objs[2,i], cm = draw_map(t_str=None,
                                      ax=ax[2, i],   
                                      data=cos[this_mod],
                                      vmin=cos_vmin,
@@ -280,18 +279,18 @@ def map_grid_main():
     else:
         aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
                                   'aq_out_data.cpickle')
-    cos_conc, gpp, fCOS = assemble_data(aqout_data)
+    cos_dd, gpp, fCOS = assemble_data(aqout_data)
 
-    # #convert July-August time-integrated fluxes to flux per month.
-    # #This is consistent with e.g. Huntzinger et al (2012) and Beer et
-    # #al (2010), which allows quick comparisons without unit
-    # #conversions.
-    # n_months = 2.0  #July and August
-    # for k in cos.keys():
-    #     fCOS[k] = fCOS[k] / n_months
-    #     gpp[k] = gpp[k] / n_months
+    #convert July-August time-integrated fluxes to flux per month.
+    #This is consistent with e.g. Huntzinger et al (2012) and Beer et
+    #al (2010), which allows quick comparisons without unit
+    #conversions.
+    n_months = 2.0  #July and August
+    for k in cos_dd.keys():
+        fCOS[k] = fCOS[k] / n_months
+        gpp[k] = gpp[k] / n_months
 
-    map_objs, cos_cmap, cos_norm = draw_all_panels(cos_conc, gpp, fCOS)
+    map_objs, cos_cmap, cos_norm = draw_all_panels(cos_dd, gpp, fCOS)
     return(map_objs, cos_cmap, cos_norm)
     
 if __name__ == "__main__":
