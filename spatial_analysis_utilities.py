@@ -94,9 +94,13 @@ def plot_site_mean_drawdown(dd_df, all_data, cmap=None, norm=None, dd_map=None):
     data_agg = all_data.obs[agg_vars].groupby(['sample_site_code']).aggregate(np.mean)
 
     dd_df = dd_df.reset_index().groupby('sample_site_code').mean()
+    print('warning - [COS] drawdown < 0.0 reset to 0.0')
+    dd_df[dd_df < 0.0] = 0.0
+    print('warning - [COS] drawdown NaNs replaced by -1')
+    dd_df = dd_df.fillna(-1)
 
     df = pd.merge(dd_df, data_agg, left_index=True, right_index=True)
-    
+
     if dd_map is None:
         dd_map = na_map.NAMapFigure(t_str='mean OCS drawdown')
 

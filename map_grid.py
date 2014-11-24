@@ -206,7 +206,10 @@ def draw_all_panels(cos, gpp, fCOS):
     fcos_vmax = np.dstack([v for v in fCOS.values()]).flatten().max()
     cos_vmin = 0.0
     #cos_vmax = np.percentile(np.dstack([v for v in cos.values()]).flatten(), 99)
-    cos_vmax = np.dstack([v for v in cos.values()]).flatten().max()
+    cos_vmax = 80#
+
+    print('ceil(max): {}'.format(
+        np.dstack([v for v in cos.values()]).flatten().max()))
 
     fig, ax, cbar_ax = setup_panel_array(nrows=4, ncols=len(models))
     map_objs = np.empty(ax.shape, dtype='object')
@@ -254,6 +257,7 @@ def draw_all_panels(cos, gpp, fCOS):
     cos_cmap, cos_norm = colormap_nlevs.setup_colormap(
         cos_vmin,
         cos_vmax,
+        nlevs=10,
         cmap=plt.get_cmap('Oranges'),
         extend='neither')
     for i, this_mod in enumerate(models):
