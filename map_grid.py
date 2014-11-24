@@ -159,21 +159,29 @@ def daily_to_JulAug(arr):
     arr_out = np.mean(arr[:,0,...], axis=0).squeeze()
     return(arr_out)
 
-def assemble_data(aqout_path=None):
-    cos_conc_daily = load_aqout_data(aqout_path)
+def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True):
+    if get_dd:
+        cos_conc_daily = load_aqout_data(aqout_path)
 
-    # aggregate daily means to a single July-August mean
-    cos_conc = cos_conc_daily['cos_mean']
+        # aggregate daily means to a single July-August mean
+        cos_conc = cos_conc_daily['cos_mean']
 
-    cos_conc.update((k, calc_drawdown.calc_STEM_COS_drawdown(v)) for
-                    k, v in cos_conc.items())
-    cos_conc.update((k, daily_to_JulAug(v)) for k, v in cos_conc.items())
-    # for k, v in cos_conc.items():
-    #     print "{} drawdown array: {}".format(k, v.shape)
-
+        cos_conc.update((k, calc_drawdown.calc_STEM_COS_drawdown(v)) for
+                        k, v in cos_conc.items())
+        cos_conc.update((k, daily_to_JulAug(v)) for k, v in cos_conc.items())
+        # for k, v in cos_conc.items():
+        #     print "{} drawdown array: {}".format(k, v.shape)
+    else:
+        cos_conc = None
     try:
-        gpp = get_JulAug_total_flux(which_flux='GPP')
-        fCOS = get_JulAug_total_flux(which_flux='fCOS')
+        if get_GPP:
+            gpp = get_JulAug_total_flux(which_flux='GPP')
+        else:
+            gpp = None
+        if get_fCOS:
+            fCOS = get_JulAug_total_flux(which_flux='fCOS')
+        else:
+            fCOS = None
     except:
         print('Unable to read GPP or FCOS, returning placeholder')
         gpp = cos_conc
