@@ -37,6 +37,21 @@ def assemble_bar_plot_data():
 
     return(ocs_dd)
 
+def normalize_drawdown(ocs_dd, norm_site='NHA'):
+    """
+    Within each drawdown "product", normalize to the NHA value.  NHA
+    is chosen because it is the maximum observed drawdown in the NOAA
+    observations.
+    """
+    dd_vars=['ocs_dd', 'casa_gfed_161',
+                'canibis_161', 'casa_gfed_187',
+                'kettle_161', 'casa_m15_161', 'MPI_161',
+                'casa_gfed_135']
+    for this_var in dd_vars:
+        ocs_dd[this_var] = ocs_dd[this_var] / ocs_dd[this_var][norm_site]
+
+    return(ocs_dd)
+
 def draw_box_plot(df, sites_list):
     g = sns.factorplot(x="sample_site_code", 
                        y="drawdown", 
@@ -48,16 +63,18 @@ def draw_box_plot(df, sites_list):
                        aspect=1.25)
     g.despine(offset=10, trim=True)
     g.set_axis_labels("site", "[OCS] drawdown (ppt)")
-    
+
     return(g)
 
 if __name__ == "__main__":
 
     ocs_dd = assemble_bar_plot_data()
-    
+    ocs_dd = normalize_drawdown(ocs_dd)
+
     wet_dry = ['CAR', 'BNE', 'WBI', 'OIL', 'NHA']
     east_coast = ['NHA', 'CMA', 'SCA']
-    
+    mid_continent = ['ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC']
+
     ocs_dd_long = pd.melt(ocs_dd.reset_index(),
                           id_vars=['sample_site_code'],
                           value_vars=['ocs_dd', 'casa_gfed_161',
@@ -66,8 +83,12 @@ if __name__ == "__main__":
                                       'casa_gfed_135'], 
                           value_name='drawdown')
 
-    g = draw_box_plot(ocs_dd_long, east_coast)
-    g = draw_box_plot(ocs_dd_long, wet_dry)
-    plt.gcf().savefig('/tmp/barplots.pdf')
-    
 
+    g = draw_box_plot(ocs_dd_long, east_coast)
+    plt.gcf().savefig('/tmp/barplots_eastcoast.pdf')
+
+    g = draw_box_plot(ocs_dd_long, wet_dry)
+    plt.gcf().savefig('/tmp/barplots_wetdry.pdf')
+
+    g = draw_box_plot(ocs_dd_long, mid_continent)
+    plt.gcf().savefig('/tmp/barplots_midcontinent.pdf')
