@@ -15,6 +15,34 @@ from stem_pytools import noaa_ocs
 from stem_pytools import na_map
 from map_grid import map_grid_main
 
+def get_aqout_data_path():
+    """return the full path to the directory containing (pre-parsed)
+    aqout data files on either ecampbell300 or Tim's laptop
+
+    """
+    if 'Timothys-MacBook-Air.local' in socket.gethostname():
+        aqout_data = (os.path.join(os.getenv('HOME'), 'work', 'Data',
+                                   'STEM', 'aq_out_data.cpickle'))
+    else:
+        aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
+                                  'aq_out_data.cpickle')
+    return(aqout_data)
+
+def get_noaa_COS_data_path():
+    """
+    return the full path to the directory containing the NOAA OCS data
+    files on either ecampbell300 or Tim's laptop
+
+    """
+    if 'Timothys-MacBook-Air.local' in socket.gethostname():
+        noaa_dir = os.path.join(os.getenv('HOME'), 'work', 
+                                'Data', 'NOAA_95244993')
+    else:
+        noaa_dir = os.path.join(os.getenv('HOME'), 'projects',
+                                'COS (ecampbell3)', 
+                                'NOAA_95244993')
+    return(noaa_dir)
+
 def get_site_mean_cos(data):
     """
     compute mean cos concentration at each site in a NOAA_OCS dataset.
@@ -37,6 +65,24 @@ def get_site_mean_cos(data):
     # return(ocs_mean)
 
 def preprocess_NOAA_airborne_data_for_JA_spatial_analysis(noaa_dir):
+    """
+    (1) parses all NOAA COS observation files from noaa_dir
+    (2) assigns each observation to a STEM x, y, and z cell
+    (3) removes all observations with a [COS] value of -999
+    (4) removes all observations that are not in July or August
+    (5) removes all observations west of 140 deg W longitude (this
+        roughly correspondes to the western boundary of the 124x124
+        STEM domain)
+
+    INPUTS
+    noaa_dir: full path to a directory containing NOAA COS observation files
+
+    OUTPUTS
+    a noaa_ocs object
+
+    SEE ALSO
+    stem_pytools.noaa_ocs
+    """
 
     data = noaa_ocs.get_all_NOAA_airborne_data(noaa_dir)
     
@@ -60,6 +106,28 @@ def preprocess_NOAA_airborne_data_for_JA_spatial_analysis(noaa_dir):
     data.obs = data.obs.loc[keep_idx]
 
     return(data)
+
+def get_JA_site_mean_drawdown(noaa_dir):
+    """
+    calculate July-August [COS] drawdown, both daily and for the full
+    62-day period (1 July through 31 Aug)
+    """
+    # parse the data and calculate drawdown
+    print 'filtering for Jul & Aug, etc.'
+    ja_data = preprocess_NOAA_airborne_data_for_JA_spatial_analysis(noaa_dir)
+    print 'calculating drawdown'
+    ja_daily_dd = ja_data.calculate_OCS_daily_vert_drawdown()
+
+    agg_vars = ['sample_latitude', 'sample_longitude', 
+                'sample_site_code', 'analysis_value']
+    ja_mean_ocs = ja_data.obs[agg_vars].groupby(
+        ['sample_site_code']).aggregate(np.mean)
+
+    ja_mean_dd = ja_daily_dd.reset_index().groupby(
+        ['sample_site_code']).aggregate(np.mean)
+ 
+    ja_mean = ja_mean_ocs.join(ja_mean_dd)
+    return(ja_mean, ja_daily_dd)
 
 def plot_site_altitude_histograms(data, savefig=False):
     """
@@ -88,30 +156,24 @@ def plot_site_altitude_histograms(data, savefig=False):
                                      'altitude_histograms_by_site.pdf'))
         return(g)
 
-def plot_site_mean_drawdown(dd_df, all_data, cmap=None, norm=None, dd_map=None):
+def plot_site_mean_drawdown(dd, cmap=None, norm=None, dd_map=None):
 
-    agg_vars = ['sample_latitude', 'sample_longitude', 'sample_site_code']
-    data_agg = all_data.obs[agg_vars].groupby(['sample_site_code']).aggregate(np.mean)
-
-    dd_df = dd_df.reset_index().groupby('sample_site_code').mean()
     print('warning - [COS] drawdown < 0.0 reset to 0.0')
-    dd_df[dd_df < 0.0] = 0.0
+    dd.ocs_dd[dd.ocs_dd < 0.0] = 0.0
     print('warning - [COS] drawdown NaNs replaced by -1')
-    dd_df = dd_df.fillna(-1)
-
-    df = pd.merge(dd_df, data_agg, left_index=True, right_index=True)
+    dd.ocs_dd = dd.ocs_dd.fillna(-1)
 
     if dd_map is None:
         dd_map = na_map.NAMapFigure(t_str='mean OCS drawdown')
 
-    x, y = dd_map.map(df.sample_longitude.values,
-                      df.sample_latitude.values)
+    x, y = dd_map.map(dd.sample_longitude.values,
+                      dd.sample_latitude.values)
     dd_map.map.scatter(x, y,
-                       c = cmap(norm(df.ocs_dd.values)),
+                       c = cmap(norm(dd.ocs_dd.values)),
                        edgecolor='blue',
                        linewidths=1,
                        s=70)
-    return(dd_map, df)
+    return(dd_map)
 
 def plot_site_drawdown_timeseries(dd_df):
 
@@ -124,7 +186,6 @@ def plot_site_drawdown_timeseries(dd_df):
         dd_df['doy'] = dd.index.get_level_values('date').dayofyear
         dd_df = dd_df.reset_index().dropna()
         dd_df.date = pd.to_datetime(dd_df.date)
-        dd_df['jdate'] = np.array([t.to_julian_date() for t in dd_df.date])
         dd_df['jdate'] = np.array([t.to_julian_date() for t in dd_df.date])
         # dd_df['dt'] = [datetime.datetime.strptime(np.datetime_as_string(t), 
         #                                         '%Y-%m-%dT%H:%M:%S.000000000Z') 
@@ -147,30 +208,15 @@ if __name__ == "__main__":
     draw_observation_altitude_histograms = False
     draw_site_drawdown_timeseries = False
     plot_site_mean_drawdown_switch = True
-    
-    if 'Timothys-MacBook-Air.local' in socket.gethostname():
-        noaa_dir = os.path.join(os.getenv('HOME'), 'work', 
-                                'Data', 'NOAA_95244993')
-    else:
-        noaa_dir = os.path.join(os.getenv('HOME'), 'projects',
-                                'COS (ecampbell3)', 
-                                'NOAA_95244993')
-
-    # parse the data and calculate drawdown
-    print 'parsing data'
-    data = noaa_ocs.get_all_NOAA_airborne_data(noaa_dir)
-    print 'filtering for Jul & Aug, etc.'
-    ja_data = preprocess_NOAA_airborne_data_for_JA_spatial_analysis(noaa_dir)
-    print 'calculating drawdown'
-    dd = ja_data.calculate_OCS_daily_vert_drawdown()
 
     if plot_site_mean_drawdown_switch:
+        ocs_dd, ocs_daily = get_JA_site_mean_drawdown(noaa_dir)
         map_objs, cos_cmap, cos_norm = map_grid_main()
         for i in range(map_objs.shape[1]):
-            dd_map, dd_df = plot_site_mean_drawdown(dd, data,
-                                                    cmap=cos_cmap, 
-                                                    norm=cos_norm, 
-                                                    dd_map=map_objs[3,i])
+            dd_map = plot_site_mean_drawdown(ocs_dd,
+                                             cmap=cos_cmap, 
+                                             norm=cos_norm, 
+                                             dd_map=map_objs[3,i])
         print("saving the figure")
         plt.gcf().savefig('/tmp/maps.png')
 
