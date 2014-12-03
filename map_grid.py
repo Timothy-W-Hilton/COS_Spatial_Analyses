@@ -241,13 +241,12 @@ def draw_all_panels(cos, gpp, fCOS):
                                      vmax=gpp_vmax,
                                      cmap=gpp_cmap,
                                      norm=gpp_norm)
-        #i == 2: shows four evenly-spaced levels and a bunch of
-        #(seemingly) unrelated tick marks
-        #i == 1: shows four unevenly-spaced levels and a bunch of
-        #(seemingly) unrelated tick marks
-        if i == 2:
-            plt.colorbar(cm, cax=cbar_ax[0, 0], format='%0.2f')
-            cbar_ax[0, 0].set_title('GPP (Kg C m$^{-2}$ mon$^{-1}$)')
+
+    all_gpp = np.dstack([v for v in gpp.values()]).flatten()
+    dummy_scm = plt.cm.ScalarMappable(cmap=gpp_cmap, norm=gpp_norm)
+    dummy_scm.set_array(all_gpp)
+    plt.colorbar(dummy_scm, cax=cbar_ax[0, 0], format='%0.2f')
+    cbar_ax[0, 0].set_title('GPP (Kg C m$^{-2}$ mon$^{-1}$)')
     # matplotlib.colorbar.ColorbarBase(ax=cbar_ax[0, 0],
     #                                  norm=gpp_norm,
     #                                  cmap=gpp_cmap,
