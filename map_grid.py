@@ -241,15 +241,19 @@ def draw_all_panels(cos, gpp, fCOS):
                                      vmax=gpp_vmax,
                                      cmap=gpp_cmap,
                                      norm=gpp_norm)
-
-    # plt.colorbar(cm, cax=cbar_ax[0, 0], format='%0.2f')
-    matplotlib.colorbar.ColorbarBase(ax=cbar_ax[0, 0],
-                                     norm=gpp_norm,
-                                     cmap=gpp_cmap,
-                                     boundaries=gpp_norm.boundaries,
-                                     format='%0.2f')
-    #plt.colorbar(cm, ax=ax[0,i], format='%0.2f')
-    cbar_ax[0, 0].set_title('GPP (Kg C m$^{-2}$ mon$^{-1}$)')
+        #i == 2: shows four evenly-spaced levels and a bunch of
+        #(seemingly) unrelated tick marks
+        #i == 1: shows four unevenly-spaced levels and a bunch of
+        #(seemingly) unrelated tick marks
+        if i == 2:
+            plt.colorbar(cm, cax=cbar_ax[0, 0], format='%0.2f')
+            cbar_ax[0, 0].set_title('GPP (Kg C m$^{-2}$ mon$^{-1}$)')
+    # matplotlib.colorbar.ColorbarBase(ax=cbar_ax[0, 0],
+    #                                  norm=gpp_norm,
+    #                                  cmap=gpp_cmap,
+    #                                  boundaries=gpp_norm.boundaries,
+    #                                  format='%0.2f')
+    
 
     # fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap_with_zeroval(
     #     fcos_vmin, fcos_vmax,
