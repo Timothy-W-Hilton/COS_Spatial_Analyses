@@ -210,15 +210,16 @@ if __name__ == "__main__":
     plot_site_mean_drawdown_switch = True
 
     if plot_site_mean_drawdown_switch:
-        ocs_dd, ocs_daily = get_JA_site_mean_drawdown(noaa_dir)
-        map_objs, cos_cmap, cos_norm = map_grid_main()
+        ocs_dd, ocs_daily = get_JA_site_mean_drawdown(get_noaa_COS_data_path())
+        fig, map_objs, cos_cmap, cos_norm = map_grid_main()
         for i in range(map_objs.shape[1]):
             dd_map = plot_site_mean_drawdown(ocs_dd,
                                              cmap=cos_cmap, 
                                              norm=cos_norm, 
                                              dd_map=map_objs[3,i])
-        print("saving the figure")
-        plt.gcf().savefig('/tmp/maps.png')
+        fname = '/tmp/maps.png'
+        print("saving {}".format(fname))
+        fig.savefig(fname)
 
     if draw_site_drawdown_timeseries:
         plot_site_drawdown_timeseries(dd)
