@@ -1,5 +1,10 @@
 import matplotlib
 matplotlib.use('AGG')
+#matplotlib.rcParams.update({'font.size': 20})
+font = {'family' : 'Bitstream Vera Sans',
+        'weight' : 'normal',
+        'size'   : 20}
+matplotlib.rc('font', **font)
 
 import os, os.path
 import socket

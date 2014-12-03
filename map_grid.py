@@ -18,6 +18,22 @@ from stem_pytools import calc_drawdown
 from timutils import colormap_nlevs
 from timutils import scinot_format
 
+def colorbar_from_cmap_norm(cmap, norm, cax, format, vals):
+    """
+    create a colorbar in a specified axis from a colormap instance, a
+    norm instance, and an array of values.
+
+    This is a workaround for a problem I'm having where calling
+    plt.colorbar on different matplotlib.contour.QuadContourSet
+    created from the same cmap and norm produces different colorbars,
+    all of which are messed up in one way or another.  This function
+    creates a dummy mappable and creates the colorbar from it.
+    """
+    dummy_scm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    dummy_scm.set_array(vals)
+    cb = plt.colorbar(dummy_scm, cax=cax, format=format)
+    return(cb)
+
 def load_aqout_data(fname='/home/thilton/Data/STEM/aq_out_data.cpickle'):
     import cPickle;
     f = open(fname, 'rb')
@@ -243,38 +259,39 @@ def draw_all_panels(cos, gpp, fCOS):
                                      norm=gpp_norm)
 
     all_gpp = np.dstack([v for v in gpp.values()]).flatten()
-    dummy_scm = plt.cm.ScalarMappable(cmap=gpp_cmap, norm=gpp_norm)
-    dummy_scm.set_array(all_gpp)
-    plt.colorbar(dummy_scm, cax=cbar_ax[0, 0], format='%0.2f')
-    cbar_ax[0, 0].set_title('GPP (Kg C m$^{-2}$ mon$^{-1}$)')
-    # matplotlib.colorbar.ColorbarBase(ax=cbar_ax[0, 0],
-    #                                  norm=gpp_norm,
-    #                                  cmap=gpp_cmap,
-    #                                  boundaries=gpp_norm.boundaries,
-    #                                  format='%0.2f')
-    
+    cb = colorbar_from_cmap_norm(gpp_cmap, 
+                                 gpp_norm, 
+                                 cbar_ax[0,0], 
+                                 '%0.2f', 
+                                 all_gpp)
+    t = cbar_ax[0, 0].set_title('GPP (Kg C m$^{-2}$ mon$^{-1}$)\n')
+    t.set_y(1.09)
+    t.set_fontsize(20)
 
-    # fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap_with_zeroval(
-    #     fcos_vmin, fcos_vmax,
-    #     nlevs=5,
-    #     cmap=plt.get_cmap('Blues'),
-    #     extend='neither')
-    # for i, this_mod in enumerate(models):
-    #     #plot fCOS drawdown maps
-    #     print("plotting {model} fCOS".format(model=models_str[i]))
-    #     map_objs[1, i], cm = draw_map(t_str=None,
-    #                                   ax=ax[1, i],
-    #                                   data=fCOS[this_mod],
-    #                                   vmin=fcos_vmin,
-    #                                   vmax=fcos_vmax,
-    #                                   cmap=fcos_cmap,
-    #                                   norm=fcos_norm)
-    # cb = plt.colorbar(cm, cax=cbar_ax[1, 0])
-    # #format tick labels in scientific notation using "10^X", not
-    # #"1eX" notation
-    # #cb.formatter = FuncFormatter(scinot_format.scinot_format)
-    # #cb.update_ticks()
-    # cbar_ax[1, 0].set_title('$F_{plant}$ (pmol COS m$^{-2}$ s$^{-1})$')
+    fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap_with_zeroval(
+        fcos_vmin, fcos_vmax,
+        nlevs=5,
+        cmap=plt.get_cmap('Blues'),
+        extend='neither')
+    for i, this_mod in enumerate(models):
+        #plot fCOS drawdown maps
+        print("plotting {model} fCOS".format(model=models_str[i]))
+        map_objs[1, i], cm = draw_map(t_str=None,
+                                      ax=ax[1, i],
+                                      data=fCOS[this_mod],
+                                      vmin=fcos_vmin,
+                                      vmax=fcos_vmax,
+                                      cmap=fcos_cmap,
+                                      norm=fcos_norm)
+    all_fcos = np.dstack([v for v in fCOS.values()]).flatten()
+    cb = colorbar_from_cmap_norm(fcos_cmap, 
+                                 fcos_norm, 
+                                 cbar_ax[1,0],
+                                 '%d',
+                                 all_fcos)
+    t = cbar_ax[1, 0].set_title('$F_{plant}$ (pmol COS m$^{-2}$ s$^{-1})$')
+    t.set_y(1.09)
+    t.set_fontsize(20)
 
     cos_cmap, cos_norm = colormap_nlevs.setup_colormap(
         cos_vmin,
@@ -282,26 +299,39 @@ def draw_all_panels(cos, gpp, fCOS):
         nlevs=10,
         cmap=plt.get_cmap('Oranges'),
         extend='neither')
-    # for i, this_mod in enumerate(models):
-    #     #plot [COS] drawdown maps
-    #     print("plotting {model} COS drawdown".format(model=models_str[i]))
-    #     map_objs[2,i], cm = draw_map(t_str=None,
-    #                                  ax=ax[2, i],   
-    #                                  data=cos[this_mod],
-    #                                  vmin=cos_vmin,
-    #                                  vmax=cos_vmax,
-    #                                  cmap=cos_cmap,
-    #                                  norm=cos_norm)
+    for i, this_mod in enumerate(models):
+        #plot [COS] drawdown maps
+        print("plotting {model} COS drawdown".format(model=models_str[i]))
+        map_objs[2,i], cm = draw_map(t_str=None,
+                                     ax=ax[2, i],   
+                                     data=cos[this_mod],
+                                     vmin=cos_vmin,
+                                     vmax=cos_vmax,
+                                     cmap=cos_cmap,
+                                     norm=cos_norm)
 
-    # plt.colorbar(cm, cax=cbar_ax[2,0], format='%0.1f')
-    # cbar_ax[2,0].set_title('STEM [COS] drawdown (ppt)')
+    all_dd = np.dstack([v for v in cos.values()]).flatten()
+    cb = colorbar_from_cmap_norm(cos_cmap, 
+                                 cos_norm, 
+                                 cbar_ax[2,0], 
+                                 '%d', 
+                                 all_dd)
+    t = cbar_ax[2, 0].set_title('STEM [COS] drawdown (ppt)')
+    t.set_y(1.09)
+    t.set_fontsize(20)
 
-    # #show observed drawdown in separate map
-    # for i, this_mod in enumerate(models):
-    #     map_objs[3, i] = NAMapFigure(t_str = None,
-    #                                 map_axis = ax[3, i])
-    # plt.colorbar(cm, cbar_ax[3,0], format='%0.1f')
-    # cbar_ax[3,0].set_title('obs [COS] drawdown (ppt)')
+    #show observed drawdown in separate map
+    for i, this_mod in enumerate(models):
+        map_objs[3, i] = NAMapFigure(t_str = None,
+                                    map_axis = ax[3, i])
+    cb = colorbar_from_cmap_norm(cos_cmap, 
+                                 cos_norm, 
+                                 cbar_ax[3,0], 
+                                 '%d', 
+                                 all_dd)
+    t = cbar_ax[3,0].set_title('obs [COS] drawdown (ppt)')
+    t.set_y(1.09)
+    t.set_fontsize(20)
     return(fig, map_objs, cos_cmap, cos_norm)
 
 def map_grid_main():
