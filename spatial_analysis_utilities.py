@@ -216,13 +216,17 @@ if __name__ == "__main__":
 
     if plot_site_mean_drawdown_switch:
         ocs_dd, ocs_daily = get_JA_site_mean_drawdown(get_noaa_COS_data_path())
-        fig, map_objs, cos_cmap, cos_norm = map_grid_main()
+        fig, map_objs, cos_cmap, cos_norm = map_grid_main(
+            models = ['canibis_161', 'casa_gfed_135'],
+            models_str= ['Can-IBIS', 'CASA-GFED3'])
+
         for i in range(map_objs.shape[1]):
             dd_map = plot_site_mean_drawdown(ocs_dd,
                                              cmap=cos_cmap, 
                                              norm=cos_norm, 
                                              dd_map=map_objs[3,i])
-        fname = '/tmp/maps.png'
+
+        fname = '/tmp/maps.pdf'
         print("saving {}".format(fname))
         fig.savefig(fname)
 

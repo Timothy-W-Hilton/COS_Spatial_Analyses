@@ -206,29 +206,32 @@ def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True):
 
     return(cos_conc, gpp, fCOS)
 
-def draw_all_panels(cos, gpp, fCOS):
-    models = ['MPI_161',
-              'canibis_161',
-              'kettle_161',
-              'casa_m15_161',
-              'casa_gfed_161',
-              'casa_gfed_135',
-              'casa_gfed_187']
-    models_str = ['MPI',
-                  'Can-IBIS',
-                  'Kettle',
-                  'CASA-m15',
-                  'CASA-GFED3',
-                  'CASA-GFED3',
-                  'CASA-GFED3']
+def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
+    if models is None:
+        models = ['MPI_161',
+                  'canibis_161',
+                  'kettle_161',
+                  'casa_m15_161',
+                  'casa_gfed_161',
+                  'casa_gfed_135',
+                  'casa_gfed_187']
+    if models_str is None:
+        models_str= ['MPI',
+                     'Can-IBIS',
+                     'Kettle',
+                     'CASA-m15',
+                     'CASA-GFED3',
+                     'CASA-GFED3',
+                     'CASA-GFED3']
+
     lru = [1.61, 1.61, 1.61, 1.61, 1.61, 1.35, 1.87]
 
     gpp_vmin = 0.0
     #gpp_vmax = np.percentile(np.dstack([v for v in gpp.values()]).flatten(), 99)
-    gpp_vmax = np.dstack([v for v in gpp.values()]).flatten().max()
+    gpp_vmax = 0.45 #np.dstack([v for v in gpp.values()]).flatten().max()
     fcos_vmin = 0.0 #np.dstack([v for v in fCOS.values()]).flatten().min()
     #fcos_vmax = np.percentile(np.dstack([v for v in fCOS.values()]).flatten(), 99)
-    fcos_vmax = np.dstack([v for v in fCOS.values()]).flatten().max()
+    fcos_vmax = 20.0#np.dstack([v for v in fCOS.values()]).flatten().max()
     cos_vmin = 0.0
     #cos_vmax = np.percentile(np.dstack([v for v in cos.values()]).flatten(), 99)
     cos_vmax = 80#
@@ -249,6 +252,7 @@ def draw_all_panels(cos, gpp, fCOS):
     for i, this_mod in enumerate(models):
         #plot GPP drawdown maps
         print("plotting {model} GPP".format(model=models_str[i]))
+
         map_objs[0,i], cm = draw_map(t_str='{}, LRU={}'.format(models_str[i], 
                                                                lru[i]),
                                      ax=ax[0, i],   #axis 0 is left-most on row 3
@@ -334,7 +338,7 @@ def draw_all_panels(cos, gpp, fCOS):
     t.set_fontsize(20)
     return(fig, map_objs, cos_cmap, cos_norm)
 
-def map_grid_main():
+def map_grid_main(models=None, models_str=None):
     if 'Timothys-MacBook-Air.local' in socket.gethostname():
         aqout_data = (os.path.join(os.getenv('HOME'), 'work', 'Data',
                                    'STEM', 'aq_out_data.cpickle'))
@@ -358,8 +362,10 @@ def map_grid_main():
         fCOS[k] = fCOS[k] / secs_per_JulAug
         gpp[k] = gpp[k] / n_months
 
-    fig, map_objs, cos_cmap, cos_norm = draw_all_panels(cos_dd, gpp, fCOS)
+    fig, map_objs, cos_cmap, cos_norm = draw_all_panels(cos_dd, gpp, fCOS, 
+                                                        models, models_str)
     return(fig, map_objs, cos_cmap, cos_norm)
-    
+
 if __name__ == "__main__":
-    map_grid_main()
+    map_grid_main(models = ['canibis_161', 'casa_gfed_135'],
+                  models_str= ['Can-IBIS', 'CASA-GFED3'])
