@@ -11,7 +11,6 @@ stem_pytools.ecampbell300_data_paths, where the location of all the
 various STEM runs' data files is listed.
 
 Timothy W. Hilton, UC Merced, 13 January 2015
-
 """
 
 import os, os.path, sys
