@@ -17,7 +17,7 @@ import os, os.path, sys
 import subprocess
 from stem_pytools import ecampbell300_data_paths as edp
 
-print('using {}'.format(sys.executable))
+print('python: {}'.format(sys.executable))
 
 # get the GPP I/O API file for the CASA m15 file
 runs = edp.get_runs()

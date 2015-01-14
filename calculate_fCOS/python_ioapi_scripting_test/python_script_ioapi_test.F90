@@ -22,6 +22,31 @@ program python_script_ioapi_test
   real, allocatable, dimension(:,:,:):: LRU, cos_co2_ratio
   character*80 vdesc_arg
 
+! ! test whether scripting with python, ecampbell300_data_paths will
+! ! work, handle spaces in paths correctly -- YES!
+
+!   VNAME3D(1) = 'dummy'
+!   UNITS3D(1) = 'furlongs fortnight-1'
+!   VDESC3D(1) = 'this is a test :)'
+
+!   if(.not.OPEN3('OUTPUT',FSCREA3,'python_test')) then 
+!      !     output file does not exist! 
+!      print*, 'Error opening output file'
+!      stop
+!   endif
+
+  call test_subroutine('GPP_INPUT', FSREAD3, 'test_subroutine')
+
+END program python_script_ioapi_test
+
+!============================================================
+
+SUBROUTINE test_subroutine(file_arg, mode_arg, prog_name_arg)
+
+  include 'PARMS3.EXT'	! i/o API
+  include 'FDESC3.EXT'	! i/o API
+  include 'IODECL3.EXT'	! i/o API
+
   if(.not.OPEN3('GPP_INPUT',FSREAD3,'python_script_test')) then 
      !output file does not exist!
      print*, 'Error opening input file'
@@ -35,19 +60,6 @@ program python_script_ioapi_test
      endif
   endif
 
-  print*, 'vars: ', VNAME3D(1), UNITS3D(1), VDESC3D(1)
+  print*, 'in test_subroutine, vars: ', VNAME3D(1), UNITS3D(1), VDESC3D(1)
 
-! test whether scripting with python, ecampbell300_data_paths will
-! work, handle spaces in paths correctly -- YES!
-
-  VNAME3D(1) = 'dummy'
-  UNITS3D(1) = 'furlongs fortnight-1'
-  VDESC3D(1) = 'this is a test :)'
-
-  if(.not.OPEN3('OUTPUT',FSCREA3,'python_test')) then 
-     !     output file does not exist! 
-     print*, 'Error opening output file'
-     stop
-  endif
-
-END program python_script_ioapi_test
+END SUBROUTINE test_subroutine
