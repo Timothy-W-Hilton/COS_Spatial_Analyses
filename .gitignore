@@ -6,3 +6,6 @@ scratch*.py
 build/*
 dist/*
 *egg-info
+*.o
+*.x
+*.mod
