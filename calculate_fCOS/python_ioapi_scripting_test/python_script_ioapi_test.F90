@@ -21,45 +21,25 @@ program python_script_ioapi_test
 
   real, allocatable, dimension(:,:,:):: LRU, cos_co2_ratio
   character*80 vdesc_arg
+  integer LOGDEV, status
+
+  LOGDEV = INIT3()
+
+  call open3_and_fdesc3('GPP_INPUT', FSREAD3, 'test_open')
 
 ! ! test whether scripting with python, ecampbell300_data_paths will
 ! ! work, handle spaces in paths correctly -- YES!
 
-!   VNAME3D(1) = 'dummy'
-!   UNITS3D(1) = 'furlongs fortnight-1'
-!   VDESC3D(1) = 'this is a test :)'
+  VNAME3D(1) = 'dummy'
+  UNITS3D(1) = 'furlongs fortnight-1'
+  VDESC3D(1) = 'this is a test :)'
 
-!   if(.not.OPEN3('OUTPUT',FSCREA3,'python_test')) then 
-!      !     output file does not exist! 
-!      print*, 'Error opening output file'
-!      stop
-!   endif
+  call open3_and_fdesc3('OUTPUT', FSCREA3, 'python_test')
 
-  call test_subroutine('GPP_INPUT', FSREAD3, 'test_subroutine')
+  status = 0  !successful completion
+  call M3EXIT('python_test', sdate3d, stime3d, 'program completed', status)
 
 END program python_script_ioapi_test
 
 !============================================================
 
-SUBROUTINE test_subroutine(file_arg, mode_arg, prog_name_arg)
-
-  include 'PARMS3.EXT'	! i/o API
-  include 'FDESC3.EXT'	! i/o API
-  include 'IODECL3.EXT'	! i/o API
-
-  if(.not.OPEN3('GPP_INPUT',FSREAD3,'python_script_test')) then 
-     !output file does not exist!
-     print*, 'Error opening input file'
-     stop
-  else
-     if (.not. DESC3('GPP_INPUT') ) then ! if exit, get information
-        print*, 'Error getting info from input IOAPI' 
-        stop
-     else
-        print*, 'successfully got description of input IOAPI'
-     endif
-  endif
-
-  print*, 'in test_subroutine, vars: ', VNAME3D(1), UNITS3D(1), VDESC3D(1)
-
-END SUBROUTINE test_subroutine
