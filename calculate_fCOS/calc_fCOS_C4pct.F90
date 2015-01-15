@@ -117,7 +117,6 @@ subroutine write_COS_CO2_ratio_ioapi(nrows, ncols, const_val_arg)
     integer :: LOGDEV, ierr, jdate, jtime
 
     LOGDEV = INIT3()
-    ! call open3_and_fdesc3('RATIO_FILE', FSCREA3, 'write_COS_CO2_ratio')
 
     ! populate dimensions, date & time, file & variable descriptions, etc.
     FDESC3D(1) = "contains constant COS/CO2 ratio 1.1"
@@ -163,11 +162,9 @@ subroutine write_COS_CO2_ratio_ioapi(nrows, ncols, const_val_arg)
     jtime = 0
     allocate(ratio_vals(nrows, ncols, 1), STAT=ierr)
     ratio_vals = const_val_arg
+
     print*, 'writing COS/CO2 ratios'
-    if(.not.OPEN3('RATIO_FILE',FSCREA3,'write_COS_CO2_ratio_ioapi')) then
-       print*, 'Error opening output file'
-       stop
-    endif
+    call open3_and_fdesc3('RATIO_FILE', FSCREA3, 'write_COS_CO2_ratio')
     if (.not.write3('RATIO_FILE',vname3d(1), &
          jdate, jtime, ratio_vals(:,:,:))) then 
        write(*,*) 'unable to write COS/CO2 ratio to file'
