@@ -25,7 +25,7 @@ program calc_fCOS_C4pct
 
   LOGDEV = INIT3()
 
-  call open3_and_fdesc3('LRU_INPUT', FSREAD3, 'test_open')
+  call open3_and_desc3('LRU_INPUT', FSREAD3, 'test_open')
   write(*,*) 'vars: ', VNAME3D(1), UNITS3D(1), VDESC3D(1)
   write(*,*) 'dimensions: ', NLAYS3D,NROWS3D,NCOLS3D
 
@@ -36,7 +36,7 @@ program calc_fCOS_C4pct
   UNITS3D(1) = 'furlongs fortnight-1'
   VDESC3D(1) = 'this is a test :)'
 
-  !call open3_and_fdesc3('OUTPUT', FSCREA3, 'python_test')
+  !call open3_and_desc3('OUTPUT', FSCREA3, 'python_test')
   call write_COS_CO2_ratio_ioapi(124, 124, 1.1)
 
   status = 0  !successful completion
@@ -73,15 +73,15 @@ subroutine calc_fcos(t_start, t_end, t_step, GPP_FILE, LRU_FILE, RATIO_FILE)
   real, dimension(:,:), allocatable :: this_t_GPP, this_t_LRU, this_t_ratio
   real, dimension(:,:,:), allocatable :: fCOS
 
-  call open3_and_fdesc3('GPP_FILE', FSREAD3, 'calc_fCOS')
+  call open3_and_desc3('GPP_FILE', FSREAD3, 'calc_fCOS')
   ncols = NCOLS3D
   nrows = NROWS3D
-  call open3_and_fdesc3('LRU_FILE', FSREAD3, 'calc_fCOS')
+  call open3_and_desc3('LRU_FILE', FSREAD3, 'calc_fCOS')
   IF (.not.((ncols.eq.NCOLS3D) .and. (nrows.eq.NROWS3D))) THEN
      write(*,*) 'LRU, GPP, and COS/CO2 ratio files must have same horizontal dimensions'
      stop
   ENDIF
-  call open3_and_fdesc3('RATIO_FILE', FSREAD3, 'calc_fCOS')
+  call open3_and_desc3('RATIO_FILE', FSREAD3, 'calc_fCOS')
   IF (.not.((ncols.eq.NCOLS3D) .and. (nrows.eq.NROWS3D))) THEN
      write(*,*) 'LRU, GPP, and COS/CO2 ratio files must have same horizontal dimensions'
      stop
@@ -164,7 +164,7 @@ subroutine write_COS_CO2_ratio_ioapi(nrows, ncols, const_val_arg)
     ratio_vals = const_val_arg
 
     print*, 'writing COS/CO2 ratios'
-    call open3_and_fdesc3('RATIO_FILE', FSCREA3, 'write_COS_CO2_ratio')
+    call open3_and_desc3('RATIO_FILE', FSCREA3, 'write_COS_CO2_ratio')
     if (.not.write3('RATIO_FILE',vname3d(1), &
          jdate, jtime, ratio_vals(:,:,:))) then 
        write(*,*) 'unable to write COS/CO2 ratio to file'
