@@ -1,15 +1,49 @@
-!short example of using the I/O API fortran library 
-!
-!performs these tasks:
-!(1) open an existing I/O API file
-!(2) read and display some brief information aboutthe variables it contains
-!(3) create a new I/O API file with the same metadata as the original
-!    except that the GPP variable is replaced by "dummy"
-!
-!Timothy W. Hilton, UC Merced, 15 January 2015
-
 program calc_fCOS_C4pct
-
+  !----------------------------------------------------------------------
+  ! DESC: Create an I/O API file containing COS plant fluxes (fCOS)
+  !   from specified I/O API files containing GPP, LRU, and COS/CO2
+  !   ratio data.  fCOS is calculated according by equation 1 of
+  !   Campbell et al (2008).
+  !----------------------------------------------------------------------
+  ! PRECONDITIONS
+  !   I/O API files with logical names GPP_INPUT and C4pct_INPUT must
+  !   exist and contain GPP and C4 vegetation percentage data,
+  !   respectively.  From these, a spatially-varying LRU file is
+  !   calculated as a weighted average of the C3 and C4 LRU values
+  !   reported by Stimler et al (2011).  At present uses a constant
+  !   COS/CO2 ratio value of 1.1 ppt COS/ppm CO2.  This is the
+  !   average value from the INTEX-NA observations (Blake et al
+  !   (2008)).
+  !----------------------------------------------------------------------
+  ! OUTPUT: A new I/O API file is created in the file with logical
+  !   name fCOS_FILE.  
+  !----------------------------------------------------------------------
+  ! REFERENCES:
+  !
+  ! Blake, N. J., Campbell, J. E., Vay, S. A., Fuelberg, H. E., Huey,
+  !   L. G., Sachse, G., Meinardi, S., Beyersdorf, A., Baker, A.,
+  !   Barletta, B., Midyett, J., Doezema, L., Kamboures, M., McAdams,
+  !   J., Novak, B., Rowland, F. S., and Blake, D. R.: Carbonyl
+  !   sulfide (OCS): Large-scale distributions over North America
+  !   during INTEX-NA and relationship to CO2, Journal of Geophysical
+  !   Research: Atmospheres, 113, doi:10.1029/2007JD009163, 2008.
+  !
+  ! Campbell, J. E., Carmichael, G. R., Chai, T., Mena-Carrasco, M.,
+  !   Tang, Y., Blake, D. R., Blake, N. J., Vay, S. A., Collatz,
+  !   G. J., Baker, I., Berry, J. A., Montzka, S. A., Sweeney, C.,
+  !   Schnoor, J. L., and Stanier, C. O.: Photosynthetic Control of
+  !   Atmospheric Carbonyl Sulfide During the Growing Season, Science,
+  !   322, 1085–1088, doi:10.1126/science.1164015, 2008.
+  !
+  ! Stimler, K., Berry, J. A., Montzka, S. A., and Yakir, D.:
+  !   Association between Carbonyl Sulfide Uptake and 18delta during
+  !   Gas Exchange in C3 and C4 Leaves, Plant Physiology, 157,
+  !   509–517, doi:10.1104/pp.111.176578, 2011.
+  !----------------------------------------------------------------------
+  ! HISTORY:
+  ! By: Timothy W. Hilton <thilton@ucmerced.edu>
+  ! On: Jan 2015
+  !----------------------------------------------------------------------
   USE ioapi_regrid_tools
 
   IMPLICIT NONE
@@ -22,21 +56,26 @@ program calc_fCOS_C4pct
   integer :: JULIAN
 
   real, allocatable, dimension(:,:,:):: GPP, LRU, cos_co2_ratio
-  character*80 vdesc_arg
+  character*10 GPP_model_name_arg
   integer LOGDEV, status, t_start, t_end, t_step
+
+  call getarg(1, GPP_model_name_arg)
+  write(*,*) 'GPP model name: ', GPP_model_name_arg
 
   LOGDEV = INIT3()
 
+  ! COS/CO2 ratio: use constant value of 1.1 ppt COS/ppm CO2 for now.
+  ! This is the average value from the INTEX-NA observations (Blake et
+  ! al (2008)).
   call write_COS_CO2_ratio_ioapi(124, 124, 1.1)
   call write_LRU_ioapi_from_C4_pct('C4pct_INPUT', 'LRU_FILE', status)
-  ! t_start = (2008 * 1000) + JULIAN(2008, 7, 1)
-  ! t_end = (2008 * 1000) + JULIAN(2008, 9, 1)
-  ! write(*,*) 'times: ', t_start, t_end
-  ! ! t_start = 2008180
-  ! ! t_end = 2008242
-  ! t_step = 030000  !3 hours expressed as HHMMSS
-  ! call calc_fcos_3D(t_start, t_end, t_step, 'GPP_INPUT', 'LRU_FILE', 'RATIO_FILE')
-
+  t_start = (2008 * 1000) + JULIAN(2008, 7, 1)
+  t_end = (2008 * 1000) + JULIAN(2008, 9, 1)
+  write(*,*) 'times: ', t_start, t_end
+  t_step = 030000  !3 hours expressed as HHMMSS
+  call calc_fcos_3D(t_start, t_end, t_step, &
+       'GPP_INPUT', 'LRU_FILE', 'RATIO_FILE', &
+       GPP_model_name_arg)
   status = 0  !successful completion
   call M3EXIT('python_test', sdate3d, stime3d, 'program completed', status)
 
@@ -44,7 +83,9 @@ END program calc_fCOS_C4pct
 
 !============================================================
 
-subroutine calc_fcos_3D(t_start, t_end, t_step, GPP_FILE, LRU_FILE, RATIO_FILE)
+subroutine calc_fcos_3D(t_start, t_end, t_step, &
+     GPP_FILE, LRU_FILE, RATIO_FILE, &
+     GPP_model_name)
 
 !t_start: starting date, YYYYDDD
 !t_end: ending date, YYYYDDD
@@ -73,7 +114,7 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, GPP_FILE, LRU_FILE, RATIO_FILE)
   include 'IODECL3.EXT'	! i/o API
 
   integer, intent(in) :: t_start, t_end, t_step
-  character(len=*), intent(in) :: GPP_FILE, LRU_FILE, RATIO_FILE
+  character(len=*), intent(in) :: GPP_FILE, LRU_FILE, RATIO_FILE, GPP_model_name
 
   integer :: currstep, currec
   integer :: nrows, ncols, ntimes, ierr, midnight, cdate, ctime, t
@@ -109,21 +150,44 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, GPP_FILE, LRU_FILE, RATIO_FILE)
   allocate(this_t_LRU(ncols, nrows), STAT=ierr)
   allocate(this_t_ratio(ncols, nrows), STAT=ierr)
   allocate(fCOS(ntimes, ncols, nrows, 1), STAT=ierr)
-  
+
   this_yyyyddd = t_start
   this_hhmmss = midnight
   surface_layer = 1
+
+! prepare fCOS for writing
+  VNAME3D(1) = 'fCOS'
+  UNITS3D(1) = 'mol m-2 s-1'
+  write(FDESC3D, '(A, A)'), 'LRU from C4 veg pct; COS/CO2 ratio=1.1; GPP: ', &
+       GPP_model_name
+  VDESC3D(1) = 'COS plant flux'
+  SDATE3D = t_start
+  STIME3D = midnight
+  TSTEP3D = t_step
+  GDNAM3D = 'ARCNAGRID'
+  CALL open3_and_desc3('fCOS_FILE', FSCREA3, 'calc_fCOS_3D')
+  UPNAM3D = 'calc_fCOS_3D'
+  FDESC3D = 'COS plant fluxes (fCOS)'
+
   DO t=1, ntimes
-     ierr = READ3('GPP_FILE', 'GPP', surface_layer, &
+     ierr = READ3(GPP_FILE, 'GPP', surface_layer, &
           this_yyyyddd, this_hhmmss, this_t_GPP)
-     ierr = READ3('LRU_FILE', 'LRU', surface_layer, &
+     ierr = READ3(LRU_FILE, 'LRU', surface_layer, &
           this_yyyyddd, this_hhmmss, this_t_LRU)
-     ierr = READ3('RATIO_FILE', 'COS_CO2_ratio', surface_layer, &
+     ierr = READ3(RATIO_FILE, 'COS_CO2_ratio', surface_layer, &
           this_yyyyddd, this_hhmmss, this_t_ratio)
      ! equation 1, Campbell et al (2008)
      fCOS(t, surface_layer, :, :) = this_t_GPP * this_t_LRU * this_t_ratio
+
+     IF (.NOT.write3('fCOS_FILE', vname3d(1), &
+          this_yyyyddd, this_hhmmss, fCOS(:,:,:,:))) THEN 
+        WRITE(*,*) 'unable to write COS/CO2 ratio to file'
+        STOP
+     ENDIF
+
      call nextime(this_yyyyddd, this_hhmmss, t_step)
   ENDDO
+
 END SUBROUTINE calc_fCOS_3D
 
 !============================================================
@@ -172,7 +236,7 @@ SUBROUTINE write_COS_CO2_ratio_ioapi(nrows, ncols, const_val_arg)
     vglvs3d(1)=1.             ! levels in meter
     vglvs3d(2)=0.             ! levels in meter
     !     do L=1,nvars3d
-    units3d(1)='fraction'
+    units3d(1)='ppt COS/ppm CO2'
     VNAME3D(1) = 'COS_CO2_ratio'
     VDESC3D(1) = 'COS/CO2 ratio'
     vtype3d=m3real

@@ -26,4 +26,4 @@ clean:
 	rm -f  $(OBJDRV) *.o *.mod
 
 clobber: clean
-	rm -f *.x
+	rm -f *.x *.nc
