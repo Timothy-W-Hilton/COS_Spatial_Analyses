@@ -6,7 +6,7 @@ FC=pgf90
 LD=pgf90
 
 FFLAGS= -O2 -c -I$(HOME)/local/include 
-APINCL=-I$(HOME)/local/include 
+APINCL=-I$(HOME)/local/include
 APILIB= -L$(HOME)/local/lib -lioapi -lnetcdf -ldatetime -lioapi_regrid_tools
 
 CMD=$(PROGRAM).x
