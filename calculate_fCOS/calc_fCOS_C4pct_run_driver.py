@@ -67,10 +67,12 @@ fname_C4pct = os.path.join('/home', 'thilton', 'projects', 'COS (ecampbell3)',
                          'C4_pct_124x124.nc')
 # get the GPP I/O API file for the CASA m15 file
 runs = edp.get_runs()
-for this_run in runs.values()[0:1]:
+for this_run in [runs[k] for k in ['casa_gfed_161', 'canibis_161', 'kettle_161', 
+                                 'casa_m15_161', 'MPI_161']]:
     fname_GPP = this_run.gpp_path
-    print('GPP file: {}'.format(fname_GPP))
-    print('C4 file: {}'.format(fname_C4pct))
+    sys.stdout.write('\n\nGPP file: {}\n'.format(fname_GPP))
+    sys.stdout.write('C4 file: {}\n\n'.format(fname_C4pct))
+    sys.stdout.flush()
 
     if os.path.exists(fname_GPP) and os.path.exists(fname_C4pct):
         os.environ['GRIDDESC'] = os.path.join(os.environ['HOME'], 'Data', 
@@ -79,7 +81,7 @@ for this_run in runs.values()[0:1]:
         os.environ['C4pct_INPUT'] = fname_C4pct
         os.environ['RATIO_FILE'] = './COS_CO2_ratio_const_1.1.nc'
         os.environ['LRU_FILE'] = './LRU_from_C4pct.nc'
-        os.environ['fCOS_FILE'] = './fCOS_from_{}_C4pct.nc'.format(
+        os.environ['fCOS_FILE'] = './fCOS_{}_2008_124x124_LRUfromC4pct.nc'.format(
             re.sub('[\ \-]', '', this_run.model))
         # run the fortran part
         if this_run.model.lower().find('casa') >= 0:
@@ -91,6 +93,15 @@ for this_run in runs.values()[0:1]:
                 re.sub(' ', '\ ', this_run.model),
                 t_step),
             shell=True)
+
+        #move the new fCOS file to its permanent location
+        newname = os.path.join(os.path.dirname(this_run.fcos_path),
+                               os.path.basename(os.environ['fCOS_FILE']))
+        sys.stdout.write('\n{} --> {}\n\n'.format(os.environ['fCOS_FILE'], 
+                                                    newname))
+        sys.stdout.flush()
+        os.rename(os.environ['fCOS_FILE'], newname)
+
     else:
         print('GPP file not found')
 
