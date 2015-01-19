@@ -57,7 +57,7 @@ program calc_fCOS_C4pct
 
   real, allocatable, dimension(:,:,:):: GPP, LRU, cos_co2_ratio
   character*10 GPP_model_name_arg
-  integer LOGDEV, status, t_start, t_end, t_step
+  integer LOGDEV, status, t_start, t_end, t_step, t_yyyyddd, t_hhmmss
 
   call getarg(1, GPP_model_name_arg)
   write(*,*) 'GPP model name: ', GPP_model_name_arg
@@ -71,8 +71,8 @@ program calc_fCOS_C4pct
   call write_LRU_ioapi_from_C4_pct('C4pct_INPUT', 'LRU_FILE', status)
 
   ! set up start time, stop time, time step
-  t_start = (2008 * 1000) + JULIAN(2008, 7, 1)
-  t_end = (2008 * 1000) + JULIAN(2008, 9, 1)
+  t_start = (2008 * 1000) + JULIAN(2008, 1, 1)
+  t_end = (2008 * 1000) + JULIAN(2008, 12, 31)
   write(*,*) 'times: ', t_start, t_end
   t_step = 030000  !3 hours expressed as HHMMSS
 
@@ -83,7 +83,8 @@ program calc_fCOS_C4pct
 
   !exit cleanly
   status = 0  !successful completion
-  call M3EXIT('python_test', sdate3d, stime3d, 'program completed', status)
+  call GETDTTIME(t_yyyyddd, t_hhmmss)
+  call M3EXIT('python_test', t_yyyyddd, t_hhmmss, 'program completed', status)
 
 END program calc_fCOS_C4pct
 
@@ -123,7 +124,7 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, &
   character(len=*), intent(in) :: GPP_FILE, LRU_FILE, RATIO_FILE, GPP_model_name
 
   integer :: currstep, currec
-  integer :: nrows, ncols, ntimes, ierr, midnight, cdate, ctime, t
+  integer :: nrows, ncols, ntimes, ierr, midnight, cdate, ctime, t, end_hhmmss
   integer :: this_yyyyddd, this_hhmmss, surface_layer
   real, dimension(:,:), allocatable :: this_t_GPP, this_t_LRU, this_t_ratio
   real, dimension(:,:,:,:), allocatable :: fCOS
@@ -149,7 +150,8 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, &
 
   ! determine number of timesteps
   midnight = 0  !midnight expressed as hour of day
-  ntimes = currec(t_end, midnight, t_start, midnight, t_step, cdate, ctime)
+  end_hhmmss = 235959  !23:59:59, i.e. one minute before midnight
+  ntimes = currec(t_end, end_hhmmss, t_start, midnight, t_step, cdate, ctime)
   write(*,*) 'number of timesteps: ', ntimes
 
   allocate(this_t_GPP(ncols, nrows), STAT=ierr)
