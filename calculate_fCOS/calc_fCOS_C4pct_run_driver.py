@@ -18,11 +18,26 @@ import subprocess
 import re
 import netCDF4
 import matplotlib.pyplot as plt
+import numpy as np
+import brewer2mpl
+from matplotlib.colors import Normalize
 from stem_pytools import ecampbell300_data_paths as edp
 from stem_pytools import na_map
 from stem_pytools import STEM_parsers as sp
 from timutils import colormap_nlevs
 
+
+
+class MidpointNormalize(Normalize):
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        self.midpoint = midpoint
+        Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        # I'm ignoring masked values and all kinds of edge cases to make a
+        # simple example...
+        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        return np.ma.masked_array(np.interp(value, x, y))
 
 
 #============================================================
@@ -37,11 +52,8 @@ def draw_LRU_map():
     nc.close()
     stem_lon, stem_lat, topo = sp.parse_STEM_coordinates(
         os.path.join(os.getenv('SARIKA_INPUT'), 'TOPO-124x124.nc'))
-    fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap(
-        LRU.min(),
-        LRU.max(),
-        nlevs=10,
-        cmap=plt.get_cmap('Blues'))
+    fcos_norm = MidpointNormalize(midpoint=1.61, vmin=LRU.min(), vmax=LRU.max())
+    fcos_cmap = brewer2mpl.get_map('PuOr', 'diverging', 8).mpl_colormap
     lru_map = na_map.NAMapFigure(cb_axis=True,t_str='LRU from C4 veg pct')
     cm = lru_map.map.pcolor(stem_lon, stem_lat, LRU,
                             cmap=fcos_cmap,
