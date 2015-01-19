@@ -20,6 +20,8 @@ import netCDF4
 import matplotlib.pyplot as plt
 import numpy as np
 import brewer2mpl
+import argparse
+
 from stem_pytools import ecampbell300_data_paths as edp
 from stem_pytools import na_map
 from stem_pytools import STEM_parsers as sp
@@ -47,7 +49,14 @@ def draw_LRU_map():
     plt.colorbar(cm, cax=lru_map.ax_cmap)
     lru_map.fig.savefig('LRU_from_c4pct.png')
 
-run_diagnostics = True
+#parse arguments
+parser = argparse.ArgumentParser(description=("""script to calculate fCOS for all GPP products defined in stem_pytools.ecampbell300_data_paths."""))
+parser.add_argument('--diagnostics',
+                    dest='run_diagnostics',
+                    action='store_true',
+                    help=('if set, some diagnostic plots are created'
+                          'after the calculations.'))
+args = parser.parse_args()
 
 # compile the fortran code
 subprocess.call('make -f calc_fCOS_C4pct.mk clobber', shell=True)
@@ -73,11 +82,18 @@ for this_run in runs.values()[0:1]:
         os.environ['fCOS_FILE'] = './fCOS_from_{}_C4pct.nc'.format(
             re.sub('[\ \-]', '', this_run.model))
         # run the fortran part
+        if this_run.model.lower().find('casa') >= 0:
+            t_step = 30000 # 3 hours expressed as HHMMSS
+        else:
+            t_step = 7320000 # 30.5 days expressed as HHMMSS
         subprocess.call(
-            './calc_fCOS_C4pct.x {}'.format(re.sub(' ', '\ ', this_run.model)),
+            './calc_fCOS_C4pct.x {} {}'.format(
+                re.sub(' ', '\ ', this_run.model),
+                t_step),
             shell=True)
     else:
         print('GPP file not found')
 
-if run_diagnostics:
+if args.run_diagnostics:
+    print 'creating diagnostic plots'
     fCOS_from_C4pct_diagnostics()

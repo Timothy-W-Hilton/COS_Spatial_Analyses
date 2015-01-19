@@ -56,11 +56,14 @@ program calc_fCOS_C4pct
   integer :: JULIAN
 
   real, allocatable, dimension(:,:,:):: GPP, LRU, cos_co2_ratio
-  character*10 GPP_model_name_arg
+  character*10 GPP_model_name_arg, t_step_arg
   integer LOGDEV, status, t_start, t_end, t_step, t_yyyyddd, t_hhmmss
 
   call getarg(1, GPP_model_name_arg)
   write(*,*) 'GPP model name: ', GPP_model_name_arg
+  call getarg(2, t_step_arg)
+  read (t_step_arg,*) t_step
+  write(*,*) 't_step: ', t_step
 
   LOGDEV = INIT3()
 
@@ -74,7 +77,6 @@ program calc_fCOS_C4pct
   t_start = (2008 * 1000) + JULIAN(2008, 1, 1)
   t_end = (2008 * 1000) + JULIAN(2008, 12, 31)
   write(*,*) 'times: ', t_start, t_end
-  t_step = 030000  !3 hours expressed as HHMMSS
 
   ! calculate the fCOS
   call calc_fcos_3D(t_start, t_end, t_step, &
