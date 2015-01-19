@@ -69,13 +69,19 @@ program calc_fCOS_C4pct
   ! al (2008)).
   call write_COS_CO2_ratio_ioapi(124, 124, 1.1)
   call write_LRU_ioapi_from_C4_pct('C4pct_INPUT', 'LRU_FILE', status)
+
+  ! set up start time, stop time, time step
   t_start = (2008 * 1000) + JULIAN(2008, 7, 1)
   t_end = (2008 * 1000) + JULIAN(2008, 9, 1)
   write(*,*) 'times: ', t_start, t_end
   t_step = 030000  !3 hours expressed as HHMMSS
+
+  ! calculate the fCOS
   call calc_fcos_3D(t_start, t_end, t_step, &
        'GPP_INPUT', 'LRU_FILE', 'RATIO_FILE', &
        GPP_model_name_arg)
+
+  !exit cleanly
   status = 0  !successful completion
   call M3EXIT('python_test', sdate3d, stime3d, 'program completed', status)
 
@@ -164,7 +170,7 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, &
   SDATE3D = t_start
   STIME3D = midnight
   TSTEP3D = t_step
-  GDNAM3D = 'ARCNAGRID'
+  CALL get_arctas_NA_grid_parmeters()
   CALL open3_and_desc3('fCOS_FILE', FSCREA3, 'calc_fCOS_3D')
   UPNAM3D = 'calc_fCOS_3D'
   FDESC3D = 'COS plant fluxes (fCOS)'
@@ -217,24 +223,9 @@ SUBROUTINE write_COS_CO2_ratio_ioapi(nrows, ncols, const_val_arg)
 
     LOGDEV = INIT3()
 
+    call get_arctas_NA_grid_parmeters()
     ! populate dimensions, date & time, file & variable descriptions, etc.
     FDESC3D(1) = "contains constant COS/CO2 ratio 1.1"
-    nvars3d=1                 ! emission species number
-    ftype3d=GRDDED3           ! file is in grided, Global dobson file header
-    gdtyp3d=LATGRD3           ! lat-lon
-    xcent3d=0.
-    ycent3d=0.
-    xorig3d=-180.
-    yorig3d=-90.
-    xcell3d=REAL(1)
-    ycell3d=REAL(1)
-    ncols3d=ncols
-    nrows3d=nrows
-    nlays3d=1
-    vgtyp3d=VGSGPN3           !  non-hydrostatic sigma-p vertical coordinate
-    vgtop3d=1.                ! domain top in meter
-    vglvs3d(1)=1.             ! levels in meter
-    vglvs3d(2)=0.             ! levels in meter
     !     do L=1,nvars3d
     units3d(1)='ppt COS/ppm CO2'
     VNAME3D(1) = 'COS_CO2_ratio'
@@ -249,6 +240,9 @@ SUBROUTINE write_COS_CO2_ratio_ioapi(nrows, ncols, const_val_arg)
     sdate3d = 0
     stime3d = 0
     tstep3d = 0
+
+    NLAYS3D = 1  ! one vertical layer in file
+    NVARS3D = 1  ! one variable in file
 
     !--------------------------------------------------
     ! write the ratio value to the I/O API file
@@ -371,5 +365,52 @@ SUBROUTINE write_LRU_ioapi_from_C4_pct(C4PCT_FNAME, LRU_FNAME, stat)
 
 end SUBROUTINE write_LRU_ioapi_from_C4_pct
 
+!============================================================
 
+SUBROUTINE get_arctas_NA_grid_parmeters()
 
+  !----------------------------------------------------------------------
+  ! DESC: define the I/O API grid parmameters describing the 124x124x22
+  !     STEM grid and place them in the FDESC3 commons structures.
+  !----------------------------------------------------------------------
+  ! INPUT:
+  !     no inputs
+  !----------------------------------------------------------------------
+  ! OUTPUT:
+  !     no explicit outputs.  
+  !----------------------------------------------------------------------
+  ! PRECONDITIONS: INCLUDE 'FDESC3.EXT', include 'PARMS3.EXT', file
+  ! with logical name 'GRIDDESC.TXT' must exist and be a valid I/O API
+  ! grid description file.
+  !----------------------------------------------------------------------
+  ! SEE ALSO:
+  !    See I/O API documentation for DESC3 function and for FDESC3.EXT.
+  !----------------------------------------------------------------------
+  ! HISTORY:
+  ! By: Timothy W. Hilton
+  ! On: 19 Jan 2015
+  !----------------------------------------------------------------------
+
+  IMPLICIT NONE
+
+  include 'PARMS3.EXT'	! I/O API
+  include 'FDESC3.EXT'	! I/O API
+  include 'IODECL3.EXT'	! I/O API
+
+  character(len=80) :: coord_sys_name
+  integer :: coord_sys_type
+
+  ! read grid parameters from GRIDDESC
+  CALL DSCGRID( 'ARCNAGRID', GDNAM3D, &
+       GDTYP3D, P_ALP3D, P_BET3D, P_GAM3D, XCENT3D, YCENT3D, &
+       XORIG3D, YORIG3D, XCELL3D, YCELL3D, NCOLS3D, NROWS3D, NTHIK3D )
+
+  FTYPE3D = GRDDED3
+
+  !define vertical coordinates
+  VGTYP3D = VGSGPN3   ! non-hydrostatic sigma-P coords
+  VGTOP3D = 1.0
+  !VGLVS3D = (/1.0, 0.0/)  !TODO: figure this one out...
+  ! GDNAM3D = "ARCNAGRID"
+
+end SUBROUTINE get_arctas_NA_grid_parmeters

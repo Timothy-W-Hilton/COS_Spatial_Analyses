@@ -64,6 +64,8 @@ for this_run in runs.values()[0:1]:
     print('C4 file: {}'.format(fname_C4pct))
 
     if os.path.exists(fname_GPP) and os.path.exists(fname_C4pct):
+        os.environ['GRIDDESC'] = os.path.join(os.environ['HOME'], 'Data', 
+                                              'STEM', 'input', 'GRIDDESC.txt')
         os.environ['GPP_INPUT'] = fname_GPP
         os.environ['C4pct_INPUT'] = fname_C4pct
         os.environ['RATIO_FILE'] = './COS_CO2_ratio_const_1.1.nc'
