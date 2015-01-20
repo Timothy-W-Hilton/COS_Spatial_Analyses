@@ -166,7 +166,7 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, &
   surface_layer = 1
 
 ! prepare fCOS for writing
-  VNAME3D(1) = 'fCOS'
+  VNAME3D(1) = 'cos'
   UNITS3D(1) = 'mol m-2 s-1'
   write(FDESC3D, '(A, A)'), 'LRU from C4 veg pct; COS/CO2 ratio=1.1; GPP: ', &
        GPP_model_name
