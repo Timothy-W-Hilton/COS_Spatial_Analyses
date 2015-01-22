@@ -74,7 +74,7 @@ program calc_fCOS_C4pct
   call write_LRU_ioapi_from_C4_pct('C4pct_INPUT', 'LRU_FILE', status)
 
   ! set up start time, stop time, time step
-  t_start = (2008 * 1000) + JULIAN(2008, 1, 1)
+  t_start = (2008 * 1000) + JULIAN(2008, 2, 29)
   t_end = (2008 * 1000) + JULIAN(2008, 12, 31)
   write(*,*) 'times: ', t_start, t_end
 
@@ -125,7 +125,7 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, &
   integer, intent(in) :: t_start, t_end, t_step
   character(len=*), intent(in) :: GPP_FILE, LRU_FILE, RATIO_FILE, GPP_model_name
 
-  integer :: currstep, currec
+  integer :: currstep, currec, i, j
   integer :: nrows, ncols, ntimes, ierr, midnight, cdate, ctime, t, end_hhmmss
   integer :: this_yyyyddd, this_hhmmss, surface_layer
   real, dimension(:,:), allocatable :: this_t_GPP, this_t_LRU, this_t_ratio
@@ -159,7 +159,7 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, &
   allocate(this_t_GPP(ncols, nrows), STAT=ierr)
   allocate(this_t_LRU(ncols, nrows), STAT=ierr)
   allocate(this_t_ratio(ncols, nrows), STAT=ierr)
-  allocate(fCOS(ntimes, ncols, nrows, 1), STAT=ierr)
+  allocate(fCOS(ntimes, 1, ncols, nrows), STAT=ierr)
 
   this_yyyyddd = t_start
   this_hhmmss = midnight
@@ -186,8 +186,15 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, &
           this_yyyyddd, this_hhmmss, this_t_LRU)
      ierr = READ3(RATIO_FILE, 'COS_CO2_ratio', surface_layer, &
           this_yyyyddd, this_hhmmss, this_t_ratio)
-     ! equation 1, Campbell et al (2008)
-     fCOS(t, surface_layer, :, :) = this_t_GPP * this_t_LRU * this_t_ratio
+     DO i = 1, NCOLS3D
+        DO j = 1, NROWS3D
+           ! equation 1, Campbell et al (2008)     
+           fCOS(t, surface_layer, i, j) = calc_fcos(this_t_GPP(i, j), &
+                this_t_LRU(i, j), &
+                this_t_ratio(i, j), &
+                1.0, .FALSE.)
+        ENDDO
+     ENDDO
 
      IF (.NOT.write3('fCOS_FILE', vname3d(1), &
           this_yyyyddd, this_hhmmss, fCOS(:,:,:,:))) THEN 

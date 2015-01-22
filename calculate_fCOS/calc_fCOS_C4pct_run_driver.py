@@ -66,9 +66,8 @@ fname_C4pct = os.path.join('/home', 'thilton', 'projects', 'COS (ecampbell3)',
                          'C4_percentage', 'ISLSCP_C4_1DEG_932_regridded',
                          'C4_pct_124x124.nc')
 # get the GPP I/O API file for the CASA m15 file
-runs = edp.get_runs()
-for this_run in [runs[k] for k in ['casa_gfed_161', 'canibis_161', 'kettle_161', 
-                                 'casa_m15_161', 'MPI_161']]:
+runs = edp.get_C3C4runs()
+for this_run in runs.values():
     fname_GPP = this_run.gpp_path
     sys.stdout.write('\n\nGPP file: {}\n'.format(fname_GPP))
     sys.stdout.write('C4 file: {}\n\n'.format(fname_C4pct))
