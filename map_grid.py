@@ -178,6 +178,7 @@ def daily_to_JulAug(arr):
 
 def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True):
     if get_dd:
+
         cos_conc_daily = load_aqout_data(aqout_path)
 
         # aggregate daily means to a single July-August mean
@@ -344,7 +345,7 @@ def map_grid_main(models=None, models_str=None):
                                    'STEM', 'aq_out_data.cpickle'))
     else:
         aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
-                                  'aq_out_data.cpickle')
+                                  'aq_out_data_C4.cpickle')
     cos_dd, gpp, fCOS = assemble_data(aqout_data)
 
     #convert July-August GPP time-integrated fluxes to flux per month.

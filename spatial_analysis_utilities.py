@@ -216,9 +216,20 @@ if __name__ == "__main__":
 
     if plot_site_mean_drawdown_switch:
         ocs_dd, ocs_daily = get_JA_site_mean_drawdown(get_noaa_COS_data_path())
+        # c4runs = {k: v for k, v in edp.get_runs().items() if k.find('C4') > 0}
         fig, map_objs, cos_cmap, cos_norm = map_grid_main(
-            models = ['canibis_161', 'casa_gfed_135'],
-            models_str= ['Can-IBIS', 'CASA-GFED3'])
+            models = ['kettle_C4pctLRU',
+                      'MPI_C4pctLRU',
+                      'casa_gfed_C4pctLRU',
+                      'casa_m15_C4pctLRU',
+                      'canibis_C4pctLRU'],
+            models_str = ['Kettle',
+                          'MPI',
+                          'CASA-GFED',
+                          'CASA-m15',
+                          'Can-IBIS'])
+            # models = ['canibis_161', 'casa_gfed_135'],
+            # models_str= ['Can-IBIS', 'CASA-GFED3'])
 
         for i in range(map_objs.shape[1]):
             dd_map = plot_site_mean_drawdown(ocs_dd,
@@ -226,7 +237,7 @@ if __name__ == "__main__":
                                              norm=cos_norm, 
                                              dd_map=map_objs[3,i])
 
-        fname = '/tmp/maps.pdf'
+        fname = '/tmp/maps.png'
         print("saving {}".format(fname))
         fig.savefig(fname)
 
