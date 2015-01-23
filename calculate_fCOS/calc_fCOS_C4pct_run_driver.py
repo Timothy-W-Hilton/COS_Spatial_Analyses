@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import brewer2mpl
 import argparse
+import datetime 
 
 from stem_pytools import ecampbell300_data_paths as edp
 from stem_pytools import na_map
@@ -30,7 +31,24 @@ from timutils import midpt_norm
 #============================================================
 def fCOS_from_C4pct_diagnostics():
 
-    draw_LRU_map()
+    #draw_LRU_map()
+
+    runs = edp.get_C3C4runs()
+    for k in runs.keys():
+        fcos = sp.parse_STEM_var(nc_fname=runs[k].fcos_path,
+                                 t0 = datetime.datetime(2008,7,1),
+                                 t1=datetime.datetime(2008,8,31,23,59,59),
+                                 varname='cos')
+        print('{}: min: {:0.2e}    max: {:0.2e}    mean: {:0.2e}'.format(k,
+                                                          fcos['data'].min(),
+                                                          fcos['data'].max(),
+                                                          fcos['data'].mean()))
+        fig, ax = plt.subplots()
+        cm = ax.pcolor(fcos['data'].squeeze().mean(axis=0), 
+                       cmap=plt.get_cmap('Blues'))
+        plt.colorbar(cm)
+        plt.title(k)
+        fig.savefig('/tmp/fcos_{}.png'.format(k))
 
 #============================================================
 def draw_LRU_map():
