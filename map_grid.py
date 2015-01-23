@@ -228,13 +228,13 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     lru = [1.61, 1.61, 1.61, 1.61, 1.61, 1.35, 1.87]
 
     gpp_vmin = 0.0
-    #gpp_vmax = np.percentile(np.dstack([v for v in gpp.values()]).flatten(), 99)
-    gpp_vmax = 0.45 #np.dstack([v for v in gpp.values()]).flatten().max()
-    fcos_vmin = 0.0 #np.dstack([v for v in fCOS.values()]).flatten().min()
-    #fcos_vmax = np.percentile(np.dstack([v for v in fCOS.values()]).flatten(), 99)
-    fcos_vmax = np.dstack([v for v in fCOS.values()]).flatten().max()
+    #gpp_vmax = np.percentile(np.dstack([fCOS[k] for k in models]).flatten(), 99)
+    gpp_vmax = 0.45 #np.dstack([fCOS[k] for k in models]).flatten().max()
+    fcos_vmin = 0.0 #np.dstack([fCOS[k] for k in models]).flatten().min()
+    #fcos_vmax = np.percentile(np.dstack([fCOS[k] for k in models]).flatten(), 99)
+    fcos_vmax = np.dstack([fCOS[k] for k in models]).flatten().max()
     cos_vmin = 0.0
-    #cos_vmax = np.percentile(np.dstack([v for v in cos.values()]).flatten(), 99)
+    #cos_vmax = np.percentile(np.dstack([fCOS[k] for k in models]).flatten(), 99)
     cos_vmax = 80#
 
     print('ceil(max): {}'.format(
