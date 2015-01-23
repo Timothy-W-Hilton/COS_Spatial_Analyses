@@ -128,6 +128,10 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, &
   integer :: currstep, currec, i, j
   integer :: nrows, ncols, ntimes, ierr, midnight, cdate, ctime, t, end_hhmmss
   integer :: this_yyyyddd, this_hhmmss, surface_layer
+  integer :: gpp_sdate, gpp_stime, gpp_tstep
+  integer :: lru_sdate, lru_stime, lru_tstep
+  integer :: ratio_sdate, ratio_stime, ratio_tstep
+  integer :: read_date, read_time
   real, dimension(:,:), allocatable :: this_t_GPP, this_t_LRU, this_t_ratio
   real, dimension(:,:,:,:), allocatable :: fCOS
   character*100 :: dim_err_msg
@@ -138,16 +142,25 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, &
   call open3_and_desc3(GPP_FILE, FSREAD3, 'calc_fCOS_3D')
   ncols = NCOLS3D
   nrows = NROWS3D
+  gpp_sdate = SDATE3D
+  gpp_stime = STIME3D
+  gpp_tstep = TSTEP3D
   call open3_and_desc3(LRU_FILE, FSREAD3, 'calc_fCOS_3d')
   IF (.not.((ncols.eq.NCOLS3D) .and. (nrows.eq.NROWS3D))) THEN
      write(*,*) dim_err_msg
      stop
   ENDIF
+  lru_sdate = SDATE3D
+  lru_stime = STIME3D
+  lru_tstep = TSTEP3D
   call open3_and_desc3(RATIO_FILE, FSREAD3, 'calc_fCOS_3D')
   IF (.not.((ncols.eq.NCOLS3D) .and. (nrows.eq.NROWS3D))) THEN
      write(*,*) dim_err_msg
      stop
   ENDIF
+  ratio_sdate = SDATE3D
+  ratio_stime = STIME3D
+  ratio_tstep = TSTEP3D
   write(*,*) 'dimensions: ', nrows, ncols
 
   ! determine number of timesteps
@@ -180,12 +193,21 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, &
   FDESC3D = 'COS plant fluxes (fCOS)'
 
   DO t=1, ntimes
+     call currstep(this_yyyyddd, this_hhmmss, &
+          gpp_sdate, gpp_stime, gpp_tstep, &
+          read_date, read_time)
      ierr = READ3(GPP_FILE, 'GPP', surface_layer, &
-          this_yyyyddd, this_hhmmss, this_t_GPP)
+          read_date, read_time, this_t_GPP)
+     call currstep(this_yyyyddd, this_hhmmss, &
+          lru_sdate, lru_stime, lru_tstep, &
+          read_date, read_time)
      ierr = READ3(LRU_FILE, 'LRU', surface_layer, &
-          this_yyyyddd, this_hhmmss, this_t_LRU)
+          read_date, read_time, this_t_LRU)
+     call currstep(this_yyyyddd, this_hhmmss, &
+          ratio_sdate, ratio_stime, ratio_tstep, &
+          read_date, read_time)
      ierr = READ3(RATIO_FILE, 'COS_CO2_ratio', surface_layer, &
-          this_yyyyddd, this_hhmmss, this_t_ratio)
+          read_date, read_time, this_t_ratio)
      DO i = 1, NCOLS3D
         DO j = 1, NROWS3D
            ! equation 1, Campbell et al (2008)     
@@ -197,8 +219,8 @@ subroutine calc_fcos_3D(t_start, t_end, t_step, &
      ENDDO
 
      IF (.NOT.write3('fCOS_FILE', vname3d(1), &
-          this_yyyyddd, this_hhmmss, fCOS(:,:,:,:))) THEN 
-        WRITE(*,*) 'unable to write COS/CO2 ratio to file'
+          this_yyyyddd, this_hhmmss, fCOS(t,:,:,:))) THEN 
+        WRITE(*,*) 'unable to write fCOS to file'
         STOP
      ENDIF
 
