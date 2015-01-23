@@ -228,17 +228,19 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     lru = [1.61, 1.61, 1.61, 1.61, 1.61, 1.35, 1.87]
 
     gpp_vmin = 0.0
-    #gpp_vmax = np.percentile(np.dstack([fCOS[k] for k in models]).flatten(), 99)
-    gpp_vmax = 0.45 #np.dstack([fCOS[k] for k in models]).flatten().max()
+    #gpp_vmax = np.percentile(np.dstack([GPP[k] for k in models]).flatten(), 99)
+    gpp_vmax = 0.45 #np.dstack([GPP[k] for k in models]).flatten().max()
     fcos_vmin = 0.0 #np.dstack([fCOS[k] for k in models]).flatten().min()
     #fcos_vmax = np.percentile(np.dstack([fCOS[k] for k in models]).flatten(), 99)
     fcos_vmax = np.dstack([fCOS[k] for k in models]).flatten().max()
     cos_vmin = 0.0
-    #cos_vmax = np.percentile(np.dstack([fCOS[k] for k in models]).flatten(), 99)
-    cos_vmax = 80#
+    cos_vmax = np.percentile(np.dstack([cos[k] for k in models]).flatten(), 99)
+    #cos_vmax = 80#
+    cos_vmax = np.dstack([cos[k] for k in models]).flatten().max()  #REMOVE THIS
+    cos_vmin = np.dstack([cos[k] for k in models]).flatten().min()  #REMOVE THIS
 
     print('ceil(max): {}'.format(
-        np.dstack([v for v in cos.values()]).flatten().max()))
+        np.ceil(np.dstack([cos[k] for k in models]).flatten().max())))
 
     fig, ax, cbar_ax = setup_panel_array(nrows=4, ncols=len(models))
     map_objs = np.empty(ax.shape, dtype='object')
@@ -250,12 +252,13 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
         extend='neither')
     print('nlevs: {}'.format(5))
 
+    mod_objs = edp.get_runs()
     for i, this_mod in enumerate(models):
         #plot GPP drawdown maps
         print("plotting {model} GPP".format(model=models_str[i]))
 
         map_objs[0,i], cm = draw_map(t_str='{}, LRU={}'.format(models_str[i], 
-                                                               lru[i]),
+                                                               mod_objs[this_mod].LRU),
                                      ax=ax[0, i],   #axis 0 is left-most on row 3
                                      data=gpp[this_mod],
                                      vmin=gpp_vmin,
@@ -339,13 +342,14 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     t.set_fontsize(20)
     return(fig, map_objs, cos_cmap, cos_norm)
 
-def map_grid_main(models=None, models_str=None):
-    if 'Timothys-MacBook-Air.local' in socket.gethostname():
-        aqout_data = (os.path.join(os.getenv('HOME'), 'work', 'Data',
-                                   'STEM', 'aq_out_data.cpickle'))
-    else:
-        aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
-                                  'aq_out_data_C4.cpickle')
+def map_grid_main(models=None, models_str=None, aqout_data=None):
+    if aqout_data is None:
+        if 'Timothys-MacBook-Air.local' in socket.gethostname():
+            aqout_data = (os.path.join(os.getenv('HOME'), 'work', 'Data',
+                                       'STEM', 'aq_out_data.cpickle'))
+        else:
+            aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
+                                      'aq_out_data_C4.cpickle')
     cos_dd, gpp, fCOS = assemble_data(aqout_data)
 
     #convert July-August GPP time-integrated fluxes to flux per month.

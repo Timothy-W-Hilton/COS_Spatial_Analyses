@@ -218,16 +218,20 @@ if __name__ == "__main__":
         ocs_dd, ocs_daily = get_JA_site_mean_drawdown(get_noaa_COS_data_path())
         # c4runs = {k: v for k, v in edp.get_runs().items() if k.find('C4') > 0}
         fig, map_objs, cos_cmap, cos_norm = map_grid_main(
-            models = ['kettle_C4pctLRU',
-                      'MPI_C4pctLRU',
-                      'casa_gfed_C4pctLRU',
+            aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
+                                      'aq_out_data_C4.cpickle'),
+            models = ['MPI_C4pctLRU',
+                      'canibis_C4pctLRU',
+                      'kettle_C4pctLRU',
                       'casa_m15_C4pctLRU',
-                      'canibis_C4pctLRU'],
-            models_str = ['Kettle',
-                          'MPI',
-                          'CASA-GFED',
+                      'casa_gfed_C4pctLRU'],
+            models_str = ['MPI',
+                          'Can-IBIS',
+                          'Kettle',
                           'CASA-m15',
-                          'Can-IBIS'])
+                          'CASA-GFED'])
+            # aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
+            #                           'aq_out_data.cpickle'),
             # models = ['canibis_161', 'casa_gfed_135'],
             # models_str= ['Can-IBIS', 'CASA-GFED3'])
 
@@ -237,7 +241,7 @@ if __name__ == "__main__":
                                              norm=cos_norm, 
                                              dd_map=map_objs[3,i])
 
-        fname = '/tmp/maps.png'
+        fname = '/tmp/maps_C4.png'
         print("saving {}".format(fname))
         fig.savefig(fname)
 
