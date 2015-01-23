@@ -115,8 +115,9 @@ def draw_map(t_str,
              norm=plt.normalize):
 
     map = NAMapFigure(t_str=t_str,
-                      cb_axis=False,
+                      cb_axis=None,
                       map_axis=ax)
+
     lon, lat, topo = sp.parse_STEM_coordinates(
         os.path.join(os.getenv('SARIKA_INPUT'), 'TOPO-124x124.nc'))
     cm = map.map.contourf(lon, lat,
