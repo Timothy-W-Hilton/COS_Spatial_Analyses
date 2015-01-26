@@ -30,7 +30,7 @@ def get_aqout_data_path():
                                    'STEM', 'aq_out_data.cpickle'))
     else:
         aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
-                                  'aq_out_data.cpickle')
+                                  'aq_out_data_C4.cpickle')
     return(aqout_data)
 
 def get_noaa_COS_data_path():

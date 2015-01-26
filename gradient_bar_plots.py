@@ -43,10 +43,12 @@ def normalize_drawdown(ocs_dd, norm_site='NHA'):
     is chosen because it is the maximum observed drawdown in the NOAA
     observations.
     """
-    dd_vars=['ocs_dd', 'casa_gfed_161',
-                'canibis_161', 'casa_gfed_187',
-                'kettle_161', 'casa_m15_161', 'MPI_161',
-                'casa_gfed_135']
+    dd_vars=['ocs_dd', 
+             'casa_gfed_C4pctLRU',
+             'canibis_C4pctLRU', 
+             'kettle_C4pctLRU', 
+             'casa_m15_C4pctLRU',
+             'MPI_C4pctLRU']
     for this_var in dd_vars:
         ocs_dd[this_var] = ocs_dd[this_var] / ocs_dd[this_var][norm_site]
 
@@ -77,10 +79,12 @@ if __name__ == "__main__":
 
     ocs_dd_long = pd.melt(ocs_dd.reset_index(),
                           id_vars=['sample_site_code'],
-                          value_vars=['ocs_dd', 'casa_gfed_161',
-                                      'canibis_161', 'casa_gfed_187',
-                                      'kettle_161', 'casa_m15_161', 'MPI_161',
-                                      'casa_gfed_135'], 
+                          value_vars=['ocs_dd', 
+                                      'casa_gfed_C4pctLRU',
+                                      'canibis_C4pctLRU', 
+                                      'kettle_C4pctLRU', 
+                                      'casa_m15_C4pctLRU',
+                                      'MPI_C4pctLRU'],
                           value_name='drawdown')
 
 
