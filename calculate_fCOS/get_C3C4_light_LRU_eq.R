@@ -20,7 +20,6 @@ light_data[['C3C4']] <- as.factor(light_data[['C3C4']])
 pal <- brewer.pal(length(levels(light_data[['species']])), 'Dark2')
 mytheme <- standard.theme("pdf")
 mytheme[['superpose.symbol']][['pch']] <- c(15,16,17,3,4)
-##mytheme[['superpose.line']][['col'] <- pal # doesn't affect the loess lines
 mytheme[['superpose.symbol']][['col']] <- pal
 
 xy <- xyplot(LRU~PAR|C3C4, data=light_data, groups=species,
@@ -34,7 +33,7 @@ xy <- xyplot(LRU~PAR|C3C4, data=light_data, groups=species,
              panel=function(x,y,...) {
                  ## custom panel function to add an overall loess line
                  panel.superpose(x,y,...)
-                 panel.loess(x,y,lty='dashed',col='black',...)
+                 panel.loess(x, y, lty='dashed', col='black', lwd=2)
              }
          )
 ## pdf(file='~/stimler_PAR_LRU.pdf')
