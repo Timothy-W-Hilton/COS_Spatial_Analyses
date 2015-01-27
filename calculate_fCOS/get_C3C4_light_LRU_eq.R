@@ -8,7 +8,6 @@ all_data <- read.csv(fpath)
 all_data <- all_data[-1, c('PAR_umol.m.2s.1', 'lru', 'plant')]
 names(all_data) <- c('PAR', 'LRU', 'species')
 light_experiments <- grep('-light', as.character(all_data[['species']]))
-light_data <- all_data[light_experiments, ]
 
 light_data[['species']] <- as.factor(sub('-light', '',
                                          as.character(light_data[['species']])))
@@ -24,3 +23,14 @@ mytheme[['superpose.symbol']][['col']] <-
 xyplot(LRU~PAR|C3C4, data=light_data, groups=species,
        auto.key = TRUE,
        par.settings = mytheme)
+
+xyplot(LRU~PAR|C3C4, data=light_data, groups=species, type='smooth')
+
+
+C3_lo <- loess(LRU~PAR, data=light_data[light_data[['C3C4']] == 'C3', ])
+C4_lo <- loess(LRU~PAR, data=light_data[light_data[['C3C4']] == 'C4', ])
+
+C3_pred <- predict(C3_lo, newdata=seq(0, max(light_data[['PAR']])))
+C4_pred <- predict(C4_lo, newdata=seq(0, max(light_data[['PAR']])))
+
+
