@@ -5,10 +5,10 @@ library(RColorBrewer)
 fpath <- file.path(Sys.getenv('HOME'), 'work', 'Data',
                    'Stimler_COS_exchange_data.csv')
 all_data <- read.csv(fpath)
-all_data <- all_data[-1, c('PAR_umol.m.2s.1', 'lru', 'plant')]
-names(all_data) <- c('PAR', 'LRU', 'species')
-light_experiments <- grep('-light', as.character(all_data[['species']]))
-
+light_data <- all_data[-1, c('PAR_umol.m.2s.1', 'lru', 'plant')]
+names(light_data) <- c('PAR', 'LRU', 'species')
+light_experiments <- grep('-light', as.character(light_data[['species']]))
+light_data <- light_data[light_experiments, ]
 light_data[['species']] <- as.factor(sub('-light', '',
                                          as.character(light_data[['species']])))
 isC4 <- light_data[['species']] %in% c('corn', 'sorghum', 'amaranthus')
@@ -24,17 +24,19 @@ mytheme[['superpose.symbol']][['pch']] <- c(15,16,17,3,4)
 mytheme[['superpose.symbol']][['col']] <- pal
 
 xy <- xyplot(LRU~PAR|C3C4, data=light_data, groups=species,
-             panel=function(x,y,...) {
-                 ## custom panel function to add an overall loess line
-                 panel.superpose(x,y,...)
-                 panel.loess(x,y,col="darkblue",...)
-             },
              auto.key=TRUE,
              col.line=pal,
              par.settings=mytheme,
              panel.groups=function(x, y, ...){
-                 panel.xyplot(x, y, ...)
-                 panel.loess(x, y, ...)})
+                 panel.xyplot(x, y,  ...)
+                 panel.loess(x, y, ...)
+             },
+             panel=function(x,y,...) {
+                 ## custom panel function to add an overall loess line
+                 panel.superpose(x,y,...)
+                 panel.loess(x,y,lty='dashed',col='black',...)
+             }
+         )
 ## pdf(file='~/stimler_PAR_LRU.pdf')
 print(xy)
 ## dev.off()
@@ -42,7 +44,7 @@ print(xy)
 C3_lo <- loess(LRU~PAR, data=light_data[light_data[['C3C4']] == 'C3', ])
 C4_lo <- loess(LRU~PAR, data=light_data[light_data[['C3C4']] == 'C4', ])
 
-C3_pred <- predict(C3_lo, newdata=seq(0, max(light_data[['PAR']])))
-C4_pred <- predict(C4_lo, newdata=seq(0, max(light_data[['PAR']])))
+C3_pred <- predict(C3_lo, newdata=seq(0, max(light_data[['PAR']], na.rm=TRUE)))
+C4_pred <- predict(C4_lo, newdata=seq(0, max(light_data[['PAR']], na.rm=TRUE)))
 
 
