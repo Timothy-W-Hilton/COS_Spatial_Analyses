@@ -36,9 +36,10 @@ xy <- xyplot(LRU~PAR|C3C4, data=light_data, groups=species,
                  panel.loess(x, y, lty='dashed', col='black', lwd=2)
              }
          )
-## pdf(file='~/stimler_PAR_LRU.pdf')
+pdf(file=file.path(Sys.getenv('HOME'), 'work', 'Plots', 'SpatialAnalysisPaper',
+        'stimler_PAR_LRU.pdf'))
 print(xy)
-## dev.off()
+dev.off()
 
 C3_lo <- loess(LRU~PAR, data=light_data[light_data[['C3C4']] == 'C3', ])
 C4_lo <- loess(LRU~PAR, data=light_data[light_data[['C3C4']] == 'C4', ])
