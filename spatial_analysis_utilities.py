@@ -1,24 +1,26 @@
 import matplotlib
 matplotlib.use('AGG')
-#matplotlib.rcParams.update({'font.size': 20})
-font = {'family' : 'Bitstream Vera Sans',
-        'weight' : 'normal',
-        'size'   : 20}
+# matplotlib.rcParams.update({'font.size': 20})
+font = {'family': 'Bitstream Vera Sans',
+        'weight': 'normal',
+        'size': 20}
 matplotlib.rc('font', **font)
 
-import os, os.path
+import os
+import os.path
 import socket
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-#for parsing STEM grid latitude, longitude, and topography
+# for parsing STEM grid latitude, longitude, and topography
 from stem_pytools import STEM_parsers
 # for parsing and plotting NOAA [OCS] observations
 from stem_pytools import noaa_ocs
 # for plotting observations on a map of N America
 from stem_pytools import na_map
 from map_grid import map_grid_main
+
 
 def get_aqout_data_path():
     """return the full path to the directory containing (pre-parsed)
@@ -33,6 +35,7 @@ def get_aqout_data_path():
                                   'aq_out_data_C4.cpickle')
     return(aqout_data)
 
+
 def get_noaa_COS_data_path():
     """
     return the full path to the directory containing the NOAA OCS data
@@ -40,13 +43,14 @@ def get_noaa_COS_data_path():
 
     """
     if 'Timothys-MacBook-Air.local' in socket.gethostname():
-        noaa_dir = os.path.join(os.getenv('HOME'), 'work', 
+        noaa_dir = os.path.join(os.getenv('HOME'), 'work',
                                 'Data', 'NOAA_95244993')
     else:
         noaa_dir = os.path.join(os.getenv('HOME'), 'projects',
-                                'COS (ecampbell3)', 
+                                'COS (ecampbell3)',
                                 'NOAA_95244993')
     return(noaa_dir)
+
 
 def get_site_mean_cos(data):
     """
@@ -64,10 +68,11 @@ def get_site_mean_cos(data):
     ocs_mean = data_by_site.aggregate(np.mean)
     return(ocs_mean)
 
-    ## this code calculates only mean OCS
+    # this code calculates only mean OCS
     # ocs_by_site = data.obs.analysis_value.groupby(data.obs.sample_site_code)
     # ocs_mean = ocs_by_site.aggregate(np.mean)
     # return(ocs_mean)
+
 
 def preprocess_NOAA_airborne_data_for_JA_spatial_analysis(noaa_dir):
     """
@@ -90,10 +95,10 @@ def preprocess_NOAA_airborne_data_for_JA_spatial_analysis(noaa_dir):
     """
 
     data = noaa_ocs.get_all_NOAA_airborne_data(noaa_dir)
-    
+
     stem_input_dir = os.getenv('SARIKA_INPUT')
     topo_file = os.path.join(stem_input_dir, 'TOPO-124x124.nc')
-    wrf_height_file = os.path.join(stem_input_dir, 
+    wrf_height_file = os.path.join(stem_input_dir,
                                    'wrfheight-124x124-22levs.nc')
     stem_lon, stem_lat, topo = STEM_parsers.parse_STEM_coordinates(topo_file)
     data.get_stem_xy(stem_lon, stem_lat)
@@ -103,7 +108,7 @@ def preprocess_NOAA_airborne_data_for_JA_spatial_analysis(noaa_dir):
     # some observations list longitude of -999: remove those
     keep_idx = data.obs['sample_longitude'].values > -998
     # keep observations from July and August only
-    keep_idx = keep_idx & np.in1d(data.obs['sample_month'].values, [7,8])
+    keep_idx = keep_idx & np.in1d(data.obs['sample_month'].values, [7, 8])
     # remove observations in Alaska - this is outside of the STEM
     # domain.  I can do this crudely by cutting it off at 140 deg W
     # longitude.
@@ -111,6 +116,7 @@ def preprocess_NOAA_airborne_data_for_JA_spatial_analysis(noaa_dir):
     data.obs = data.obs.loc[keep_idx]
 
     return(data)
+
 
 def get_JA_site_mean_drawdown(noaa_dir):
     """
@@ -123,16 +129,17 @@ def get_JA_site_mean_drawdown(noaa_dir):
     print 'calculating drawdown'
     ja_daily_dd = ja_data.calculate_OCS_daily_vert_drawdown()
 
-    agg_vars = ['sample_latitude', 'sample_longitude', 
+    agg_vars = ['sample_latitude', 'sample_longitude',
                 'sample_site_code', 'analysis_value']
     ja_mean_ocs = ja_data.obs[agg_vars].groupby(
         ['sample_site_code']).aggregate(np.mean)
 
     ja_mean_dd = ja_daily_dd.reset_index().groupby(
         ['sample_site_code']).aggregate(np.mean)
- 
+
     ja_mean = ja_mean_ocs.join(ja_mean_dd)
     return(ja_mean, ja_daily_dd)
+
 
 def plot_site_altitude_histograms(data, savefig=False):
     """
@@ -144,22 +151,23 @@ def plot_site_altitude_histograms(data, savefig=False):
         print('Seaborn not available on this system; exiting')
         return(None)
     else:
-        ## plot site-by-site histograms of observation altitudes
+        # plot site-by-site histograms of observation altitudes
         g = sns.FacetGrid(data.obs,
                           row="sample_site_code",
                           size=2,
                           aspect=5)
         g.map(plt.hist,
               "sample_altitude",
-              bins=np.linspace(0,15000,200))
+              bins=np.linspace(0, 15000, 200))
         g.set_xlabels('obseration altitude (m)')
-        g.set_ylabels('# of obs')  #check those units
+        g.set_ylabels('# of obs')  # check those units
         g.set_titles(row_template='site: {row_name}')
         if savefig:
             plt.savefig(os.path.join('/Users', 'tim', 'work', 'Plots',
                                      'SpatialAnalysisPaper',
                                      'altitude_histograms_by_site.pdf'))
         return(g)
+
 
 def plot_site_mean_drawdown(dd, cmap=None, norm=None, dd_map=None):
 
@@ -174,11 +182,12 @@ def plot_site_mean_drawdown(dd, cmap=None, norm=None, dd_map=None):
     x, y = dd_map.map(dd.sample_longitude.values,
                       dd.sample_latitude.values)
     dd_map.map.scatter(x, y,
-                       c = cmap(norm(dd.ocs_dd.values)),
+                       c=cmap(norm(dd.ocs_dd.values)),
                        edgecolor='blue',
                        linewidths=1,
                        s=70)
     return(dd_map)
+
 
 def plot_site_drawdown_timeseries(dd_df):
 
@@ -188,12 +197,12 @@ def plot_site_drawdown_timeseries(dd_df):
         print('Seaborn not available on this system; exiting')
         return(None)
     else:
-        dd_df['doy'] = dd.index.get_level_values('date').dayofyear
+        dd_df['doy'] = dd_df.index.get_level_values('date').dayofyear
         dd_df = dd_df.reset_index().dropna()
         dd_df.date = pd.to_datetime(dd_df.date)
         dd_df['jdate'] = np.array([t.to_julian_date() for t in dd_df.date])
-        # dd_df['dt'] = [datetime.datetime.strptime(np.datetime_as_string(t), 
-        #                                         '%Y-%m-%dT%H:%M:%S.000000000Z') 
+        # dd_df['dt'] = [datetime.datetime.strptime(np.datetime_as_string(t),
+        #                                         '%Y-%m-%dT%H:%M:%S.000000000Z')
         #                for t in dd_df['date'].values]
         g = sns.FacetGrid(dd_df,
                           hue="sample_site_code")
@@ -218,38 +227,40 @@ if __name__ == "__main__":
         ocs_dd, ocs_daily = get_JA_site_mean_drawdown(get_noaa_COS_data_path())
         # c4runs = {k: v for k, v in edp.get_runs().items() if k.find('C4') > 0}
         fig, map_objs, cos_cmap, cos_norm = map_grid_main(
-            aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
-                                      'aq_out_data_C4.cpickle'),
-            models = ['MPI_C4pctLRU',
-                      'canibis_C4pctLRU',
-                      'kettle_C4pctLRU',
-                      'casa_m15_C4pctLRU',
-                      'casa_gfed_C4pctLRU'],
-            models_str = ['MPI',
-                          'Can-IBIS',
-                          'Kettle',
-                          'CASA-m15',
-                          'CASA-GFED'])
-            # aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
-            #                           'aq_out_data.cpickle'),
-            # models = ['canibis_161', 'casa_gfed_135'],
-            # models_str= ['Can-IBIS', 'CASA-GFED3'])
+            aqout_data=os.path.join(os.getenv('HOME'), 'Data', 'STEM',
+                                    'aq_out_data_C4.cpickle'),
+            models=['MPI_C4pctLRU',
+                    'canibis_C4pctLRU',
+                    'kettle_C4pctLRU',
+                    'casa_m15_C4pctLRU',
+                    'casa_gfed_C4pctLRU'],
+            models_str=['MPI',
+                        'Can-IBIS',
+                        'Kettle',
+                        'CASA-m15',
+                        'CASA-GFED'])
+        # aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
+        #                           'aq_out_data.cpickle'),
+        # models = ['canibis_161', 'casa_gfed_135'],
+        # models_str= ['Can-IBIS', 'CASA-GFED3'])
 
         for i in range(map_objs.shape[1]):
             dd_map = plot_site_mean_drawdown(ocs_dd,
-                                             cmap=cos_cmap, 
-                                             norm=cos_norm, 
-                                             dd_map=map_objs[3,i])
+                                             cmap=cos_cmap,
+                                             norm=cos_norm,
+                                             dd_map=map_objs[3, i])
 
         fname = '/tmp/maps_C4.png'
         print("saving {}".format(fname))
         fig.savefig(fname)
 
     if draw_site_drawdown_timeseries:
+        # FIX THIS: where does dd come from?  -TWH
         plot_site_drawdown_timeseries(dd)
 
     if draw_site_locations_map:
         # draw observation sites map
+        # FIX THIS: where does data come from?  -TWH
         location_map = data.plot_obs_site_locations()
         location_map.fig.savefig(os.path.join(os.getenv('PLOTS'),
                                               'SpatialAnalysisPaper',
@@ -257,11 +268,12 @@ if __name__ == "__main__":
         plt.close(location_map.fig)
 
     if draw_observation_altitude_histograms:
+        # FIX THIS: where does data come from?  -TWH
         draw_observation_altitude_histograms(data)
 
     if False:
 
-        ##pd.set_option('display.width',160)
+        ## pd.set_option('display.width',160)
 
         ## to move levels of a multiindex to columns, use reset_index
         ## ocs_mean.head().reset_index(level=0)
@@ -275,8 +287,10 @@ if __name__ == "__main__":
         ## now make two dataframes: one with WLEF data < 2000m and the
         ## other with WLEF data > 4000m.  Then align the data based on
         ## jday.
-        lef_hi = lef_data[lef_data.index.get_level_values('alt_bin') == '(4000, 30000]']
-        lef_lo = lef_data[lef_data.index.get_level_values('alt_bin') == '(0, 2000]']
+        lef_hi = lef_data[
+            lef_data.index.get_level_values('alt_bin') == '(4000, 30000]']
+        lef_lo = lef_data[
+            lef_data.index.get_level_values('alt_bin') == '(0, 2000]']
 
 
         ## to do:
@@ -284,4 +298,3 @@ if __name__ == "__main__":
         ## - pre process NOAA data for (1) Jul Aug and (2) inside STEM
         ##   domain.  Maybe not (2).
         ##  -
-        

@@ -1,4 +1,5 @@
-import os, os.path
+import os
+import os.path
 import numpy as np
 import pandas as pd
 import itertools
@@ -7,6 +8,7 @@ import cPickle
 
 from stem_pytools import ecampbell300_data_paths as edp
 from stem_pytools import STEM_parsers as sp
+
 
 def is_midday(this_t):
     """
@@ -21,6 +23,7 @@ def is_midday(this_t):
     True or False
     """
     return ((this_t.hour >= 15) and (this_t.hour <= 23))
+
 
 def daily_window_stats(t, data, f_wndw, f_stat):
     """
@@ -56,6 +59,7 @@ def daily_window_stats(t, data, f_wndw, f_stat):
 
     return(t_out, data_out)
 
+
 def assemble_data():
     """
     calculate and save to a cPickle file:
@@ -71,7 +75,8 @@ def assemble_data():
     """
     model_runs = edp.get_runs()
 
-    model_runs = {k: v for k, v in edp.get_runs().items() if (k.find('C4') > 0)}
+    model_runs = {k: v for k, v in edp.get_runs().items() if
+                  (k.find('C4') > 0)}
     t = []
     cos_mean = []
     cos_std = []
@@ -79,10 +84,10 @@ def assemble_data():
     for k, run in model_runs.items():
         t0 = datetime.now()
         print 'processing {}'.format(k)
-        this_cos = sp.parse_STEM_var(run.aqout_path, 
+        this_cos = sp.parse_STEM_var(run.aqout_path,
                                      varname='CO2_TRACER1',
-                                     t0 = datetime(2008, 7, 1),
-                                     t1 = datetime(2008, 8, 31, 23, 59, 59))
+                                     t0=datetime(2008, 7, 1),
+                                     t1=datetime(2008, 8, 31, 23, 59, 59))
         t_data = pd.DatetimeIndex(this_cos['t'], freq='1H')
 
         this_t, this_mean = daily_window_stats(t_data,
@@ -98,19 +103,20 @@ def assemble_data():
         cos_std.append(this_std)
         print 'finished {}, time: {}'.format(k, str(datetime.now() - t0))
 
-    t_dict = {key:value for key, value in zip(model_runs.keys(), t)}
-    cos_mean_dict = {key:value for key, value in zip(model_runs.keys(),
-                                                     cos_mean)}
-    cos_std_dict = {key:value for key, value in zip(model_runs.keys(),
-                                                    cos_std)}
-    all_data_dict = {'t':t_dict,
-                     'cos_mean':cos_mean_dict,
+    t_dict = {key: value for key, value in zip(model_runs.keys(), t)}
+    cos_mean_dict = {key: value for key, value in zip(model_runs.keys(),
+                                                      cos_mean)}
+    cos_std_dict = {key: value for key, value in zip(model_runs.keys(),
+                                                     cos_std)}
+    all_data_dict = {'t': t_dict,
+                     'cos_mean': cos_mean_dict,
                      'cos_std': cos_std_dict}
     outfile = open('/home/thilton/Data/STEM/aq_out_data_C4.cpickle', 'wb')
     cPickle.dump(all_data_dict, outfile, protocol=2)
     outfile.close()
 
     return(all_data_dict)
+
 
 def demo():
     fname = os.path.join('/', 'home', 'thilton',
@@ -123,19 +129,21 @@ def demo():
     fname = os.path.join('/', 'Users', 'tim', 'work', 'Data', 'STEM',
                          'output',
                          'AQOUT-124x124-22levs-CanIBIS_fCOS_LRU1.61.nc')
-    
+
     t_ex = [datetime.now()]
     cos = sp.parse_STEM_var(fname, varname='CO2_TRACER1')
     t_ex.append(datetime.now())
-    t_mn, cos_md_mean = daily_window_stats(pd.DatetimeIndex(cos['t'], freq='1H'),
-                                     cos['data'],
-                                     is_midday,
-                                     np.mean)
+    t_mn, cos_md_mean = daily_window_stats(
+        pd.DatetimeIndex(cos['t'], freq='1H'),
+        cos['data'],
+        is_midday,
+        np.mean)
     t_ex.append(datetime.now())
-    t_mn, cos_md_std = daily_window_stats(pd.DatetimeIndex(cos['t'], freq='1H'),
-                                     cos['data'],
-                                     is_midday,
-                                     np.std)
+    t_mn, cos_md_std = daily_window_stats(
+        pd.DatetimeIndex(cos['t'], freq='1H'),
+        cos['data'],
+        is_midday,
+        np.std)
     t_ex.append(datetime.now())
 
     return(t_ex, t_mn, cos_md_mean, cos_md_std)
