@@ -260,7 +260,7 @@ if __name__ == "__main__":
 
     if draw_site_locations_map:
         # draw observation sites map
-        # FIX THIS: where does data come from?  -TWH
+        data = noaa_ocs.get_all_NOAA_airborne_data(get_noaa_COS_data_path())
         location_map = data.plot_obs_site_locations()
         location_map.fig.savefig(os.path.join(os.getenv('PLOTS'),
                                               'SpatialAnalysisPaper',
