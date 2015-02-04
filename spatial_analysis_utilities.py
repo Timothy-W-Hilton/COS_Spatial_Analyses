@@ -17,6 +17,8 @@ import matplotlib.pyplot as plt
 from stem_pytools import STEM_parsers
 # for parsing and plotting NOAA [OCS] observations
 from stem_pytools import noaa_ocs
+# for finding files
+from stem_pytools import ecampbell300_data_paths as edp
 # for plotting observations on a map of N America
 from stem_pytools import na_map
 from map_grid import map_grid_main
@@ -32,7 +34,7 @@ def get_aqout_data_path():
                                    'STEM', 'aq_out_data.cpickle'))
     else:
         aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
-                                  'aq_out_data_C4.cpickle')
+                                  'aq_out_data_BASC.cpickle')
     return(aqout_data)
 
 
@@ -225,24 +227,15 @@ if __name__ == "__main__":
 
     if plot_site_mean_drawdown_switch:
         ocs_dd, ocs_daily = get_JA_site_mean_drawdown(get_noaa_COS_data_path())
-        # c4runs = {k: v for k, v in edp.get_runs().items() if k.find('C4') > 0}
+        # c4runs = edp.get_C3C4runs()
+        basc_runs = edp.get_BASC_runs()
         fig, map_objs, cos_cmap, cos_norm = map_grid_main(
             aqout_data=os.path.join(os.getenv('HOME'), 'Data', 'STEM',
-                                    'aq_out_data_C4.cpickle'),
-            models=['MPI_C4pctLRU',
-                    'canibis_C4pctLRU',
-                    'kettle_C4pctLRU',
-                    'casa_m15_C4pctLRU',
-                    'casa_gfed_C4pctLRU'],
-            models_str=['MPI',
-                        'Can-IBIS',
-                        'Kettle',
-                        'CASA-m15',
-                        'CASA-GFED'])
-        # aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
-        #                           'aq_out_data.cpickle'),
-        # models = ['canibis_161', 'casa_gfed_135'],
-        # models_str= ['Can-IBIS', 'CASA-GFED3'])
+                                    'aq_out_data_BASC.cpickle'),
+            models=[k for k in basc_runs.keys()],
+            models_str=[v.model for v in basc_runs.values()])
+            # models = ['canibis_161', 'casa_gfed_135'],
+            # models_str= ['Can-IBIS', 'CASA-GFED3'])
 
         for i in range(map_objs.shape[1]):
             dd_map = plot_site_mean_drawdown(ocs_dd,
@@ -250,7 +243,7 @@ if __name__ == "__main__":
                                              norm=cos_norm,
                                              dd_map=map_objs[3, i])
 
-        fname = '/tmp/maps_C4.png'
+        fname = '/tmp/maps_basc.pdf'
         print("saving {}".format(fname))
         fig.savefig(fname)
 
