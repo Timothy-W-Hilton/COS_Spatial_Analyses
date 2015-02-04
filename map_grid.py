@@ -1,10 +1,11 @@
 import os
-import os.pathes
+import os.path
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from datetime import datetime
 import socket
 import numpy as np
+import warnings
 
 import stem_pytools.ecampbell300_data_paths as edp
 from stem_pytools import STEM_parsers as sp
@@ -232,9 +233,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     fcos_vmax = np.dstack([fCOS[k] for k in models]).flatten().max()
     cos_vmin = 0.0
     cos_vmax = np.percentile(np.dstack([cos[k] for k in models]).flatten(), 99)
-    # cos_vmax = 80#
-    cos_vmax = np.dstack([cos[k] for k in models]).flatten().max()  # REMOVE THIS
-    cos_vmin = np.dstack([cos[k] for k in models]).flatten().min()  # REMOVE THIS
+    cos_vmax = 80#
 
     print('ceil(max): {}'.format(
         np.ceil(np.dstack([cos[k] for k in models]).flatten().max())))
@@ -255,7 +254,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
         print("plotting {model} GPP".format(model=models_str[i]))
 
         map_objs[0, i], cm = draw_map(
-            t_str='{}, LRU={}'.format(models_str[i],
+            t_str='{}, LRU={}'.format(models[i],
                                       mod_objs[this_mod].LRU),
             ax=ax[0, i],   # axis 0 is left-most on row 3
             data=gpp[this_mod],
@@ -308,9 +307,13 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     for i, this_mod in enumerate(models):
         # plot [COS] drawdown maps
         print("plotting {model} COS drawdown".format(model=models_str[i]))
+        this_cos = cos[this_mod]
+        if any(this_cos.flatten() < 0):
+            warnings.warn('COS drawdown values < 0.0 set to 0.0')
+            this_cos[this_cos < 0] = 0
         map_objs[2, i], cm = draw_map(t_str=None,
                                       ax=ax[2, i],
-                                      data=cos[this_mod],
+                                      data=this_cos,
                                       vmin=cos_vmin,
                                       vmax=cos_vmax,
                                       cmap=cos_cmap,
@@ -371,5 +374,9 @@ def map_grid_main(models=None, models_str=None, aqout_data=None):
     return(fig, map_objs, cos_cmap, cos_norm)
 
 if __name__ == "__main__":
-    map_grid_main(models=['canibis_161', 'casa_gfed_135'],
-                  models_str=['Can-IBIS', 'CASA-GFED3'])
+    basc_runs = edp.get_BASC_runs()
+    models = [k for k in basc_runs.keys()]
+    models_str = [v.model for v in basc_runs.values()]
+    map_grid_main(models, models_str)
+    # map_grid_main(models=['canibis_161', 'casa_gfed_135'],
+    #               models_str=['Can-IBIS', 'CASA-GFED3'])

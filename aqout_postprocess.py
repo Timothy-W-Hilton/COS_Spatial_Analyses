@@ -60,23 +60,29 @@ def daily_window_stats(t, data, f_wndw, f_stat):
     return(t_out, data_out)
 
 
-def assemble_data():
-    """
-    calculate and save to a cPickle file:
+def assemble_data(model_runs=None, pickle_fname=None):
+    """calculate and save to a cPickle file:
     (1) daily mid-day [COS] mean
     (2) daily mid-day [COS] standard deviation
     (3) timestamps associated with (1) and (2)
 
-    the data are placed in a dict and saved to
-    /home/thilton/Data/STEM/aq_out_data.cpickle
+    the data are placed in a dict and saved to a user-specified
+    cpickle file.
+
+    INPUT PARAMETERS
+    model_runs: dict of STEMRun objects.  If unspecified the default
+        is the output of stem_pytools.ecampbell300_data_paths.get_runs()
+    pickle_fname: full path of the cpickle file to create.  If
+        unspecified the default is
+        /home/thilton/Data/STEM/aq_out_data.cpickle
 
     OUTPUT PARAMETERS:
     all_data: dict containing (1), (2), and (3) above.
-    """
-    model_runs = edp.get_runs()
 
-    model_runs = {k: v for k, v in edp.get_runs().items() if
-                  (k.find('C4') > 0)}
+    """
+    if model_runs is None:
+        model_runs = edp.get_runs()
+
     t = []
     cos_mean = []
     cos_std = []
@@ -111,7 +117,7 @@ def assemble_data():
     all_data_dict = {'t': t_dict,
                      'cos_mean': cos_mean_dict,
                      'cos_std': cos_std_dict}
-    outfile = open('/home/thilton/Data/STEM/aq_out_data_C4.cpickle', 'wb')
+    outfile = open('/home/thilton/Data/STEM/aq_out_data_BASC.cpickle', 'wb')
     cPickle.dump(all_data_dict, outfile, protocol=2)
     outfile.close()
 
