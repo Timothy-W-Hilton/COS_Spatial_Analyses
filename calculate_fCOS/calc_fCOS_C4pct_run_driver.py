@@ -69,7 +69,7 @@ def draw_LRU_map():
                             latlon=True,
                             norm=fcos_norm)
     ticks = np.concatenate([np.linspace(1.12, 1.84, 5), np.array([1.61])])
-    cbar = lru_map.fig.colorbar(cm, cax=lru_map.ax_cmap, ticks=ticks.sort())
+    cbar = lru_map.fig.colorbar(cm, cax=lru_map.ax_cmap, ticks=ticks)
     cbar.ax.set_title('LRU')
     lru_map.fig.savefig('LRU_from_c4pct.pdf')
 
