@@ -67,15 +67,12 @@ def normalize_drawdown(ocs_dd, norm_site='NHA'):
 def draw_box_plot(df, sites_list):
     sns.set_style('ticks')
     sns.set_context('talk')
-    pal = sns.color_palette(['#C2A4CE', '#C2A4CE',
-                             '#AADEA1', '#AADEA1',
-                             '#F4F5F4'])
     g = sns.factorplot(x="sample_site_code",
                        y="drawdown",
                        hue='variable',
                        data=df[df.sample_site_code.isin(sites_list)],
                        kind="bar",
-                       palette=pal,
+                       palette=sns.color_palette("Paired", 5),
                        x_order=sites_list,
                        aspect=1.25)
     g.despine(offset=10, trim=True)
@@ -83,6 +80,31 @@ def draw_box_plot(df, sites_list):
 
     return(g)
 
+
+def rename_columns(df):
+    """rename drawdown columns into more human-readable strings.  The
+    motivation for this is that these column names eventually become
+    the labels in the barplot legends, and changing them here seemed
+    easier (though less elegant, perhaps) than digging through the
+    seaborn facetgrid object to access and change the legend labels
+    and then redrawing the plot.
+
+    """
+    columns_dict = {'ocs_dd': 'NOAA obs',
+                    'casa_gfed_161': 'CASA-GFED3, LRU=1.61',
+                    'MPI_C4pctLRU': 'MPI, LRU=C3/C4',
+                    'canibis_161': 'Can-IBIS, LRU=1.61',
+                    'casa_gfed_187': 'CASA-GFED3, LRU=1.87',
+                    'kettle_C4pctLRU': 'Kettle, LRU=C3/C4',
+                    'kettle_161': 'Kettle, LRU=1.61',
+                    'casa_m15_161': 'CASA-m15, LRU=1.61',
+                    'MPI_161': 'MPI, LRU=1.61',
+                    'casa_gfed_C4pctLRU': 'CASA-GFED3, LRU=C3/C4',
+                    'casa_gfed_135': 'CASA-GFED3, LRU=1.35',
+                    'canibis_C4pctLRU': 'Can-IBIS, LRU=C3/C4',
+                    'casa_m15_C4pctLRU': 'CASA-m15, LRU=C3/C4'}
+    df = df.rename(columns=columns_dict)
+    return(df)
 
 if __name__ == "__main__":
 
@@ -93,13 +115,14 @@ if __name__ == "__main__":
     east_coast = ['NHA', 'CMA', 'SCA']
     mid_continent = ['ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC']
 
-    ocs_dd_long = pd.melt(ocs_dd.reset_index(),
+    ocs_dd_new = rename_columns(ocs_dd)
+    ocs_dd_long = pd.melt(ocs_dd_new.reset_index(),
                           id_vars=['sample_site_code'],
-                          value_vars=['ocs_dd',
-                                      'casa_gfed_161',
-                                      'casa_gfed_C4pctLRU',
-                                      'canibis_C4pctLRU',
-                                      'canibis_161'],
+                          value_vars=['NOAA obs',
+                                      'CASA-GFED3, LRU=1.61',
+                                      'CASA-GFED3, LRU=C3/C4',
+                                      'Can-IBIS, LRU=1.61',
+                                      'Can-IBIS, LRU=C3/C4'],
                           value_name='drawdown')
 
     g = draw_box_plot(ocs_dd_long, east_coast)
