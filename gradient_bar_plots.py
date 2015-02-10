@@ -1,8 +1,8 @@
 import matplotlib
 matplotlib.use('AGG')
 
-import os, os.path
-import socket
+import os
+import os.path
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,6 +12,7 @@ import spatial_analysis_utilities as sau
 from stem_pytools import noaa_ocs
 from stem_pytools import STEM_parsers
 from map_grid import assemble_data
+
 
 def assemble_bar_plot_data():
     noaa_dir = sau.get_noaa_COS_data_path()
@@ -33,8 +34,8 @@ def assemble_bar_plot_data():
                                  'aq_out_data.cpickle')
 
     cos_dd, gpp, fCOS = assemble_data(constLRU_data,
-                                       get_GPP=False,
-                                       get_fCOS=False)
+                                      get_GPP=False,
+                                      get_fCOS=False)
     cos_dd_C4, gpp, fCOS = assemble_data(C4_data,
                                          get_GPP=False,
                                          get_fCOS=False)
@@ -45,37 +46,43 @@ def assemble_bar_plot_data():
 
     return(ocs_dd)
 
+
 def normalize_drawdown(ocs_dd, norm_site='NHA'):
     """
     Within each drawdown "product", normalize to the NHA value.  NHA
     is chosen because it is the maximum observed drawdown in the NOAA
     observations.
     """
-    dd_vars=['ocs_dd',
-             'casa_gfed_161',
-             'casa_gfed_C4pctLRU',
-             'canibis_C4pctLRU',
-             'canibis_161']
+    dd_vars = ['ocs_dd',
+               'casa_gfed_161',
+               'casa_gfed_C4pctLRU',
+               'canibis_C4pctLRU',
+               'canibis_161']
     for this_var in dd_vars:
         ocs_dd[this_var] = ocs_dd[this_var] / ocs_dd[this_var][norm_site]
 
     return(ocs_dd)
 
+
 def draw_box_plot(df, sites_list):
     sns.set_style('ticks')
     sns.set_context('talk')
+    pal = sns.color_palette(['#C2A4CE', '#C2A4CE',
+                             '#AADEA1', '#AADEA1',
+                             '#F4F5F4'])
     g = sns.factorplot(x="sample_site_code",
                        y="drawdown",
                        hue='variable',
                        data=df[df.sample_site_code.isin(sites_list)],
                        kind="bar",
-                       palette="PRGn",
+                       palette=pal,
                        x_order=sites_list,
                        aspect=1.25)
     g.despine(offset=10, trim=True)
     g.set_axis_labels("site", "[OCS] drawdown (ppt)")
 
     return(g)
+
 
 if __name__ == "__main__":
 
@@ -95,12 +102,11 @@ if __name__ == "__main__":
                                       'canibis_161'],
                           value_name='drawdown')
 
-
     g = draw_box_plot(ocs_dd_long, east_coast)
-    plt.gcf().savefig('/tmp/barplots_eastcoast_casa_canibis.pdf')
+    plt.gcf().savefig('/tmp/barplots/barplots_eastcoast_casa_canibis.pdf')
 
     g = draw_box_plot(ocs_dd_long, wet_dry)
-    plt.gcf().savefig('/tmp/barplots_wetdry.pdf')
+    plt.gcf().savefig('/tmp/barplots/barplots_wetdry.pdf')
 
     g = draw_box_plot(ocs_dd_long, mid_continent)
-    plt.gcf().savefig('/tmp/barplots_midcontinent.pdf')
+    plt.gcf().savefig('/tmp/barplots/barplots_midcontinent.pdf')
