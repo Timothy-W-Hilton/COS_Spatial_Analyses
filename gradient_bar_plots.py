@@ -12,7 +12,7 @@ import spatial_analysis_utilities as sau
 from stem_pytools import noaa_ocs
 from stem_pytools import STEM_parsers
 from map_grid import assemble_data
-
+import draw_c3c4LRU_map
 
 def assemble_bar_plot_data():
     noaa_dir = sau.get_noaa_COS_data_path()
@@ -106,14 +106,50 @@ def rename_columns(df):
     df = df.rename(columns=columns_dict)
     return(df)
 
+
+def draw_gradient_map(gradient_sites_dict):
+    """draw a NOAA observation site "spatial gradient" over the C3/C4 LRU
+    map
+    """
+    lru_map = draw_c3c4LRU_map.draw_map()
+    site_coords = noaa_ocs.get_all_NOAA_airborne_data(
+        sau.get_noaa_COS_data_path())
+    site_coords = site_coords.get_sites_lats_lons()
+
+    line_styles = ['-', '--', '-.']
+    markers = ['x', 'o', 's']
+    count = 0
+    for grad_name, grad_sites in gradient_sites_dict.items():
+        this_gradient = site_coords.loc[grad_sites]
+        print(this_gradient)
+
+        print('drawing: {}'.format(grad_name))
+        lru_map.map.plot(this_gradient['sample_longitude'].values,
+                         this_gradient['sample_latitude'].values,
+                         color='#1b9e77',
+                         linewidth=2.0,
+                         latlon=True)
+        lru_map.map.scatter(this_gradient['sample_longitude'].values,
+                            this_gradient['sample_latitude'].values,
+                            latlon=True,
+                            color='#1b9e77',
+                            marker=markers[count],
+                            linewidth=3,
+                            s=160,
+                            facecolors='None')
+        count = count + 1
+    return(lru_map)
+
+
 if __name__ == "__main__":
 
     ocs_dd = assemble_bar_plot_data()
     ocs_dd = normalize_drawdown(ocs_dd)
 
-    wet_dry = ['CAR', 'BNE', 'WBI', 'OIL', 'NHA']
-    east_coast = ['NHA', 'CMA', 'SCA']
-    mid_continent = ['ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC']
+    gradients = {'wet_dry': ['CAR', 'BNE', 'WBI', 'OIL', 'NHA'],
+                 'east_coast': ['NHA', 'CMA', 'SCA'],
+                 'mid_continent': ['ETL', 'DND', 'LEF', 'WBI',
+                                   'BNE', 'SGP', 'TGC']}
 
     ocs_dd_new = rename_columns(ocs_dd)
     ocs_dd_long = pd.melt(ocs_dd_new.reset_index(),
@@ -125,11 +161,11 @@ if __name__ == "__main__":
                                       'Can-IBIS, LRU=C3/C4'],
                           value_name='drawdown')
 
-    g = draw_box_plot(ocs_dd_long, east_coast)
+    g = draw_box_plot(ocs_dd_long, gradients['east_coast'])
     plt.gcf().savefig('/tmp/barplots/barplots_eastcoast_casa_canibis.pdf')
 
-    g = draw_box_plot(ocs_dd_long, wet_dry)
+    g = draw_box_plot(ocs_dd_long, gradients['wet_dry'])
     plt.gcf().savefig('/tmp/barplots/barplots_wetdry.pdf')
 
-    g = draw_box_plot(ocs_dd_long, mid_continent)
+    g = draw_box_plot(ocs_dd_long, gradients['mid_continent'])
     plt.gcf().savefig('/tmp/barplots/barplots_midcontinent.pdf')
