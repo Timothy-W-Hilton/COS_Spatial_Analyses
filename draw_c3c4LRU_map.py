@@ -3,12 +3,11 @@ import netCDF4
 import os
 import os.path
 import numpy as np
+from mpl_toolkits.basemap import maskoceans
 
 from stem_pytools import na_map
-from stem_pytools import noaa_ocs
 from stem_pytools import STEM_parsers as sp
 from timutils import midpt_norm
-from spatial_analysis_utilities import get_noaa_COS_data_path
 
 
 def draw_map():
@@ -25,8 +24,12 @@ def draw_map():
     stem_lon, stem_lat, topo = sp.parse_STEM_coordinates(
         os.path.join(os.getenv('SARIKA_INPUT'), 'TOPO-124x124.nc'))
     fcos_norm = midpt_norm.MidpointNormalize(midpoint=1.61)
-    lru_map = na_map.NAMapFigure(cb_axis=True, t_str='LRU from C4 veg pct')
-    cm = lru_map.map.pcolor(stem_lon, stem_lat, LRU,
+    lru_map = na_map.NAMapFigure(label_latlon=True,
+                                 cb_axis=True,
+                                 t_str='LRU from C4 veg pct')
+
+    cm = lru_map.map.pcolor(stem_lon, stem_lat,
+                            maskoceans(stem_lon, stem_lat, LRU),
                             cmap=plt.get_cmap('PuOr_r'),
                             latlon=True,
                             norm=fcos_norm)

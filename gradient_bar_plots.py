@@ -116,23 +116,24 @@ def draw_gradient_map(gradient_sites_dict):
         sau.get_noaa_COS_data_path())
     site_coords = site_coords.get_sites_lats_lons()
 
-    line_styles = ['-', '--', '-.']
     markers = ['x', 'o', 's']
     count = 0
     for grad_name, grad_sites in gradient_sites_dict.items():
         this_gradient = site_coords.loc[grad_sites]
         print(this_gradient)
 
+        black = '#000000'
+        # #1b9e77   turquoise color from colorbrewer2 Dark2 palette
         print('drawing: {}'.format(grad_name))
         lru_map.map.plot(this_gradient['sample_longitude'].values,
                          this_gradient['sample_latitude'].values,
-                         color='#1b9e77',
+                         color=black,
                          linewidth=2.0,
                          latlon=True)
         lru_map.map.scatter(this_gradient['sample_longitude'].values,
                             this_gradient['sample_latitude'].values,
                             latlon=True,
-                            color='#1b9e77',
+                            color=black,
                             marker=markers[count],
                             linewidth=3,
                             s=160,
@@ -143,13 +144,13 @@ def draw_gradient_map(gradient_sites_dict):
 
 if __name__ == "__main__":
 
-    ocs_dd = assemble_bar_plot_data()
-    ocs_dd = normalize_drawdown(ocs_dd)
-
     gradients = {'wet_dry': ['CAR', 'BNE', 'WBI', 'OIL', 'NHA'],
                  'east_coast': ['NHA', 'CMA', 'SCA'],
                  'mid_continent': ['ETL', 'DND', 'LEF', 'WBI',
                                    'BNE', 'SGP', 'TGC']}
+
+    ocs_dd = assemble_bar_plot_data()
+    ocs_dd = normalize_drawdown(ocs_dd)
 
     ocs_dd_new = rename_columns(ocs_dd)
     ocs_dd_long = pd.melt(ocs_dd_new.reset_index(),
@@ -169,3 +170,6 @@ if __name__ == "__main__":
 
     g = draw_box_plot(ocs_dd_long, gradients['mid_continent'])
     plt.gcf().savefig('/tmp/barplots/barplots_midcontinent.pdf')
+
+    gradient_map = draw_gradient_map(gradients)
+    gradient_map.fig.savefig('/tmp/gradients_map.pdf')
