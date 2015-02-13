@@ -11,14 +11,16 @@ from stem_pytools import STEM_parsers as sp
 from stem_pytools import na_map
 
 
-def apply_to_NAmerica_JA(fname_wrf):
-    """
-    apply Mary's fsoil equation (from calc_fsoil) to the WRF soil T
-    and soil moisture for July and Aug.
+def get_WRF_Tsoil_VWC(fname_wrf):
+    """obtain WRF soil T and soil moisture.  soil T is masked below 10 C
+    because Mary's soil flux model fitting data went no lower..
     """
 
     vwc = sp.parse_STEM_var(nc_fname=fname_wrf, varname='SMOIS')
     Tsoil = sp.parse_STEM_var(nc_fname=fname_wrf, varname='TSOIL')
+
+    ten_C = 273.15 + 10  # 10 C expressed in Kelvins
+    Tsoil['data'] = ma.masked_less(Tsoil['data'], ten_C)
 
     return(vwc, Tsoil)
 
@@ -95,10 +97,12 @@ def draw_fsoil(map, fsoil, vmin, vmax):
     lon, lat, topo = sp.parse_STEM_coordinates(
         os.path.join(os.environ['SARIKA_INPUT'], 'TOPO-124x124.nc'))
     fsoil = maskoceans(lon, lat, fsoil)
+    norm = midpt_norm.MidpointNormalize(midpoint=0.0)
     cm = map.map.pcolor(lon, lat, fsoil,
                         vmin=vmin,  # np.nanmin(fsoil),
                         vmax=vmax,  # np.nanmax(fsoil),
-                        cmap=plt.get_cmap('Blues_r'),
+                        norm=norm,
+                        cmap=plt.get_cmap('RdGy_r'),
                         latlon=True)
     cb = plt.colorbar(cm, ax=map.ax_map, extend='both')
     cb.ax.set_title('mol COS m$^{-2}$ mon$^{-1}$',
@@ -122,8 +126,8 @@ def draw_fsoil_maps(fsoil_mary, fsoil_kettle):
     # draw_fsoil(map_m, fsoil_mary, vmin, vmax)
     # draw_fsoil(map_k, fsoil_kettle, vmin, vmax)
 
-    draw_fsoil(map_m, fsoil_mary, np.nanmin(fsoil_kettle), 0.0)
-    draw_fsoil(map_k, fsoil_kettle, np.nanmin(fsoil_kettle), 0.0)
+    draw_fsoil(map_m, fsoil_mary, np.nanmin(fsoil_kettle), 6e-5)
+    draw_fsoil(map_k, fsoil_kettle, np.nanmin(fsoil_kettle), 6e-5)
     ratio = calc_ratio(fsoil_mary, fsoil_kettle)
     draw_ratio(map_r, ratio)
     return(fig, map_m, map_k, map_r)
@@ -133,7 +137,7 @@ if __name__ == "__main__":
 
     fname_wrf = os.path.join(os.environ['SARIKA_INPUT'],
                              'soil_T_moisture_JulAug.nc')
-    vwc, Tsoil = apply_to_NAmerica_JA(fname_wrf)
+    vwc, Tsoil = get_WRF_Tsoil_VWC(fname_wrf)
     fsoil = calc_fsoil(vwc['data'], Tsoil['data'])
     fsoil_itgd = integrate_mary_fsoil(fsoil, s_per_6hrs)
 
@@ -143,16 +147,3 @@ if __name__ == "__main__":
 
     plt.close('all')
     fig, map_m, map_k, map_r = draw_fsoil_maps(fsoil_itgd, fsoil_k_itgd)
-
-    map_m2 = na_map.NAMapFigure(t_str="Mary's COS F$_{soil}$")
-    lon, lat, topo = sp.parse_STEM_coordinates(
-        os.path.join(os.environ['SARIKA_INPUT'], 'TOPO-124x124.nc'))
-    m_norm = midpt_norm.MidpointNormalize(midpoint=0.0)
-    cm = map_m2.map.pcolor(lon, lat,
-                           fsoil_itgd,
-                           norm=m_norm,
-                           cmap=plt.get_cmap('PuOr'),
-                           latlon=True)
-    cb = plt.colorbar(cm, ax=map_m2.ax_map)
-    cb.ax.set_title('mol COS m$^{-2}$ mon$^{-1}$',
-                    fontdict={'fontsize': 8})
