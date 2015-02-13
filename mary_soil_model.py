@@ -90,7 +90,9 @@ def draw_ratio(map, ratio):
                         cmap=plt.get_cmap('PuOr'),
                         norm=ratio_norm,
                         latlon=True)
-    plt.colorbar(cm, ax=map.ax_map, extend='both')
+    cb = plt.colorbar(cm, ax=map.ax_map, extend='both',
+                      ticks=np.arange(-7, 9, 2))
+    cb.solids.set_edgecolor("face")
 
 
 def draw_fsoil(map, fsoil, vmin, vmax):
@@ -105,29 +107,41 @@ def draw_fsoil(map, fsoil, vmin, vmax):
                         cmap=plt.get_cmap('RdGy_r'),
                         latlon=True)
     cb = plt.colorbar(cm, ax=map.ax_map, extend='both')
+    cb.solids.set_edgecolor("face")
     cb.ax.set_title('mol COS m$^{-2}$ mon$^{-1}$',
                     fontdict={'fontsize': 8})
 
 
 def draw_fsoil_maps(fsoil_mary, fsoil_kettle):
+
+    # NAMapFigure arguments to zoom map on the Eastern USA
+    E_USA = {'lon_0': -88.6275,
+             'lat_0': 37.0722,
+             'mapwidth': 3e6,
+             'mapheight': 2.5e6}
+    kwargs = E_USA
+
     fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(18, 4))
     map_m = na_map.NAMapFigure(t_str="Mary's COS F$_{soil}$",
                                map_axis=ax[0],
-                               cb_axis=None)
+                               cb_axis=None,
+                               **kwargs)
     map_k = na_map.NAMapFigure(t_str="Kettle's COS F$_{soil}$",
                                map_axis=ax[1],
-                               cb_axis=None)
+                               cb_axis=None,
+                               **kwargs)
     map_r = na_map.NAMapFigure(t_str="Kettle's F$_{soil}$ / Mary's F$_{soil}$",
                                map_axis=ax[2],
-                               cb_axis=None)
+                               cb_axis=None,
+                               **kwargs)
 
-    # vmin = np.nanmin(np.vstack((fsoil_mary, fsoil_kettle)).flatten())
-    # vmax = np.nanmax(np.vstack((fsoil_mary, fsoil_kettle)).flatten())
-    # draw_fsoil(map_m, fsoil_mary, vmin, vmax)
-    # draw_fsoil(map_k, fsoil_kettle, vmin, vmax)
+    vmin = np.nanmin(np.vstack((fsoil_mary, fsoil_kettle)).flatten())
+    vmax = np.nanmax(np.vstack((fsoil_mary, fsoil_kettle)).flatten())
+    draw_fsoil(map_m, fsoil_mary, vmin, vmax)
+    draw_fsoil(map_k, fsoil_kettle, vmin, vmax)
 
-    draw_fsoil(map_m, fsoil_mary, np.nanmin(fsoil_kettle), 6e-5)
-    draw_fsoil(map_k, fsoil_kettle, np.nanmin(fsoil_kettle), 6e-5)
+    # draw_fsoil(map_m, fsoil_mary, np.nanmin(fsoil_kettle), 6e-5)
+    # draw_fsoil(map_k, fsoil_kettle, np.nanmin(fsoil_kettle), 6e-5)
     ratio = calc_ratio(fsoil_mary, fsoil_kettle)
     draw_ratio(map_r, ratio)
     return(fig, map_m, map_k, map_r)
@@ -147,3 +161,5 @@ if __name__ == "__main__":
 
     plt.close('all')
     fig, map_m, map_k, map_r = draw_fsoil_maps(fsoil_itgd, fsoil_k_itgd)
+
+    fig.savefig('/tmp/soil_model_maps_EUSA.pdf')
