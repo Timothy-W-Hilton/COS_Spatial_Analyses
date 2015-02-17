@@ -5,8 +5,9 @@ import numpy.ma as ma
 from datetime import datetime
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import maskoceans
+from matplotlib.ticker import FuncFormatter
 
-from timutils import midpt_norm
+from timutils import midpt_norm, scinot_format
 from stem_pytools import STEM_parsers as sp
 from stem_pytools import na_map
 
@@ -96,6 +97,10 @@ def draw_ratio(map, ratio):
 
 
 def draw_fsoil(map, fsoil, vmin, vmax):
+    pmol_per_mol = 1e12
+    fsoil = fsoil * pmol_per_mol
+    vmin = vmin * pmol_per_mol
+    vmax = vmax * pmol_per_mol
     lon, lat, topo = sp.parse_STEM_coordinates(
         os.path.join(os.environ['SARIKA_INPUT'], 'TOPO-124x124.nc'))
     fsoil = maskoceans(lon, lat, fsoil)
@@ -106,9 +111,10 @@ def draw_fsoil(map, fsoil, vmin, vmax):
                         norm=norm,
                         cmap=plt.get_cmap('RdGy_r'),
                         latlon=True)
-    cb = plt.colorbar(cm, ax=map.ax_map, extend='both')
+    cb = plt.colorbar(cm, ax=map.ax_map, extend='both',
+                      format=FuncFormatter(scinot_format.scinot_format))
     cb.solids.set_edgecolor("face")
-    cb.ax.set_title('mol COS m$^{-2}$ mon$^{-1}$',
+    cb.ax.set_title('pmol COS m$^{-2}$ mon$^{-1}$',
                     fontdict={'fontsize': 8})
 
 
