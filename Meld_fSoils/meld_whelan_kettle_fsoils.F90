@@ -15,10 +15,12 @@
 ! mentioned above must exist in the following logical names:
 !
 ! - WRF_sfc_met: must contain Tsoil and VWC in the variables TSOIL and
-!   SMOIS, respectively
+!     SMOIS, respectively
 ! - kettle_fsoil: Kettle et al (2002) COS soil flux, in the variable cos
 ! - crop_pct: Cropland percentages of Ramankutty et al (2008) in the
-!   variable crop_pct
+!     variable crop_pct
+! - fsoil_out: the file in which to write the calculated Fsoil.  Will
+!     be created; an existing file of that logical name will be deleted.
 ! ----------------------------------------------------------------------
 ! REFERENCES
 !
@@ -200,6 +202,148 @@ CONTAINS
 
   END SUBROUTINE get_melded_time_info
 
+  ! ----------------------------------------------------------------------
+  SUBROUTINE calc_whelan_fsoil(sdate_req, stime_req, fsoil)
+    ! ----------------------------------------------------------------------
+    ! DESC: calculate the Whelan soil flux for a caller-specified
+    ! timestamp from WRF soil temperature and soil moisture using the
+    ! equation in Mary's email of 5 Feb 2015.
+    ! ----------------------------------------------------------------------
+    ! INPUTS
+    !    sdate_req, stime_req; integers: the requested timestamp in
+    !       models-3 I/O API timestamp format.
+    ! OUTPUTS
+    !    fsoil; real(:, :, :, :): the 2-D soil flux for the requested timestep.
+    ! ----------------------------------------------------------------------
+    ! author: Timothy W. Hilton, thilton@ucmerced.edu, Feb 2015
+    ! ----------------------------------------------------------------------
+    USE ioapi_regrid_tools
+    USE M3UTILIO
+    IMPLICIT NONE
+
+    INTEGER, INTENT(in) :: sdate_req, stime_req
+    REAL, ALLOCATABLE, DIMENSION(:, :, :, :), INTENT(out) :: fsoil
+    INTEGER :: sdate, stime, layer, ierr
+    REAL, ALLOCATABLE, DIMENSION(:, :, :, :) :: Tsoil, VWC
+
+    layer = 1  ! these are 2-D variables, so only need layer 1
+
+
+    CALL read_STEM_var(sdate_req, stime_req, 'WRF_sfc_met', 'TSOIL', Tsoil)
+    CALL read_STEM_var(sdate_req, stime_req, 'WRF_sfc_met', 'SMOIS', VWC)
+
+    ALLOCATE(fsoil(1, 1, SIZE(Tsoil, 3), SIZE(Tsoil, 4)), STAT=ierr)
+
+    ! Mary's linear Fsoil model from her email of 5 Feb 2015
+    fsoil(1, 1, :, :) = (VWC(1, 1, :, :) * -28.77873448) + &
+         & (Tsoil(1, 1, :, :) * 0.88867741) - 252.76497309
+
+    DEALLOCATE(Tsoil)
+    DEALLOCATE(VWC)
+
+  END SUBROUTINE calc_whelan_fsoil
+
+  SUBROUTINE read_STEM_var(sdate_req, stime_req, fname, vname, arr)
+    ! ----------------------------------------------------------------------
+    ! DESC: read the Kettle soil flux for a caller-specified
+    ! timestamp
+    ! ----------------------------------------------------------------------
+    ! INPUTS
+    !    sdate_req, stime_req; integers: the requested timestamp in
+    !       models-3 I/O API timestamp format.
+    !    fname; character: logical name of the I/O API file
+    !    vname; character: name of the variable to be read
+    ! OUTPUTS
+    !    arr; real(:, :, :, :): the values for the requested timestep.
+    ! ----------------------------------------------------------------------
+    ! author: Timothy W. Hilton, thilton@ucmerced.edu, Feb 2015
+    ! ----------------------------------------------------------------------
+    USE ioapi_regrid_tools
+    USE M3UTILIO
+    IMPLICIT NONE
+
+    INTEGER, INTENT(in) :: sdate_req, stime_req
+    CHARACTER(*), INTENT(in) :: fname, vname
+    REAL, ALLOCATABLE, DIMENSION(:, :, :, :), INTENT(out) :: arr
+    INTEGER :: sdate, stime, layer, ierr
+
+    ALLOCATE(arr(1, 1, NROWS3D, NCOLS3D), STAT=ierr)
+
+    CALL open3_and_desc3(fname, FSREAD3, vname)
+    ierr = CURRSTEP(sdate_req, stime_req, SDATE3D, STIME3D, TSTEP3D, &
+         & sdate, stime)
+    layer = 1
+    ierr = READ3(fname, vname, layer, sdate, stime, arr)
+
+  END SUBROUTINE read_STEM_var
+
+  ! ----------------------------------------------------------------------
+
+  SUBROUTINE meld_fsoils(sdate, stime, tstep, nsteps, fsoil)
+
+    USE M3UTILIO
+    IMPLICIT NONE
+
+    INTEGER, INTENT(in) :: sdate, stime, tstep, nsteps
+    REAL, ALLOCATABLE, DIMENSION(:, :, :, :), INTENT(out) :: fsoil
+    INTEGER :: this_date, this_time, nrows, ncols, ierr, i
+    REAL, ALLOCATABLE, DIMENSION(:, :, :, :) :: fsoil_w, fsoil_k, pct
+
+    CALL read_STEM_var(sdate, stime, 'crop_pct', 'crop_pct', pct)
+    nrows = SIZE(pct, 3)
+    ncols = SIZE(pct, 4)
+    PRINT *, 'allocating fsoil', nsteps, 1, nrows, ncols
+    ALLOCATE(fsoil(nsteps, 1, nrows, ncols), STAT=ierr)
+
+    this_date = sdate
+    this_time = stime
+
+    DO i = 1, nsteps
+       CALL calc_whelan_fsoil(this_date, this_time, fsoil_w)
+       CALL read_STEM_var(this_date, this_time, 'kettle_fsoil', 'cos', fsoil_k)
+
+       fsoil(i, 1, :, :) = (pct(1, 1, :, :) * fsoil_w(1, 1, :, :)) + &
+            & (1-pct(1, 1, :, :) * fsoil_k(1, 1, :, :))
+
+       CALL NEXTIME( this_date, this_time, tstep)
+    ENDDO
+
+    DEALLOCATE(pct)
+
+  END SUBROUTINE meld_fsoils
+
+  SUBROUTINE write_fsoil_to_ioapi(fsoil, sdate, stime, tstep, desc)
+
+    USE M3UTILIO
+    IMPLICIT NONE
+
+    REAL, ALLOCATABLE, DIMENSION(:, :, :, :), INTENT(in) :: fsoil
+    INTEGER, INTENT(in) :: sdate, stime, tstep
+    CHARACTER(*), INTENT(in) :: desc
+    INTEGER :: ierr
+
+    ierr = DSCGRID( 'ARCNAGRID', GDNAM3D, &
+         GDTYP3D, P_ALP3D, P_BET3D, P_GAM3D, XCENT3D, YCENT3D, &
+         XORIG3D, YORIG3D, XCELL3D, YCELL3D, NCOLS3D, NROWS3D, NTHIK3D )
+    FDESC3D(1) = desc
+    nvars3d=1                 ! emission species number
+    ftype3d=GRDDED3           ! file is in gridded
+    nlays3d=1
+    vgtyp3d=VGSGPN3           ! non-hydrostatic sigma-p vertical coordinate
+    vgtop3d=1.                ! domain top in meter
+    vglvs3d(1)=1.             ! levels in meter
+    vglvs3d(2)=0.             ! levels in meter
+    tstep3d = tstep
+    units3d(1)='pmol COS m-2 s-1'
+    vname3d(1) = 'fsoil'
+    VDESC3D(1) = 'hybrid Whelan-Kettle COS Fsoil'
+    vtype3d(1)=m3real
+
+    ierr = OPEN3('fsoil_out', FSNEW3, 'meld_fsoils')
+    ierr = write3('fsoil_out', 'fsoil', sdate, stime, fsoil)
+  END SUBROUTINE write_fsoil_to_ioapi
+
+
 END MODULE HELPER_ROUTINES
 ! ----------------------------------------------------------------------
 
@@ -210,9 +354,19 @@ PROGRAM meld_whelan_kettle_soils
 
   IMPLICIT NONE
 
-  INTEGER :: i, j, i_stat, sdate, stime, tstep, nsteps
+  INTEGER :: i, j, i_stat, sdate, stime, tstep, nsteps, &
+       & date_end, time_end
+  REAL, ALLOCATABLE, DIMENSION(:, :, :, :) :: fsoil
+  CHARACTER(len=200) :: desc
 
   CALL get_melded_time_info(sdate, stime, tstep, nsteps)
-  PRINT *, 'sdate, stime, tstep, nsteps', sdate, stime, tstep, nsteps
+  print *, 'sdate, stime, tstep, nsteps', sdate, stime, tstep, nsteps
+  CALL meld_fsoils(sdate, stime, tstep, nsteps, fsoil)
+  desc = "hybrid soil COS flux from applying Whelan model (of 5 Feb 2015 email) to croplands, Kettle soil COS flux elsewhere"
+  CALL write_fsoil_to_ioapi(fsoil, sdate, stime, tstep, desc)
+  DEALLOCATE(fsoil)
 
+  i_stat = 0  ! success
+  CALL LASTTIME(sdate, stime, tstep, nsteps, date_end, time_end)
+  CALL M3EXIT('meld_fsoils', date_end, time_end, 'program completed', i_stat)
 END PROGRAM meld_whelan_kettle_soils
