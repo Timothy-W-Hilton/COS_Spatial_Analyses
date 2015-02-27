@@ -20,7 +20,7 @@ if __name__ == "__main__":
         os.environ['HOME'],
         'projects', 'COS (ecampbell3)', 'Fractional_US_Cropland',
         'Ramankutty_etal_Cropland2000_pct_124x124_IOAPI.nc')
-    outfile = 'whelan_kettle_hybrid_fsoil_124x124.nc'
+    outfile = './whelan_kettle_hybrid_fsoil_124x124.nc'
     os.environ['fsoil_out'] = outfile
     if os.path.exists(outfile):
         sys.stdout.write('removing {}'.format(outfile))

@@ -280,7 +280,23 @@ CONTAINS
   ! ----------------------------------------------------------------------
 
   SUBROUTINE meld_fsoils(sdate, stime, tstep, nsteps, fsoil)
-
+    ! ----------------------------------------------------------------------
+    ! DESC: calculate a COS soil flux from a weighted average of
+    ! Mary's soil flux (cropland areas) and Kettle's soil flux
+    ! (non-cropland areas).  Weights are calculated from Ramankutty's
+    ! cropland percentage dataset.
+    ! ----------------------------------------------------------------------
+    ! INPUTS
+    ! sdate_req, stime_req; integers: the requested timestamp
+    !   in models-3 I/O API timestamp format.
+    ! tstep; integer: time step in models-3 I/O API format (HHMMSS)
+    ! nsteps; integer: number of timesteps to calculate
+    ! OUTPUTS
+    ! fsoil; real(:, :, :, :): allocatable array into which hte
+    !   calculated soil fluxes will be placed
+    ! ----------------------------------------------------------------------
+    ! author: Timothy W. Hilton, thilton@ucmerced.edu, Feb 2015
+    ! ----------------------------------------------------------------------
     USE M3UTILIO
     IMPLICIT NONE
 
@@ -312,15 +328,32 @@ CONTAINS
 
   END SUBROUTINE meld_fsoils
 
-  SUBROUTINE write_fsoil_to_ioapi(fsoil, sdate, stime, tstep, desc)
-
+! ----------------------------------------------------------------------
+  SUBROUTINE write_fsoil_to_ioapi(fsoil, sdate_arg, stime_arg, tstep, nsteps, desc)
+    ! ----------------------------------------------------------------------
+    ! DESC: write soil flux to a Models-3 I/O API file with a
+    ! user-specified description string
+    ! ----------------------------------------------------------------------
+    ! INPUTS
+    ! sdate_arg, stime_arg; integers: the starting timestamp in
+    !   models-3 I/O API timestamp format.
+    ! tstep; integer: time step in models-3 I/O API format (HHMMSS)
+    ! nsteps; integer: number of timesteps in fsoil
+    ! fsoil; real(nstep, 1, nrows, ncols): array containing the soil
+    !   fluxes to be written
+    ! desc; character string: description of the file contents to be
+    !   placed in the Models-3 I/O API FDESC3D field.  80-character
+    !   maximum
+    ! ----------------------------------------------------------------------
+    ! author: Timothy W. Hilton, thilton@ucmerced.edu, Feb 2015
+    ! ----------------------------------------------------------------------
     USE M3UTILIO
     IMPLICIT NONE
 
     REAL, ALLOCATABLE, DIMENSION(:, :, :, :), INTENT(in) :: fsoil
-    INTEGER, INTENT(in) :: sdate, stime, tstep
+    INTEGER, INTENT(in) :: sdate_arg, stime_arg, tstep, nsteps
     CHARACTER(*), INTENT(in) :: desc
-    INTEGER :: ierr
+    INTEGER :: ierr, i, this_date, this_time
 
     ierr = DSCGRID( 'ARCNAGRID', GDNAM3D, &
          GDTYP3D, P_ALP3D, P_BET3D, P_GAM3D, XCENT3D, YCENT3D, &
@@ -333,14 +366,23 @@ CONTAINS
     vgtop3d=1.                ! domain top in meter
     vglvs3d(1)=1.             ! levels in meter
     vglvs3d(2)=0.             ! levels in meter
-    tstep3d = tstep
     units3d(1)='pmol COS m-2 s-1'
     vname3d(1) = 'fsoil'
     VDESC3D(1) = 'hybrid Whelan-Kettle COS Fsoil'
     vtype3d(1)=m3real
+    SDATE3D = sdate_arg
+    STIME3D = stime_arg
+    TSTEP3D = tstep
 
     ierr = OPEN3('fsoil_out', FSNEW3, 'meld_fsoils')
-    ierr = write3('fsoil_out', 'fsoil', sdate, stime, fsoil)
+
+    this_date = sdate_arg
+    this_time = stime_arg
+    DO i=1, nsteps
+       ierr = write3('fsoil_out', 'fsoil', this_date, this_time, &
+            & fsoil(i, 1, :, :))
+       CALL NEXTIME(this_date, this_time, tstep)
+    ENDDO
   END SUBROUTINE write_fsoil_to_ioapi
 
 
@@ -348,25 +390,26 @@ END MODULE HELPER_ROUTINES
 ! ----------------------------------------------------------------------
 
 PROGRAM meld_whelan_kettle_soils
-
+  ! ----------------------------------------------------------------------
+  ! main program.  See description at the top of this file.
+  ! ----------------------------------------------------------------------
   USE M3UTILIO
   USE HELPER_ROUTINES
 
   IMPLICIT NONE
 
-  INTEGER :: i, j, i_stat, sdate, stime, tstep, nsteps, &
+  INTEGER :: i, j, i_stat, sdate_out, stime_out, tstep, nsteps, &
        & date_end, time_end
   REAL, ALLOCATABLE, DIMENSION(:, :, :, :) :: fsoil
   CHARACTER(len=200) :: desc
 
-  CALL get_melded_time_info(sdate, stime, tstep, nsteps)
-  print *, 'sdate, stime, tstep, nsteps', sdate, stime, tstep, nsteps
-  CALL meld_fsoils(sdate, stime, tstep, nsteps, fsoil)
+  CALL get_melded_time_info(sdate_out, stime_out, tstep, nsteps)
+  CALL meld_fsoils(sdate_out, stime_out, tstep, nsteps, fsoil)
   desc = "hybrid soil COS flux from applying Whelan model (of 5 Feb 2015 email) to croplands, Kettle soil COS flux elsewhere"
-  CALL write_fsoil_to_ioapi(fsoil, sdate, stime, tstep, desc)
+  CALL write_fsoil_to_ioapi(fsoil, sdate_out, stime_out, tstep, nsteps, desc)
   DEALLOCATE(fsoil)
 
   i_stat = 0  ! success
-  CALL LASTTIME(sdate, stime, tstep, nsteps, date_end, time_end)
+  CALL LASTTIME(sdate_out, stime_out, tstep, nsteps, date_end, time_end)
   CALL M3EXIT('meld_fsoils', date_end, time_end, 'program completed', i_stat)
 END PROGRAM meld_whelan_kettle_soils
