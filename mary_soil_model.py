@@ -12,6 +12,20 @@ from stem_pytools import STEM_parsers as sp
 from stem_pytools import na_map
 
 
+def get_hybrid_fsoil(fname_hybrid_fsoil):
+    fsoil_JA = sp.parse_STEM_var(fname_hybrid_fsoil,
+                                 t0=datetime(2008, 7, 1),
+                                 t1=datetime(2008, 8, 31,
+                                             23, 59, 59),
+                                 varname='fsoil')
+    s_per_tstamp = 6 * 60 * 60  # six hours expressed as seconds
+    mol_per_pmol = 1e-12
+    n_months = 2
+    fsoil_itgd = np.sum(fsoil_JA['data'] * mol_per_pmol * s_per_tstamp,
+                        axis=0) / n_months
+    return(fsoil_itgd.squeeze())
+
+
 def get_WRF_Tsoil_VWC(fname_wrf):
     """obtain WRF soil T and soil moisture.  soil T is masked below 10 C
     because Mary's soil flux model fitting data went no lower..
@@ -86,8 +100,8 @@ def draw_ratio(map, ratio):
     ratio = maskoceans(lon, lat, ratio)
     ratio_norm = midpt_norm.MidpointNormalize(midpoint=1.0)
     cm = map.map.pcolor(lon, lat, ratio,
-                        vmin=np.percentile(ratio, 1),
-                        vmax=np.percentile(ratio, 99),
+                        vmin=-7,  # np.percentile(ratio, 1),
+                        vmax=9,  # np.percentile(ratio, 99),
                         cmap=plt.get_cmap('PuOr'),
                         norm=ratio_norm,
                         latlon=True)
@@ -118,7 +132,7 @@ def draw_fsoil(map, fsoil, vmin, vmax):
                     fontdict={'fontsize': 8})
 
 
-def draw_fsoil_maps(fsoil_mary, fsoil_kettle):
+def draw_fsoil_maps(fsoil_mary, fsoil_kettle, fsoil_hybrid):
 
     # NAMapFigure arguments to zoom map on the Eastern USA
     E_USA = {'lon_0': -88.6275,
@@ -126,8 +140,9 @@ def draw_fsoil_maps(fsoil_mary, fsoil_kettle):
              'mapwidth': 3e6,
              'mapheight': 2.5e6}
     kwargs = E_USA
+    kwargs = {}
 
-    fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(18, 4))
+    fig, ax = plt.subplots(nrows=1, ncols=5, figsize=(24, 6))
     map_m = na_map.NAMapFigure(t_str="Mary's COS F$_{soil}$",
                                map_axis=ax[0],
                                cb_axis=None,
@@ -136,21 +151,38 @@ def draw_fsoil_maps(fsoil_mary, fsoil_kettle):
                                map_axis=ax[1],
                                cb_axis=None,
                                **kwargs)
-    map_r = na_map.NAMapFigure(t_str="Kettle's F$_{soil}$ / Mary's F$_{soil}$",
+    map_h = na_map.NAMapFigure(t_str="Mary/Kettle 'hybrid' COS F$_{soil}$",
                                map_axis=ax[2],
                                cb_axis=None,
                                **kwargs)
+    map_r1 = na_map.NAMapFigure(t_str="Kettle's F$_{soil}$ / "
+                                "Mary's F$_{soil}$",
+                                map_axis=ax[3],
+                                cb_axis=None,
+                                **kwargs)
+    map_r2 = na_map.NAMapFigure(t_str="Kettle's F$_{soil}$ / "
+                                "hybrid F$_{soil}$",
+                                map_axis=ax[4],
+                                cb_axis=None,
+                                **kwargs)
 
-    vmin = np.nanmin(np.vstack((fsoil_mary, fsoil_kettle)).flatten())
-    vmax = np.nanmax(np.vstack((fsoil_mary, fsoil_kettle)).flatten())
+    vmin = np.nanmin(np.vstack((fsoil_mary,
+                                fsoil_kettle,
+                                fsoil_hybrid)).flatten())
+    vmax = np.nanmax(np.vstack((fsoil_mary,
+                                fsoil_kettle,
+                                fsoil_hybrid)).flatten())
     draw_fsoil(map_m, fsoil_mary, vmin, vmax)
     draw_fsoil(map_k, fsoil_kettle, vmin, vmax)
+    draw_fsoil(map_h, fsoil_hybrid, vmin, vmax)
 
     # draw_fsoil(map_m, fsoil_mary, np.nanmin(fsoil_kettle), 6e-5)
     # draw_fsoil(map_k, fsoil_kettle, np.nanmin(fsoil_kettle), 6e-5)
-    ratio = calc_ratio(fsoil_mary, fsoil_kettle)
-    draw_ratio(map_r, ratio)
-    return(fig, map_m, map_k, map_r)
+    ratio1 = calc_ratio(fsoil_mary, fsoil_kettle)
+    ratio2 = calc_ratio(fsoil_hybrid, fsoil_kettle)
+    draw_ratio(map_r1, ratio1)
+    draw_ratio(map_r2, ratio2)
+    return(fig, map_m, map_k, map_h, map_r1, map_r2, ratio1, ratio2)
 
 if __name__ == "__main__":
     s_per_6hrs = 6 * 60 * 60  # six hours expressed in seconds
@@ -165,7 +197,14 @@ if __name__ == "__main__":
         os.environ['SARIKA_INPUT'],
         'surfem-124x124-kettle-soil-cos_2008_2009.nc'))
 
-    plt.close('all')
-    fig, map_m, map_k, map_r = draw_fsoil_maps(fsoil_itgd, fsoil_k_itgd)
+    fsoil_hybrid_itgd = get_hybrid_fsoil(os.path.join(
+        os.environ['SARIKA_INPUT'],
+        'whelan_kettle_hybrid_fsoil_124x124.nc'))
 
-    fig.savefig('/tmp/soil_model_maps_EUSA.pdf')
+    plt.close('all')
+    fig, map_m, map_k, map_h, map_r1, map_r2, ratio1, ratio2 = draw_fsoil_maps(
+        fsoil_itgd,
+        fsoil_k_itgd,
+        fsoil_hybrid_itgd)
+
+    fig.savefig('/tmp/soil_model_maps.pdf')
