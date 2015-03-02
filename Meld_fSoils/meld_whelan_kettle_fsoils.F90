@@ -304,6 +304,7 @@ CONTAINS
     REAL, ALLOCATABLE, DIMENSION(:, :, :, :), INTENT(out) :: fsoil
     INTEGER :: this_date, this_time, nrows, ncols, ierr, i
     REAL, ALLOCATABLE, DIMENSION(:, :, :, :) :: fsoil_w, fsoil_k, pct
+    REAL :: pmol_per_mol
 
     CALL read_STEM_var(sdate, stime, 'crop_pct', 'crop_pct', pct)
     nrows = SIZE(pct, 3)
@@ -317,9 +318,11 @@ CONTAINS
     DO i = 1, nsteps
        CALL calc_whelan_fsoil(this_date, this_time, fsoil_w)
        CALL read_STEM_var(this_date, this_time, 'kettle_fsoil', 'cos', fsoil_k)
+       pmol_per_mol = 1e12
+       fsoil_k(:, :, :, :) = fsoil_k(:, :, :, :) * pmol_per_mol
 
        fsoil(i, 1, :, :) = (pct(1, 1, :, :) * fsoil_w(1, 1, :, :)) + &
-            & (1-pct(1, 1, :, :) * fsoil_k(1, 1, :, :))
+            & ((1-pct(1, 1, :, :)) * fsoil_k(1, 1, :, :))
 
        CALL NEXTIME( this_date, this_time, tstep)
     ENDDO
