@@ -9,6 +9,7 @@ import warnings
 
 import stem_pytools.ecampbell300_data_paths as edp
 from stem_pytools import STEM_parsers as sp
+from stem_pytools import aqout_postprocess as aq
 from stem_pytools.na_map import NAMapFigure
 from stem_pytools import calc_drawdown
 from timutils import colormap_nlevs
@@ -29,14 +30,6 @@ def colorbar_from_cmap_norm(cmap, norm, cax, format, vals):
     dummy_scm.set_array(vals)
     cb = plt.colorbar(dummy_scm, cax=cax, format=format)
     return(cb)
-
-
-def load_aqout_data(fname='/home/thilton/Data/STEM/aq_out_data.cpickle'):
-    import cPickle
-    f = open(fname, 'rb')
-    all_data = cPickle.load(f)
-    f.close()
-    return(all_data)
 
 
 def get_JulAug_total_flux(which_flux='GPP', models=None):
@@ -178,7 +171,7 @@ def daily_to_JulAug(arr):
 def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True):
     if get_dd:
 
-        cos_conc_daily = load_aqout_data(aqout_path)
+        cos_conc_daily = aq.load_aqout_data(aqout_path)
 
         # aggregate daily means to a single July-August mean
         cos_conc = cos_conc_daily['cos_mean']
