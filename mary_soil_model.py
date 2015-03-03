@@ -6,10 +6,31 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import maskoceans
 from matplotlib.ticker import FuncFormatter
+import netCDF4
 
 from timutils import midpt_norm, scinot_format
 from stem_pytools import STEM_parsers as sp
 from stem_pytools import na_map
+
+
+def draw_crop_pct(fname_crop_pct, map_obj, mask = None):
+    nc = netCDF4.Dataset(fname_crop_pct)
+    pct = nc.variables['crop_pct'][...].squeeze()
+    nc.close()
+
+    if mask is not None:
+        pct = ma.masked_where(mask, pct)
+
+    # pct = sp.parse_STEM_var(fname_crop_pct, varname='crop_pct')
+    lon, lat, topo = sp.parse_STEM_coordinates(
+        os.path.join(os.environ['SARIKA_INPUT'], 'TOPO-124x124.nc'))
+    cm = map_obj.map.pcolormesh(lon, lat, pct,
+                                cmap=plt.get_cmap('Blues'),
+                                vmin=0.0,
+                                vmax=1.0,
+                                latlon=True)
+    cb = plt.colorbar(cm, ax=map_obj.ax_map)
+    cb.solids.set_edgecolor("face")
 
 
 def get_hybrid_fsoil(fname_hybrid_fsoil):
@@ -151,27 +172,32 @@ def draw_fsoil_maps(fsoil_mary, fsoil_kettle, fsoil_hybrid):
                                map_axis=ax[1],
                                cb_axis=None,
                                **kwargs)
-    map_h = na_map.NAMapFigure(t_str="Mary/Kettle 'hybrid' COS F$_{soil}$",
+    map_h = na_map.NAMapFigure(t_str="'hybrid' COS F$_{soil}$",
                                map_axis=ax[2],
                                cb_axis=None,
                                **kwargs)
-    map_r1 = na_map.NAMapFigure(t_str="Kettle's F$_{soil}$ / "
-                                "Mary's F$_{soil}$",
-                                map_axis=ax[3],
-                                cb_axis=None,
-                                **kwargs)
+    map_c = na_map.NAMapFigure(t_str=("cropland fraction\n"
+                                      "[Ramankutty et al (2008)]"),
+                               map_axis=ax[3],
+                               cb_axis=None,
+                               **kwargs)
     map_r2 = na_map.NAMapFigure(t_str="Kettle's F$_{soil}$ / "
                                 "hybrid F$_{soil}$",
                                 map_axis=ax[4],
                                 cb_axis=None,
                                 **kwargs)
 
-    vmin = np.nanmin(np.vstack((fsoil_mary,
-                                fsoil_kettle,
-                                fsoil_hybrid)).flatten())
-    vmax = np.nanmax(np.vstack((fsoil_mary,
-                                fsoil_kettle,
-                                fsoil_hybrid)).flatten())
+    draw_crop_pct(os.path.join(
+        os.environ['SARIKA_INPUT'],
+        'Cropland_pct',
+        'Ramankutty_etal_Cropland2000_pct_124x124_IOAPI.nc'),
+                  map_c,
+                  mask=np.logical_or(fsoil_kettle.mask, fsoil_mary.mask))
+
+    vmin = np.nanmin(np.ma.vstack((fsoil_kettle,
+                                   fsoil_hybrid)).flatten())
+    vmax = np.nanmax(np.ma.vstack((fsoil_kettle,
+                                   fsoil_hybrid)).flatten())
     draw_fsoil(map_m, fsoil_mary, vmin, vmax)
     draw_fsoil(map_k, fsoil_kettle, vmin, vmax)
     draw_fsoil(map_h, fsoil_hybrid, vmin, vmax)
@@ -180,9 +206,8 @@ def draw_fsoil_maps(fsoil_mary, fsoil_kettle, fsoil_hybrid):
     # draw_fsoil(map_k, fsoil_kettle, np.nanmin(fsoil_kettle), 6e-5)
     ratio1 = calc_ratio(fsoil_mary, fsoil_kettle)
     ratio2 = calc_ratio(fsoil_hybrid, fsoil_kettle)
-    draw_ratio(map_r1, ratio1)
     draw_ratio(map_r2, ratio2)
-    return(fig, map_m, map_k, map_h, map_r1, map_r2, ratio1, ratio2)
+    return(fig, map_m, map_k, map_h, map_c, map_r2, ratio1, ratio2)
 
 if __name__ == "__main__":
     s_per_6hrs = 6 * 60 * 60  # six hours expressed in seconds
@@ -200,11 +225,13 @@ if __name__ == "__main__":
     fsoil_hybrid_itgd = get_hybrid_fsoil(os.path.join(
         os.environ['SARIKA_INPUT'],
         'whelan_kettle_hybrid_fsoil_124x124.nc'))
-
+    fsoil_hybrid_itgd = ma.masked_where(np.logical_or(fsoil_k_itgd.mask,
+                                                      fsoil_itgd.mask),
+                                        fsoil_hybrid_itgd)
     plt.close('all')
     fig, map_m, map_k, map_h, map_r1, map_r2, ratio1, ratio2 = draw_fsoil_maps(
         fsoil_itgd,
         fsoil_k_itgd,
         fsoil_hybrid_itgd)
 
-    fig.savefig('/tmp/soil_model_maps.pdf')
+    fig.savefig('/tmp/soil_model_maps.png')
