@@ -235,20 +235,21 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     # fcos_vmax = np.percentile(np.dstack([fCOS[k] for k in models]).flatten(), 99)
     fcos_vmax = np.dstack([fCOS[k] for k in models]).flatten().max()
     cos_vmin = 0.0
-    cos_vmax = np.percentile(np.dstack([cos[k] for k in models]).flatten(), 99)
-    cos_vmax = 80
+    cos_vmax = np.dstack([cos[k] for k in models]).flatten().max()
+    # cos_vmax = np.percentile(np.dstack([cos[k] for k in models]).flatten(), 99)
+    # cos_vmax = 80
 
     print('ceil(max): {}'.format(
         np.ceil(np.dstack([cos[k] for k in models]).flatten().max())))
 
-    fig, ax, cbar_ax = setup_panel_array(nrows=4, ncols=len(models))
+    fig, ax, cbar_ax = setup_panel_array(nrows=3, ncols=len(models))
     map_objs = np.empty(ax.shape, dtype='object')
 
     gpp_cmap, gpp_norm = colormap_nlevs.setup_colormap_with_zeroval(
         gpp_vmin, gpp_vmax,
         nlevs=5,
         cmap=plt.get_cmap('Greens'),
-        extend='neither')
+        extend='max')
     print('nlevs: {}'.format(5))
 
     mod_objs = edp.get_runs()
@@ -257,7 +258,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
         print("plotting {model} GPP".format(model=models_str[i]))
 
         map_objs[0, i], cm = draw_map(
-            t_str='{}, LRU={}'.format(models[i],
+            t_str='{}, LRU={}'.format(models_str[i],
                                       mod_objs[this_mod].LRU),
             ax=ax[0, i],   # axis 0 is left-most on row 3
             data=gpp[this_mod],
@@ -272,7 +273,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
                                  cbar_ax[0, 0],
                                  '%0.2f',
                                  all_gpp)
-    t = cbar_ax[0, 0].set_title('GPP (Kg C m$^{-2}$ mon$^{-1}$)\n')
+    t = cbar_ax[0, 0].set_title('GPP ($\mu$mol C m$^{-2}$ s$^{-1}$)\n')
     t.set_y(1.09)
     t.set_fontsize(20)
 
@@ -304,9 +305,9 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     cos_cmap, cos_norm = colormap_nlevs.setup_colormap(
         cos_vmin,
         cos_vmax,
-        nlevs=10,
+        nlevs=5,
         cmap=plt.get_cmap('Oranges'),
-        extend='neither')
+        extend='max')
     for i, this_mod in enumerate(models):
         # plot [COS] drawdown maps
         print("plotting {model} COS drawdown".format(model=models_str[i]))
@@ -322,27 +323,13 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
                                       cmap=cos_cmap,
                                       norm=cos_norm)
 
-    all_dd = np.dstack([v for v in cos.values()]).flatten()
+        all_dd = np.dstack([v for v in cos.values()]).flatten()
     cb = colorbar_from_cmap_norm(cos_cmap,
                                  cos_norm,
                                  cbar_ax[2, 0],
                                  '%d',
                                  all_dd)
     t = cbar_ax[2, 0].set_title('STEM [COS] drawdown (ppt)')
-    t.set_y(1.09)
-    t.set_fontsize(20)
-
-    # show observed drawdown in separate map
-    for i, this_mod in enumerate(models):
-        map_objs[3, i] = NAMapFigure(t_str=None,
-                                     map_axis=ax[3, i],
-                                     fast_or_pretty='fast')
-    cb = colorbar_from_cmap_norm(cos_cmap,
-                                 cos_norm,
-                                 cbar_ax[3, 0],
-                                 '%d',
-                                 all_dd)
-    t = cbar_ax[3, 0].set_title('obs [COS] drawdown (ppt)')
     t.set_y(1.09)
     t.set_fontsize(20)
     return(fig, map_objs, cos_cmap, cos_norm)
@@ -369,9 +356,8 @@ if __name__ == "__main__":
     [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
         models=['canibis_161', 'kettle_161', 'casa_m15_161',
                 'casa_gfed_135', 'casa_gfed_161', 'casa_gfed_187'],
-        models_str=['Can-IBIS (LRU = 1.61)', 'Kettle (LRU = 1.61)',
-                    'CASA-m15 (LRU=1.61)', 'CASA-GFED3 (LRU=1.35)',
-                    'CASA-GFED3 (LRU = 1.61)', 'CASA-GFED3 (LRU = 1.87)'])
+        models_str=['Can-IBIS', 'Kettle', 'CASA-m15',
+                    'CASA-GFED3', 'CASA-GFED3', 'CASA-GFED3'])
     fig.savefig('/tmp/BASC_fig.pdf')
     # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
     #     models=['kettle_C4pctLRU', 'casa_gfed_C4pctLRU', 'MPI_C4pctLRU',
