@@ -245,9 +245,9 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     fig, ax, cbar_ax = setup_panel_array(nrows=3, ncols=len(models))
     map_objs = np.empty(ax.shape, dtype='object')
 
-    gpp_cmap, gpp_norm = colormap_nlevs.setup_colormap_with_zeroval(
+    gpp_cmap, gpp_norm = colormap_nlevs.setup_colormap(
         gpp_vmin, gpp_vmax,
-        nlevs=5,
+        nlevs=6,
         cmap=plt.get_cmap('Greens'),
         extend='max')
     print('nlevs: {}'.format(5))
@@ -277,9 +277,9 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     t.set_y(1.09)
     t.set_fontsize(20)
 
-    fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap_with_zeroval(
+    fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap(
         fcos_vmin, fcos_vmax,
-        nlevs=5,
+        nlevs=6,
         cmap=plt.get_cmap('Blues'),
         extend='neither')
     for i, this_mod in enumerate(models):
@@ -305,7 +305,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     cos_cmap, cos_norm = colormap_nlevs.setup_colormap(
         cos_vmin,
         cos_vmax,
-        nlevs=5,
+        nlevs=6,
         cmap=plt.get_cmap('Oranges'),
         extend='max')
     for i, this_mod in enumerate(models):
