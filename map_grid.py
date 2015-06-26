@@ -80,12 +80,20 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
                                      varname=gross_flux_varname,
                                      t0=t0,
                                      t1=t1)
+            # convert GPP from Kg C m-2 s-1 to umol m-2 s-1
+            C_mol_per_g = (1.0 / 12.0107)
+            umol_per_mol = 1e6
+            g_per_kg = 1e3
+            C_umol_per_kg = g_per_kg * C_mol_per_g * umol_per_mol
+            flux['data'] = flux['data'] * C_umol_per_kg
+
         elif which_flux is 'fCOS':
             gross_flux_varname = 'cos'
             flux = sp.parse_STEM_var(nc_fname=runs[k].fcos_path,
                                      varname=gross_flux_varname,
                                      t0=t0,
                                      t1=t1)
+            # convert fCOS from mol m-2 s-1 to pmol m-2 s-1
             pmol_per_mol = 1e12
             flux['data'] = flux['data'] * pmol_per_mol
 
@@ -221,14 +229,14 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
                       'CASA-GFED3']
 
     gpp_vmin = 0.0
-    # gpp_vmax = np.percentile(np.dstack([GPP[k] for k in models]).flatten(), 99)
-    gpp_vmax = 0.45  # np.dstack([GPP[k] for k in models]).flatten().max()
+    gpp_vmax = np.percentile(np.dstack([gpp[k] for k in models]).flatten(), 99)
+    #gpp_vmax = 0.45  # np.dstack([GPP[k] for k in models]).flatten().max()
     fcos_vmin = 0.0  # np.dstack([fCOS[k] for k in models]).flatten().min()
     # fcos_vmax = np.percentile(np.dstack([fCOS[k] for k in models]).flatten(), 99)
     fcos_vmax = np.dstack([fCOS[k] for k in models]).flatten().max()
     cos_vmin = 0.0
     cos_vmax = np.percentile(np.dstack([cos[k] for k in models]).flatten(), 99)
-    cos_vmax = 80#
+    cos_vmax = 80
 
     print('ceil(max): {}'.format(
         np.ceil(np.dstack([cos[k] for k in models]).flatten().max())))
@@ -287,7 +295,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     cb = colorbar_from_cmap_norm(fcos_cmap,
                                  fcos_norm,
                                  cbar_ax[1, 0],
-                                 '%0.5e',
+                                 '%d',
                                  all_fcos)
     t = cbar_ax[1, 0].set_title('$F_{plant}$ (pmol COS m$^{-2}$ s$^{-1})$')
     t.set_y(1.09)
@@ -349,7 +357,6 @@ def map_grid_main(models=None, models_str=None, aqout_data=None):
             aqout_data = os.path.join(os.getenv('HOME'), 'thilton', 'Data',
                                       'STEM', 'aq_out_data.cpickle')
     cos_dd, gpp, fCOS = assemble_data(aqout_data, models=models)
-
     fig, map_objs, cos_cmap, cos_norm = draw_all_panels(cos_dd, gpp, fCOS,
                                                         models, models_str)
     return(fig, map_objs, cos_cmap, cos_norm)
@@ -360,10 +367,11 @@ if __name__ == "__main__":
     models_str = [v.model for v in runs.values()]
     # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(models, models_str)
     [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
-        models=['canibis_161', 'casa_gfed_135',
-                'casa_gfed_161', 'casa_gfed_187'],
-        models_str=['Can-IBIS', 'CASA-GFED3',
-                    'CASA-GFED3', 'CASA-GFED3'])
+        models=['canibis_161', 'kettle_161', 'casa_m15_161',
+                'casa_gfed_135', 'casa_gfed_161', 'casa_gfed_187'],
+        models_str=['Can-IBIS (LRU = 1.61)', 'Kettle (LRU = 1.61)',
+                    'CASA-m15 (LRU=1.61)', 'CASA-GFED3 (LRU=1.35)',
+                    'CASA-GFED3 (LRU = 1.61)', 'CASA-GFED3 (LRU = 1.87)'])
     fig.savefig('/tmp/BASC_fig.pdf')
     # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
     #     models=['kettle_C4pctLRU', 'casa_gfed_C4pctLRU', 'MPI_C4pctLRU',
