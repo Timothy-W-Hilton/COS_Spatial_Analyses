@@ -68,10 +68,7 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
         models = runs.keys()
     models.sort()
 
-    stem_lon, stem_lat, topo = sp.parse_STEM_coordinates(
-        os.path.join(os.getenv('SARIKA_INPUT'), 'TOPO-124x124.nc'))
-
-    annsum = {}
+    flux_mean = {}
     for k in models:
 
         print 'reading ', runs[k].gpp_path
@@ -92,15 +89,11 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
             pmol_per_mol = 1e12
             flux['data'] = flux['data'] * pmol_per_mol
 
-        secs_per_tstep = np.int(np.round((t1 - t0).total_seconds()) /
-                                flux['data'].shape[0])
-
-        annsum[k] = flux['data'].squeeze().sum(axis=0) * secs_per_tstep
-        # annsum[k] = ma.masked_less(annsum[k], -1e20)
-        if annsum[k].sum() < 0:
-            annsum[k] = annsum[k] * -1.0
-        print "{} SECS_PER_TSTEP: {}".format(k, secs_per_tstep)
-    return(annsum)
+        flux_mean[k] = flux['data'].squeeze().mean(axis=0)
+        # flux_mean[k] = ma.masked_less(flux_mean[k], -1e20)
+        if flux_mean[k].sum() < 0:
+            flux_mean[k] = flux_mean[k] * -1.0
+    return(flux_mean)
 
 
 def draw_map(t_str,
@@ -176,7 +169,8 @@ def daily_to_JulAug(arr):
     return(arr_out)
 
 
-def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True):
+def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True,
+                  models=None):
     if get_dd:
 
         cos_conc_daily = load_aqout_data(aqout_path)
@@ -193,11 +187,11 @@ def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True):
         cos_conc = None
     try:
         if get_GPP:
-            gpp = get_JulAug_total_flux(which_flux='GPP')
+            gpp = get_JulAug_total_flux(which_flux='GPP', models=models)
         else:
             gpp = None
         if get_fCOS:
-            fCOS = get_JulAug_total_flux(which_flux='fCOS')
+            fCOS = get_JulAug_total_flux(which_flux='fCOS', models=models)
         else:
             fCOS = None
     except:
@@ -353,23 +347,8 @@ def map_grid_main(models=None, models_str=None, aqout_data=None):
                                        'STEM', 'aq_out_data.cpickle'))
         else:
             aqout_data = os.path.join(os.getenv('HOME'), 'thilton', 'Data',
-                                      'STEM', 'aq_out_data_C4.cpickle')
-    cos_dd, gpp, fCOS = assemble_data(aqout_data)
-
-    # convert July-August GPP time-integrated fluxes to flux per month.
-    # This is consistent with e.g. Huntzinger et al (2012) and Beer et
-    # al (2010), which allows quick comparisons without unit
-    # conversions.  Convert fCOS to pmol m-2 s-1 for east comparison
-    # with Campbell et al 2008.
-    n_months = 2.0  # July and August
-    n_days = 62  # days in July and Aug
-    hours_per_day = 24
-    mins_per_hour = 60
-    secs_per_min = 60
-    secs_per_JulAug = n_days * hours_per_day * mins_per_hour * secs_per_min
-    for k in cos_dd.keys():
-        fCOS[k] = fCOS[k] / secs_per_JulAug
-        gpp[k] = gpp[k] / n_months
+                                      'STEM', 'aq_out_data.cpickle')
+    cos_dd, gpp, fCOS = assemble_data(aqout_data, models=models)
 
     fig, map_objs, cos_cmap, cos_norm = draw_all_panels(cos_dd, gpp, fCOS,
                                                         models, models_str)
@@ -380,14 +359,14 @@ if __name__ == "__main__":
     models = [k for k in runs.keys()]
     models_str = [v.model for v in runs.values()]
     # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(models, models_str)
-    # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
-    #     models=['canibis_161', 'casa_gfed_135',
-    #             'casa_gfed_161', 'casa_gfed_187'],
-    #     models_str=['Can-IBIS', 'CASA-GFED3',
-    #                 'CASA-GFED3', 'CASA-GFED3'])
-    # fig.savefig('/tmp/BASC_fig.pdf')
     [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
-        models=['kettle_C4pctLRU', 'casa_gfed_C4pctLRU', 'MPI_C4pctLRU',
-                'casa_m15_C4pctLRU', 'canibis_C4pctLRU'],
-        models_str=['Kettle', 'CASA-GFED3', 'MPI', 'CASA-m15', 'Can-IBIS'])
+        models=['canibis_161', 'casa_gfed_135',
+                'casa_gfed_161', 'casa_gfed_187'],
+        models_str=['Can-IBIS', 'CASA-GFED3',
+                    'CASA-GFED3', 'CASA-GFED3'])
     fig.savefig('/tmp/BASC_fig.pdf')
+    # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
+    #     models=['kettle_C4pctLRU', 'casa_gfed_C4pctLRU', 'MPI_C4pctLRU',
+    #             'casa_m15_C4pctLRU', 'canibis_C4pctLRU'],
+    #     models_str=['Kettle', 'CASA-GFED3', 'MPI', 'CASA-m15', 'Can-IBIS'])
+    # fig.savefig('/tmp/BASC_fig.pdf')
