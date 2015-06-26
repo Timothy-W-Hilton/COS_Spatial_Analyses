@@ -31,7 +31,7 @@ def colorbar_from_cmap_norm(cmap, norm, cax, format, vals):
     return(cb)
 
 
-def load_aqout_data(fname='/home/thilton/Data/STEM/aq_out_data.cpickle'):
+def load_aqout_data(fname='/home/ecampbell_lab/thilton/Data/STEM/aq_out_data.cpickle'):
     import cPickle
     f = open(fname, 'rb')
     all_data = cPickle.load(f)
@@ -113,7 +113,8 @@ def draw_map(t_str,
 
     map = NAMapFigure(t_str=t_str,
                       cb_axis=None,
-                      map_axis=ax)
+                      map_axis=ax,
+                      fast_or_pretty='fast')
 
     lon, lat, topo = sp.parse_STEM_coordinates(
         os.path.join(os.getenv('SARIKA_INPUT'), 'TOPO-124x124.nc'))
@@ -292,7 +293,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     cb = colorbar_from_cmap_norm(fcos_cmap,
                                  fcos_norm,
                                  cbar_ax[1, 0],
-                                 '%d',
+                                 '%0.5e',
                                  all_fcos)
     t = cbar_ax[1, 0].set_title('$F_{plant}$ (pmol COS m$^{-2}$ s$^{-1})$')
     t.set_y(1.09)
@@ -332,7 +333,8 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     # show observed drawdown in separate map
     for i, this_mod in enumerate(models):
         map_objs[3, i] = NAMapFigure(t_str=None,
-                                     map_axis=ax[3, i])
+                                     map_axis=ax[3, i],
+                                     fast_or_pretty='fast')
     cb = colorbar_from_cmap_norm(cos_cmap,
                                  cos_norm,
                                  cbar_ax[3, 0],
@@ -350,8 +352,8 @@ def map_grid_main(models=None, models_str=None, aqout_data=None):
             aqout_data = (os.path.join(os.getenv('HOME'), 'work', 'Data',
                                        'STEM', 'aq_out_data.cpickle'))
         else:
-            aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
-                                      'aq_out_data_C4.cpickle')
+            aqout_data = os.path.join(os.getenv('HOME'), 'thilton', 'Data',
+                                      'STEM', 'aq_out_data_C4.cpickle')
     cos_dd, gpp, fCOS = assemble_data(aqout_data)
 
     # convert July-August GPP time-integrated fluxes to flux per month.
@@ -374,9 +376,18 @@ def map_grid_main(models=None, models_str=None, aqout_data=None):
     return(fig, map_objs, cos_cmap, cos_norm)
 
 if __name__ == "__main__":
-    basc_runs = edp.get_BASC_runs()
-    models = [k for k in basc_runs.keys()]
-    models_str = [v.model for v in basc_runs.values()]
-    map_grid_main(models, models_str)
-    # map_grid_main(models=['canibis_161', 'casa_gfed_135'],
-    #               models_str=['Can-IBIS', 'CASA-GFED3'])
+    runs = edp.get_runs()
+    models = [k for k in runs.keys()]
+    models_str = [v.model for v in runs.values()]
+    # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(models, models_str)
+    # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
+    #     models=['canibis_161', 'casa_gfed_135',
+    #             'casa_gfed_161', 'casa_gfed_187'],
+    #     models_str=['Can-IBIS', 'CASA-GFED3',
+    #                 'CASA-GFED3', 'CASA-GFED3'])
+    # fig.savefig('/tmp/BASC_fig.pdf')
+    [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
+        models=['kettle_C4pctLRU', 'casa_gfed_C4pctLRU', 'MPI_C4pctLRU',
+                'casa_m15_C4pctLRU', 'canibis_C4pctLRU'],
+        models_str=['Kettle', 'CASA-GFED3', 'MPI', 'CASA-m15', 'Can-IBIS'])
+    fig.savefig('/tmp/BASC_fig.pdf')
