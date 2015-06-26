@@ -66,16 +66,16 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
 
     if models is None:
         models = runs.keys()
-    models.sort()
+    # models.sort()
 
     flux_mean = {}
     for k in models:
 
-        print 'reading ', runs[k].gpp_path
         t0 = Jul1
         t1 = Aug31
         if which_flux is 'GPP':
             gross_flux_varname = sp.get_CO2grossflux_varname(runs[k].gpp_path)
+            print 'reading ', runs[k].gpp_path
             flux = sp.parse_STEM_var(nc_fname=runs[k].gpp_path,
                                      varname=gross_flux_varname,
                                      t0=t0,
@@ -89,6 +89,7 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
 
         elif which_flux is 'fCOS':
             gross_flux_varname = 'cos'
+            print 'reading ', runs[k].fcos_path
             flux = sp.parse_STEM_var(nc_fname=runs[k].fcos_path,
                                      varname=gross_flux_varname,
                                      t0=t0,
@@ -96,6 +97,9 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
             # convert fCOS from mol m-2 s-1 to pmol m-2 s-1
             pmol_per_mol = 1e12
             flux['data'] = flux['data'] * pmol_per_mol
+            print('model: {}; mean fCOS: {}\n'.format(k,
+                                                      np.mean(flux['data'])))
+
 
         flux_mean[k] = flux['data'].squeeze().mean(axis=0)
         # flux_mean[k] = ma.masked_less(flux_mean[k], -1e20)
@@ -211,6 +215,7 @@ def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True,
 
 
 def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
+
     if models is None:
         models = ['MPI_161',
                   'canibis_161',
@@ -255,7 +260,8 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     mod_objs = edp.get_runs()
     for i, this_mod in enumerate(models):
         # plot GPP drawdown maps
-        print("plotting {model} GPP".format(model=models_str[i]))
+        print("plotting {model}({k}) GPP".format(model=models_str[i],
+                                                 k=models[i]))
 
         map_objs[0, i], cm = draw_map(
             t_str='{}, LRU={}'.format(models_str[i],
@@ -284,7 +290,8 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
         extend='neither')
     for i, this_mod in enumerate(models):
         # plot fCOS drawdown maps
-        print("plotting {model} fCOS".format(model=models_str[i]))
+        print("plotting {model}({k}) GPP".format(model=models_str[i],
+                                                 k=models[i]))
         map_objs[1, i], cm = draw_map(t_str=None,
                                       ax=ax[1, i],
                                       data=fCOS[this_mod],
@@ -310,7 +317,8 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
         extend='max')
     for i, this_mod in enumerate(models):
         # plot [COS] drawdown maps
-        print("plotting {model} COS drawdown".format(model=models_str[i]))
+        print("plotting {model}({k}) GPP".format(model=models_str[i],
+                                                 k=models[i]))
         this_cos = cos[this_mod]
         if any(this_cos.flatten() < 0):
             warnings.warn('COS drawdown values < 0.0 set to 0.0')
@@ -336,6 +344,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
 
 
 def map_grid_main(models=None, models_str=None, aqout_data=None):
+
     if aqout_data is None:
         if 'Timothys-MacBook-Air.local' in socket.gethostname():
             aqout_data = (os.path.join(os.getenv('HOME'), 'work', 'Data',
@@ -344,6 +353,7 @@ def map_grid_main(models=None, models_str=None, aqout_data=None):
             aqout_data = os.path.join(os.getenv('HOME'), 'thilton', 'Data',
                                       'STEM', 'aq_out_data.cpickle')
     cos_dd, gpp, fCOS = assemble_data(aqout_data, models=models)
+
     fig, map_objs, cos_cmap, cos_norm = draw_all_panels(cos_dd, gpp, fCOS,
                                                         models, models_str)
     return(fig, map_objs, cos_cmap, cos_norm)
@@ -355,7 +365,7 @@ if __name__ == "__main__":
     # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(models, models_str)
     [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
         models=['canibis_161', 'kettle_161', 'casa_m15_161',
-                'casa_gfed_135', 'casa_gfed_161', 'casa_gfed_187'],
+                'casa_gfed_161', 'casa_gfed_135', 'casa_gfed_187'],
         models_str=['Can-IBIS', 'Kettle', 'CASA-m15',
                     'CASA-GFED3', 'CASA-GFED3', 'CASA-GFED3'])
     fig.savefig('/tmp/BASC_fig.pdf')
