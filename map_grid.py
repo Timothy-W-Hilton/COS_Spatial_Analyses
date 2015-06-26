@@ -31,7 +31,7 @@ def colorbar_from_cmap_norm(cmap, norm, cax, format, vals):
     return(cb)
 
 
-def load_aqout_data(fname='/home/thilton/Data/STEM/aq_out_data.cpickle'):
+def load_aqout_data(fname='/home/ecampbell_lab/thilton/Data/STEM/aq_out_data.cpickle'):
     import cPickle
     f = open(fname, 'rb')
     all_data = cPickle.load(f)
@@ -66,41 +66,46 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
 
     if models is None:
         models = runs.keys()
-    models.sort()
+    # models.sort()
 
-    stem_lon, stem_lat, topo = sp.parse_STEM_coordinates(
-        os.path.join(os.getenv('SARIKA_INPUT'), 'TOPO-124x124.nc'))
-
-    annsum = {}
+    flux_mean = {}
     for k in models:
 
-        print 'reading ', runs[k].gpp_path
         t0 = Jul1
         t1 = Aug31
         if which_flux is 'GPP':
             gross_flux_varname = sp.get_CO2grossflux_varname(runs[k].gpp_path)
+            print 'reading ', runs[k].gpp_path
             flux = sp.parse_STEM_var(nc_fname=runs[k].gpp_path,
                                      varname=gross_flux_varname,
                                      t0=t0,
                                      t1=t1)
+            # convert GPP from Kg C m-2 s-1 to umol m-2 s-1
+            C_mol_per_g = (1.0 / 12.0107)
+            umol_per_mol = 1e6
+            g_per_kg = 1e3
+            C_umol_per_kg = g_per_kg * C_mol_per_g * umol_per_mol
+            flux['data'] = flux['data'] * C_umol_per_kg
+
         elif which_flux is 'fCOS':
             gross_flux_varname = 'cos'
+            print 'reading ', runs[k].fcos_path
             flux = sp.parse_STEM_var(nc_fname=runs[k].fcos_path,
                                      varname=gross_flux_varname,
                                      t0=t0,
                                      t1=t1)
+            # convert fCOS from mol m-2 s-1 to pmol m-2 s-1
             pmol_per_mol = 1e12
             flux['data'] = flux['data'] * pmol_per_mol
+            print('model: {}; mean fCOS: {}\n'.format(k,
+                                                      np.mean(flux['data'])))
 
-        secs_per_tstep = np.int(np.round((t1 - t0).total_seconds()) /
-                                flux['data'].shape[0])
 
-        annsum[k] = flux['data'].squeeze().sum(axis=0) * secs_per_tstep
-        # annsum[k] = ma.masked_less(annsum[k], -1e20)
-        if annsum[k].sum() < 0:
-            annsum[k] = annsum[k] * -1.0
-        print "{} SECS_PER_TSTEP: {}".format(k, secs_per_tstep)
-    return(annsum)
+        flux_mean[k] = flux['data'].squeeze().mean(axis=0)
+        # flux_mean[k] = ma.masked_less(flux_mean[k], -1e20)
+        if flux_mean[k].sum() < 0:
+            flux_mean[k] = flux_mean[k] * -1.0
+    return(flux_mean)
 
 
 def draw_map(t_str,
@@ -113,7 +118,8 @@ def draw_map(t_str,
 
     map = NAMapFigure(t_str=t_str,
                       cb_axis=None,
-                      map_axis=ax)
+                      map_axis=ax,
+                      fast_or_pretty='fast')
 
     lon, lat, topo = sp.parse_STEM_coordinates(
         os.path.join(os.getenv('SARIKA_INPUT'), 'TOPO-124x124.nc'))
@@ -175,7 +181,8 @@ def daily_to_JulAug(arr):
     return(arr_out)
 
 
-def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True):
+def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True,
+                  models=None):
     if get_dd:
 
         cos_conc_daily = load_aqout_data(aqout_path)
@@ -192,11 +199,11 @@ def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True):
         cos_conc = None
     try:
         if get_GPP:
-            gpp = get_JulAug_total_flux(which_flux='GPP')
+            gpp = get_JulAug_total_flux(which_flux='GPP', models=models)
         else:
             gpp = None
         if get_fCOS:
-            fCOS = get_JulAug_total_flux(which_flux='fCOS')
+            fCOS = get_JulAug_total_flux(which_flux='fCOS', models=models)
         else:
             fCOS = None
     except:
@@ -208,6 +215,7 @@ def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True):
 
 
 def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
+
     if models is None:
         models = ['MPI_161',
                   'canibis_161',
@@ -226,35 +234,37 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
                       'CASA-GFED3']
 
     gpp_vmin = 0.0
-    # gpp_vmax = np.percentile(np.dstack([GPP[k] for k in models]).flatten(), 99)
-    gpp_vmax = 0.45  # np.dstack([GPP[k] for k in models]).flatten().max()
+    gpp_vmax = np.percentile(np.dstack([gpp[k] for k in models]).flatten(), 99)
+    #gpp_vmax = 0.45  # np.dstack([GPP[k] for k in models]).flatten().max()
     fcos_vmin = 0.0  # np.dstack([fCOS[k] for k in models]).flatten().min()
     # fcos_vmax = np.percentile(np.dstack([fCOS[k] for k in models]).flatten(), 99)
     fcos_vmax = np.dstack([fCOS[k] for k in models]).flatten().max()
     cos_vmin = 0.0
-    cos_vmax = np.percentile(np.dstack([cos[k] for k in models]).flatten(), 99)
-    cos_vmax = 80#
+    cos_vmax = np.dstack([cos[k] for k in models]).flatten().max()
+    # cos_vmax = np.percentile(np.dstack([cos[k] for k in models]).flatten(), 99)
+    # cos_vmax = 80
 
     print('ceil(max): {}'.format(
         np.ceil(np.dstack([cos[k] for k in models]).flatten().max())))
 
-    fig, ax, cbar_ax = setup_panel_array(nrows=4, ncols=len(models))
+    fig, ax, cbar_ax = setup_panel_array(nrows=3, ncols=len(models))
     map_objs = np.empty(ax.shape, dtype='object')
 
-    gpp_cmap, gpp_norm = colormap_nlevs.setup_colormap_with_zeroval(
+    gpp_cmap, gpp_norm = colormap_nlevs.setup_colormap(
         gpp_vmin, gpp_vmax,
-        nlevs=5,
+        nlevs=6,
         cmap=plt.get_cmap('Greens'),
-        extend='neither')
+        extend='max')
     print('nlevs: {}'.format(5))
 
     mod_objs = edp.get_runs()
     for i, this_mod in enumerate(models):
         # plot GPP drawdown maps
-        print("plotting {model} GPP".format(model=models_str[i]))
+        print("plotting {model}({k}) GPP".format(model=models_str[i],
+                                                 k=models[i]))
 
         map_objs[0, i], cm = draw_map(
-            t_str='{}, LRU={}'.format(models[i],
+            t_str='{}, LRU={}'.format(models_str[i],
                                       mod_objs[this_mod].LRU),
             ax=ax[0, i],   # axis 0 is left-most on row 3
             data=gpp[this_mod],
@@ -269,18 +279,19 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
                                  cbar_ax[0, 0],
                                  '%0.2f',
                                  all_gpp)
-    t = cbar_ax[0, 0].set_title('GPP (Kg C m$^{-2}$ mon$^{-1}$)\n')
+    t = cbar_ax[0, 0].set_title('GPP ($\mu$mol C m$^{-2}$ s$^{-1}$)\n')
     t.set_y(1.09)
     t.set_fontsize(20)
 
-    fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap_with_zeroval(
+    fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap(
         fcos_vmin, fcos_vmax,
-        nlevs=5,
+        nlevs=6,
         cmap=plt.get_cmap('Blues'),
         extend='neither')
     for i, this_mod in enumerate(models):
         # plot fCOS drawdown maps
-        print("plotting {model} fCOS".format(model=models_str[i]))
+        print("plotting {model}({k}) GPP".format(model=models_str[i],
+                                                 k=models[i]))
         map_objs[1, i], cm = draw_map(t_str=None,
                                       ax=ax[1, i],
                                       data=fCOS[this_mod],
@@ -301,12 +312,13 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     cos_cmap, cos_norm = colormap_nlevs.setup_colormap(
         cos_vmin,
         cos_vmax,
-        nlevs=10,
+        nlevs=6,
         cmap=plt.get_cmap('Oranges'),
-        extend='neither')
+        extend='max')
     for i, this_mod in enumerate(models):
         # plot [COS] drawdown maps
-        print("plotting {model} COS drawdown".format(model=models_str[i]))
+        print("plotting {model}({k}) GPP".format(model=models_str[i],
+                                                 k=models[i]))
         this_cos = cos[this_mod]
         if any(this_cos.flatten() < 0):
             warnings.warn('COS drawdown values < 0.0 set to 0.0')
@@ -319,7 +331,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
                                       cmap=cos_cmap,
                                       norm=cos_norm)
 
-    all_dd = np.dstack([v for v in cos.values()]).flatten()
+        all_dd = np.dstack([v for v in cos.values()]).flatten()
     cb = colorbar_from_cmap_norm(cos_cmap,
                                  cos_norm,
                                  cbar_ax[2, 0],
@@ -328,55 +340,37 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     t = cbar_ax[2, 0].set_title('STEM [COS] drawdown (ppt)')
     t.set_y(1.09)
     t.set_fontsize(20)
-
-    # show observed drawdown in separate map
-    for i, this_mod in enumerate(models):
-        map_objs[3, i] = NAMapFigure(t_str=None,
-                                     map_axis=ax[3, i])
-    cb = colorbar_from_cmap_norm(cos_cmap,
-                                 cos_norm,
-                                 cbar_ax[3, 0],
-                                 '%d',
-                                 all_dd)
-    t = cbar_ax[3, 0].set_title('obs [COS] drawdown (ppt)')
-    t.set_y(1.09)
-    t.set_fontsize(20)
     return(fig, map_objs, cos_cmap, cos_norm)
 
 
 def map_grid_main(models=None, models_str=None, aqout_data=None):
+
     if aqout_data is None:
         if 'Timothys-MacBook-Air.local' in socket.gethostname():
             aqout_data = (os.path.join(os.getenv('HOME'), 'work', 'Data',
                                        'STEM', 'aq_out_data.cpickle'))
         else:
-            aqout_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
-                                      'aq_out_data_C4.cpickle')
-    cos_dd, gpp, fCOS = assemble_data(aqout_data)
-
-    # convert July-August GPP time-integrated fluxes to flux per month.
-    # This is consistent with e.g. Huntzinger et al (2012) and Beer et
-    # al (2010), which allows quick comparisons without unit
-    # conversions.  Convert fCOS to pmol m-2 s-1 for east comparison
-    # with Campbell et al 2008.
-    n_months = 2.0  # July and August
-    n_days = 62  # days in July and Aug
-    hours_per_day = 24
-    mins_per_hour = 60
-    secs_per_min = 60
-    secs_per_JulAug = n_days * hours_per_day * mins_per_hour * secs_per_min
-    for k in cos_dd.keys():
-        fCOS[k] = fCOS[k] / secs_per_JulAug
-        gpp[k] = gpp[k] / n_months
+            aqout_data = os.path.join(os.getenv('HOME'), 'thilton', 'Data',
+                                      'STEM', 'aq_out_data.cpickle')
+    cos_dd, gpp, fCOS = assemble_data(aqout_data, models=models)
 
     fig, map_objs, cos_cmap, cos_norm = draw_all_panels(cos_dd, gpp, fCOS,
                                                         models, models_str)
     return(fig, map_objs, cos_cmap, cos_norm)
 
 if __name__ == "__main__":
-    basc_runs = edp.get_BASC_runs()
-    models = [k for k in basc_runs.keys()]
-    models_str = [v.model for v in basc_runs.values()]
-    map_grid_main(models, models_str)
-    # map_grid_main(models=['canibis_161', 'casa_gfed_135'],
-    #               models_str=['Can-IBIS', 'CASA-GFED3'])
+    runs = edp.get_runs()
+    models = [k for k in runs.keys()]
+    models_str = [v.model for v in runs.values()]
+    # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(models, models_str)
+    [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
+        models=['canibis_161', 'kettle_161', 'casa_m15_161',
+                'casa_gfed_161', 'casa_gfed_135', 'casa_gfed_187'],
+        models_str=['Can-IBIS', 'Kettle', 'CASA-m15',
+                    'CASA-GFED3', 'CASA-GFED3', 'CASA-GFED3'])
+    fig.savefig('/tmp/BASC_fig.pdf')
+    # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
+    #     models=['kettle_C4pctLRU', 'casa_gfed_C4pctLRU', 'MPI_C4pctLRU',
+    #             'casa_m15_C4pctLRU', 'canibis_C4pctLRU'],
+    #     models_str=['Kettle', 'CASA-GFED3', 'MPI', 'CASA-m15', 'Can-IBIS'])
+    # fig.savefig('/tmp/BASC_fig.pdf')
