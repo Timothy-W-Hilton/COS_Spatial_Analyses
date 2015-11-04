@@ -2,6 +2,7 @@ import matplotlib
 matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 
+import numpy as np
 import os
 import os.path
 from datetime import datetime
@@ -28,28 +29,33 @@ if True:
 print('drawing map')
 norm = midpt_norm.MidpointNormalize(midpoint=0.0)
 
-STEM_mapper.Mapper124x124(dd[32, ...].squeeze()).draw_map(
-    t_str='1 Aug STEM drawdown',
+STEM_mapper.Mapper124x124(np.mean(dd[8:, ...], axis=0).squeeze()).draw_map(
+    t_str='8 Jul - 31 Aug STEM drawdown',
     cmap=plt.get_cmap('PuOr'),
     norm=norm)
 plt.gcf().savefig(os.path.join(os.getenv('HOME'), 'plots', 'dd_map.png'))
 
+cos_t_mean = np.mean(aqc.cos_mean[8:, ...], axis=0).squeeze()
+
 cmap, norm = colormap_nlevs.setup_colormap(
     nlevs=9,
-    vmin=aqc.cos_mean.min(),
-    vmax=aqc.cos_mean.max(),
+    vmin=cos_t_mean.min(),
+    vmax=cos_t_mean.max(),
     cmap=plt.get_cmap('Blues'))
-STEM_mapper.Mapper124x124(aqc.cos_mean[32, 0, ...].squeeze()).draw_map(
-    t_str='1 Aug STEM sfc [COS]',
+
+STEM_mapper.Mapper124x124(cos_t_mean[0, ...].squeeze()).draw_map(
+    t_str='8 Jul - 31 Aug STEM sfc [COS]',
     cmap=cmap,
     norm=norm)
 plt.gcf().savefig(os.path.join(os.getenv('HOME'), 'plots', 'cos_sfc.png'))
 
-STEM_mapper.Mapper124x124(dd[32, -1, ...].squeeze()).draw_map(
-    t_str='1 Aug STEM TOA [COS]',
+STEM_mapper.Mapper124x124(cos_t_mean[-1, ...].squeeze()).draw_map(
+    t_str='8 Jul - 31 Aug STEM TOA [COS]',
     cmap=cmap,
     norm=norm)
 plt.gcf().savefig(os.path.join(os.getenv('HOME'), 'plots', 'cos_TOA.png'))
+
+plt.close('all')
 
 
 # from map_grid import assemble_data
