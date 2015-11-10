@@ -48,8 +48,9 @@ def get_noaa_COS_data_path():
         noaa_dir = os.path.join(os.getenv('HOME'), 'work',
                                 'Data', 'NOAA_95244993')
     else:
-        noaa_dir = os.path.join(os.getenv('HOME'), 'projects',
-                                'COS (ecampbell3)',
+        noaa_dir = os.path.join('/', 'project', 'projectdirs',
+                                'm2319',
+                                'Data',
                                 'NOAA_95244993')
     return(noaa_dir)
 

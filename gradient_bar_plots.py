@@ -11,6 +11,7 @@ import seaborn as sns
 import spatial_analysis_utilities as sau
 from stem_pytools import noaa_ocs
 from stem_pytools import STEM_parsers
+from stem_pytools import domain
 from map_grid import assemble_data
 import draw_c3c4LRU_map
 
@@ -18,9 +19,9 @@ def assemble_bar_plot_data():
     noaa_dir = sau.get_noaa_COS_data_path()
     ocs_dd, ocs_daily = sau.get_JA_site_mean_drawdown(noaa_dir)
 
-    stem_input_dir = os.getenv('SARIKA_INPUT')
-    topo_file = os.path.join(stem_input_dir, 'TOPO-124x124.nc')
-    stem_lon, stem_lat, topo = STEM_parsers.parse_STEM_coordinates(topo_file)
+    d = domain.STEM_Domain()
+    stem_lon = d.get_lon()
+    stem_lat = d.get_lat()
 
     ocs_dd['stem_x'], ocs_dd['stem_y'] = noaa_ocs.find_nearest_stem_xy(
         ocs_dd.sample_longitude,
@@ -28,9 +29,9 @@ def assemble_bar_plot_data():
         stem_lon,
         stem_lat)
 
-    C4_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
+    C4_data = os.path.join(os.getenv('HOME'),
                            'aq_out_data_C4.cpickle')
-    constLRU_data = os.path.join(os.getenv('HOME'), 'Data', 'STEM',
+    constLRU_data = os.path.join(os.getenv('HOME'),
                                  'aq_out_data.cpickle')
 
     cos_dd, gpp, fCOS = assemble_data(constLRU_data,
@@ -162,14 +163,18 @@ if __name__ == "__main__":
                                       'Can-IBIS, LRU=C3/C4'],
                           value_name='drawdown')
 
+    tmpdir = os.getenv('SCRATCH')
     g = draw_box_plot(ocs_dd_long, gradients['east_coast'])
-    plt.gcf().savefig('/tmp/barplots/barplots_eastcoast_casa_canibis.pdf')
+    plt.gcf().savefig(os.path.join(tmpdir, 'barplots',
+                                   'barplots_eastcoast_casa_canibis.pdf'))
 
     g = draw_box_plot(ocs_dd_long, gradients['wet_dry'])
-    plt.gcf().savefig('/tmp/barplots/barplots_wetdry.pdf')
+    plt.gcf().savefig(os.path.join(tmpdir, 'barplots',
+                                   'barplots_wetdry.pdf'))
 
     g = draw_box_plot(ocs_dd_long, gradients['mid_continent'])
-    plt.gcf().savefig('/tmp/barplots/barplots_midcontinent.pdf')
+    plt.gcf().savefig(os.path.join(tmpdir, 'barplots',
+                                   'barplots_midcontinent.pdf'))
 
-    gradient_map = draw_gradient_map(gradients)
-    gradient_map.fig.savefig('/tmp/gradients_map.pdf')
+    # gradient_map = draw_gradient_map(gradients)
+    # gradient_map.fig.savefig(os.path.join(tmpdir, 'gradients_map.pdf'))
