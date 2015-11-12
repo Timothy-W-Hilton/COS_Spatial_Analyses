@@ -42,9 +42,9 @@ def calc_ABL_FreeTrop_Mean_COS(aqc):
         wrfheight_fname=os.path.join(os.getenv('SARIKA_INPUT'),
                                      'wrfheight-124x124-2008-2009-22levs.nc'))
     t_steps_per_day = 4
-    jul1 = (2008183 - 2008060) * t_steps_per_day
-    aug31 = jul1 + (62 * t_steps_per_day)
-    agl_mean = np.mean(agl[jul1:aug31, ...], axis=0)
+    jul8 = (2008191 - 2008060) * t_steps_per_day
+    aug31 = jul8 + (62 * t_steps_per_day)
+    agl_mean = np.mean(agl[jul8:aug31, ...], axis=0)
     agl_mean = np.broadcast_arrays(agl_mean, aqc.cos_mean[8:, ...])[0]
 
     free_trop = ma.masked_where(agl_mean >= 4000, aqc.cos_mean[8:, ...])
@@ -68,29 +68,30 @@ def get_COS_concentration(run_key):
     print('parsing AQOUT and calculating daily stats')
     this_run = ndp.get_runs()[run_key]
     aqc = aqp.aqout_container(this_run.aqout_path)
-    aqc.parse(t0=datetime(2008, 7, 1), t1=datetime(2008, 8, 31, 23, 59, 59))
+    aqc.parse(t0=datetime(2008, 7, 8), t1=datetime(2008, 8, 31, 23, 59, 59))
 
-    aqc.data[0] = aqc.data[0] * mol_pmol_correction
+    raw_data = aqc.data[0]
     aqc.sum()
     aqc.calc_stats()
-    aqc.stats_to_netcdf(os.path.join(os.getenv('SCRATCH'),
-                                     'hybrid_Fsoil_STEM_run_daily.nc'))
+    # aqc.stats_to_netcdf(os.path.join(os.getenv('SCRATCH'),
+    #                                  'STEM_run_daily.nc'))
 
     print('calculating drawdown')
     dd = calc_drawdown.calc_STEM_COS_drawdown(aqc.cos_mean)
-    return(aqc, dd)
+    return(aqc, dd, raw_data)
 
 if __name__ == "__main__":
 
-    aqc, dd = get_COS_concentration('Fsoil_Hybrid5Feb')
+    aqc, dd, raw_data = get_COS_concentration('Fsoil_Hybrid5Feb')
     free_trop_mean, abl_mean = calc_ABL_FreeTrop_Mean_COS(aqc)
 
     print('drawing map')
-    cmap, norm = midpt_norm.get_discrete_midpt_cmap_norm(vmin=-40, vmax=20,
+    cmap, norm = midpt_norm.get_discrete_midpt_cmap_norm(vmin=-10,
+                                                         vmax=25,
                                                          midpoint=0.0,
                                                          bands_above_mdpt=3,
                                                          bands_below_mdpt=7)
-    f_or_p = 'fast'
+    f_or_p = 'pretty'
     STEM_mapper.Mapper124x124(np.mean(dd[:], axis=0).squeeze()).draw_map(
         fast_or_pretty=f_or_p,
         t_str=('1 Jul - 31 Aug 2008 mean STEM drawdown, '
@@ -99,6 +100,54 @@ if __name__ == "__main__":
         norm=norm)
     plt.gcf().savefig(os.path.join(os.getenv('HOME'),
                                    'plots', 'dd_map_Fsoil.png'))
+
+    cmap, norm = colormap_nlevs.setup_colormap(
+        nlevs=9,
+        vmin=430,  # np.dstack((abl_mean, free_trop_mean)).min(),
+        vmax=455,  # np.dstack((abl_mean, free_trop_mean)).max(),
+        cmap=plt.get_cmap('Blues'))
+
+    STEM_mapper.Mapper124x124(abl_mean.squeeze()).draw_map(
+        fast_or_pretty=f_or_p,
+        t_str='8 Jul - 31 Aug STEM [COS] <= 2000 m; Whelan-Kettle "hybrid" Fsoil',
+        cmap=cmap,
+        norm=norm)
+    plt.gcf().savefig(os.path.join(os.getenv('HOME'),
+                                   'plots', 'cos_Fsoil_ABL.png'))
+
+    STEM_mapper.Mapper124x124(free_trop_mean.squeeze()).draw_map(
+        fast_or_pretty=f_or_p,
+        t_str='8 Jul - 31 Aug STEM [COS] >= 4000 m; Whelan-Kettle "hybrid" Fsoil',
+        cmap=cmap,
+        norm=norm)
+    plt.gcf().savefig(os.path.join(os.getenv('HOME'),
+                                   'plots', 'cos_Fsoil_FreeTrop.png'))
+
+    plt.close('all')
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    aqc, dd, raw_data = get_COS_concentration('GEOSChem_bounds')
+    free_trop_mean, abl_mean = calc_ABL_FreeTrop_Mean_COS(aqc)
+
+    print('drawing map')
+    cmap, norm = midpt_norm.get_discrete_midpt_cmap_norm(vmin=-40,
+                                                         vmax=25,
+                                                         midpoint=0.0,
+                                                         bands_above_mdpt=3,
+                                                         bands_below_mdpt=7)
+    f_or_p = 'pretty'
+    STEM_mapper.Mapper124x124(np.mean(dd[:], axis=0).squeeze()).draw_map(
+        fast_or_pretty=f_or_p,
+        t_str=('8 Jul - 31 Aug 2008 mean STEM drawdown, '
+               'GEOS-Chem Boundaries'),
+        cmap=cmap,
+        norm=norm)
+    plt.gcf().savefig(os.path.join(os.getenv('HOME'),
+                                   'plots', 'dd_map_GCbounds.png'))
 
     cmap, norm = colormap_nlevs.setup_colormap(
         nlevs=9,
@@ -111,7 +160,8 @@ if __name__ == "__main__":
         t_str='8 Jul - 31 Aug STEM [COS] <= 2000 m; GEOS-Chem boundaries',
         cmap=cmap,
         norm=norm)
-    plt.gcf().savefig(os.path.join(os.getenv('HOME'), 'plots', 'cos_ABL.png'))
+    plt.gcf().savefig(os.path.join(os.getenv('HOME'),
+                                   'plots', 'cos_GCbounds_ABL.png'))
 
     STEM_mapper.Mapper124x124(free_trop_mean.squeeze()).draw_map(
         fast_or_pretty=f_or_p,
@@ -119,6 +169,6 @@ if __name__ == "__main__":
         cmap=cmap,
         norm=norm)
     plt.gcf().savefig(os.path.join(os.getenv('HOME'),
-                                   'plots', 'cos_free_trop.png'))
+                                   'plots', 'cos_GCbounds_FreeTrop.png'))
 
     plt.close('all')
