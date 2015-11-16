@@ -10,12 +10,14 @@ import seaborn as sns
 
 import spatial_analysis_utilities as sau
 from stem_pytools import noaa_ocs
-from stem_pytools import STEM_parsers
 from stem_pytools import domain
-from map_grid import assemble_data
+import map_grid
 import draw_c3c4LRU_map
 
-def assemble_bar_plot_data():
+
+def assemble_bar_plot_data(
+        cpickle_fname=os.path.join(os.getenv('SCRATCH'),
+                                   '2015-11-16_all_runs.cpickle')):
     noaa_dir = sau.get_noaa_COS_data_path()
     ocs_dd, ocs_daily = sau.get_JA_site_mean_drawdown(noaa_dir)
 
@@ -29,18 +31,12 @@ def assemble_bar_plot_data():
         stem_lon,
         stem_lat)
 
-    C4_data = os.path.join(os.getenv('HOME'),
-                           'aq_out_data_C4.cpickle')
-    constLRU_data = os.path.join(os.getenv('HOME'),
-                                 'aq_out_data.cpickle')
+    data = os.path.join(os.getenv('SCRATCH'),
+                        '2015-11-16_all_runs.cpickle')
 
-    cos_dd, gpp, fCOS = assemble_data(constLRU_data,
-                                      get_GPP=False,
-                                      get_fCOS=False)
-    cos_dd_C4, gpp, fCOS = assemble_data(C4_data,
-                                         get_GPP=False,
-                                         get_fCOS=False)
-    cos_dd.update(cos_dd_C4)
+    cos_dd, gpp, fCOS = map_grid.assemble_data(data,
+                                               get_GPP=False,
+                                               get_fCOS=False)
     # place model drawdowns into the data frame
     for k, v in cos_dd.items():
         ocs_dd[k] = cos_dd[k][ocs_dd['stem_x'], ocs_dd['stem_y']]
@@ -103,7 +99,12 @@ def rename_columns(df):
                     'casa_gfed_C4pctLRU': 'CASA-GFED3, LRU=C3/C4',
                     'casa_gfed_135': 'CASA-GFED3, LRU=1.35',
                     'canibis_C4pctLRU': 'Can-IBIS, LRU=C3/C4',
-                    'casa_m15_C4pctLRU': 'CASA-m15, LRU=C3/C4'}
+                    'casa_m15_C4pctLRU': 'CASA-m15, LRU=C3/C4',
+                    'Kettle_Fsoil': 'Kettle Fsoil',
+                    'Fsoil_Hybrid5Feb': 'Hybrid Fsoil',
+                    'GEOSChem_bounds': 'GEOS-Chem boundaries',
+                    'SiB_mech': 'SiB, mechanistic canopy',
+                    'SiB_calc': 'SiB, prescribed canopy'}
     df = df.rename(columns=columns_dict)
     return(df)
 
@@ -151,8 +152,8 @@ if __name__ == "__main__":
                                    'BNE', 'SGP', 'TGC']}
 
     ocs_dd = assemble_bar_plot_data()
-    ocs_dd = normalize_drawdown(ocs_dd)
 
+    ocs_dd = normalize_drawdown(ocs_dd)
     ocs_dd_new = rename_columns(ocs_dd)
     ocs_dd_long = pd.melt(ocs_dd_new.reset_index(),
                           id_vars=['sample_site_code'],
