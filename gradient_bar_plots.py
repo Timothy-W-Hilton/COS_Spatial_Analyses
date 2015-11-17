@@ -11,37 +11,83 @@ import seaborn as sns
 import spatial_analysis_utilities as sau
 from stem_pytools import noaa_ocs
 from stem_pytools import domain
+from stem_pytools import aqout_postprocess as aq
+from stem_pytools import calc_drawdown
 import map_grid
 import draw_c3c4LRU_map
+
+
+def get_STEM_cos_conc(cpickle_fname=None, const_bounds_cos=4.5e-10):
+    """get dict of Jul-Aug mean COS drawdowns for each STEM gridcell.
+    Adjust GEOS-Chem boundaries concentration to reflect the *change*
+    in [COS] for the dynamic boundaries relative to the constant
+    boundaries.
+
+    :param cpickle_fname: path to a cpickle file of [COS] mean,
+        standard deviation ,time stamps calculated from AQOUT files.
+        That cpickle file will typically be the output of
+        stem_pytools.aqout_postprocess.assemble_data.
+    :param const_bounds_cos: the COS concentration of the constant
+        boundaries; this value will be subtracted out of the GEOS-Chem
+        boundaries [COS]
+    """
+    cos_conc_daily = aq.load_aqout_data(cpickle_fname)
+    # aggregate daily means to a single July-August mean
+    cos_conc = cos_conc_daily['cos_mean']
+
+    cos_conc['GEOSChem_bounds'] = calc_dynamic_boundary_effect(
+        cos_conc['GEOSChem_bounds'], const_bounds_cos)
+
+    cos_conc.update((k, calc_drawdown.calc_STEM_COS_drawdown(v)) for
+                    k, v in cos_conc.items())
+    cos_conc.update((k, map_grid.daily_to_JulAug(v))
+                    for k, v in cos_conc.items())
+    return(cos_conc)
 
 
 def assemble_bar_plot_data(
         cpickle_fname=os.path.join(os.getenv('SCRATCH'),
                                    '2015-11-16_all_runs.cpickle')):
     noaa_dir = sau.get_noaa_COS_data_path()
-    ocs_dd, ocs_daily = sau.get_JA_site_mean_drawdown(noaa_dir)
+    noaa_ocs_dd, ocs_daily = sau.get_JA_site_mean_drawdown(noaa_dir)
 
     d = domain.STEM_Domain()
     stem_lon = d.get_lon()
     stem_lat = d.get_lat()
 
-    ocs_dd['stem_x'], ocs_dd['stem_y'] = noaa_ocs.find_nearest_stem_xy(
-        ocs_dd.sample_longitude,
-        ocs_dd.sample_latitude,
+    (noaa_ocs_dd['stem_x'],
+     noaa_ocs_dd['stem_y']) = noaa_ocs.find_nearest_stem_xy(
+        noaa_ocs_dd.sample_longitude,
+        noaa_ocs_dd.sample_latitude,
         stem_lon,
         stem_lat)
 
-    data = os.path.join(os.getenv('SCRATCH'),
-                        '2015-11-16_all_runs.cpickle')
+    data_path = os.path.join(os.getenv('SCRATCH'),
+                             '2015-11-16_all_runs.cpickle')
+    stem_ocs_dd = get_STEM_cos_conc(data_path)
 
-    cos_dd, gpp, fCOS = map_grid.assemble_data(data,
-                                               get_GPP=False,
-                                               get_fCOS=False)
     # place model drawdowns into the data frame
-    for k, v in cos_dd.items():
-        ocs_dd[k] = cos_dd[k][ocs_dd['stem_x'], ocs_dd['stem_y']]
+    for k, v in stem_ocs_dd.items():
+        noaa_ocs_dd[k] = stem_ocs_dd[k][noaa_ocs_dd['stem_x'],
+                                        noaa_ocs_dd['stem_y']]
 
-    return(ocs_dd)
+    return(noaa_ocs_dd)
+
+
+def calc_dynamic_boundary_effect(ocs_conc, const_bounds=4.5e-10):
+    """Calculate drawdown enhancement or reduction because of dynamic
+     boundaries relative to static boundary conditions.  Subtract out
+     the 450 pptv static boundary condition from the dynamic
+     boundaries STEM [COS] to isolate the impact of the dynamic
+     boundaries vs static boundaries.  Static boundary of 450 pptv
+     coupled with no surface COS flux must result in [COS] = 450 pptv
+     at all places, times.
+
+    :param ocs_conc: array of [OCS], molecules m-3
+    :param const_bounds: [COS] for the constant boundary conditions
+    """
+    ocs_conc -= const_bounds
+    return(ocs_conc)
 
 
 def normalize_drawdown(ocs_dd,
