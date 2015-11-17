@@ -115,7 +115,7 @@ def draw_box_plot(df, sites_list):
                        y="drawdown",
                        hue='variable',
                        data=df[df.sample_site_code.isin(sites_list)],
-                       kind="bar",
+                       kind="point",
                        palette=sns.color_palette(
                            "cubehelix",
                            len(ocs_dd_long.variable.unique())),
