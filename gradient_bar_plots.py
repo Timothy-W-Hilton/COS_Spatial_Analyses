@@ -44,18 +44,19 @@ def assemble_bar_plot_data(
     return(ocs_dd)
 
 
-def normalize_drawdown(ocs_dd, norm_site='NHA'):
+def normalize_drawdown(ocs_dd,
+                       norm_site='NHA',
+                       vars=['ocs_dd',
+                             'casa_gfed_161',
+                             'casa_gfed_C4pctLRU',
+                             'canibis_C4pctLRU',
+                             'canibis_161']):
     """
     Within each drawdown "product", normalize to the NHA value.  NHA
     is chosen because it is the maximum observed drawdown in the NOAA
     observations.
     """
-    dd_vars = ['ocs_dd',
-               'casa_gfed_161',
-               'casa_gfed_C4pctLRU',
-               'canibis_C4pctLRU',
-               'canibis_161']
-    for this_var in dd_vars:
+    for this_var in vars:
         ocs_dd[this_var] = ocs_dd[this_var] / ocs_dd[this_var][norm_site]
 
     return(ocs_dd)
@@ -153,15 +154,27 @@ if __name__ == "__main__":
 
     ocs_dd = assemble_bar_plot_data()
 
-    ocs_dd = normalize_drawdown(ocs_dd)
-    ocs_dd_new = rename_columns(ocs_dd)
+    dd_vars = ['NOAA obs', 'GEOS-Chem boundaries', 'CASA-GFED3, LRU=1.61',
+               'MPI, LRU=C3/C4', 'casa_gfed_pctm_bnd', 'Can-IBIS, LRU=1.61',
+               'CASA-GFED3, LRU=1.87', 'Kettle, LRU=C3/C4', 'Kettle, LRU=1.61',
+               'SiB, mechanistic canopy', 'SiB, prescribed canopy',
+               'Hybrid Fsoil',
+               'CASA-m15, LRU=1.61', 'Fsoil_Kettle', 'MPI, LRU=1.61',
+               'CASA-GFED3, LRU=C3/C4', 'CASA-GFED3, LRU=1.35',
+               'Can-IBIS, LRU=C3/C4', 'CASA-m15, LRU=C3/C4']
+    ocs_dd_new = normalize_drawdown(rename_columns(ocs_dd), vars=dd_vars)
     ocs_dd_long = pd.melt(ocs_dd_new.reset_index(),
                           id_vars=['sample_site_code'],
                           value_vars=['NOAA obs',
                                       'CASA-GFED3, LRU=1.61',
                                       'CASA-GFED3, LRU=C3/C4',
                                       'Can-IBIS, LRU=1.61',
-                                      'Can-IBIS, LRU=C3/C4'],
+                                      'Can-IBIS, LRU=C3/C4',
+                                      'SiB, mechanistic canopy',
+                                      'SiB, calculated canopy',
+                                      'GEOS-Chem boundaries',
+                                      'Hybrid Fsoil',
+                                      'Kettle Fsoil'],
                           value_name='drawdown')
 
     tmpdir = os.getenv('SCRATCH')
