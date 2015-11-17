@@ -116,7 +116,9 @@ def draw_box_plot(df, sites_list):
                        hue='variable',
                        data=df[df.sample_site_code.isin(sites_list)],
                        kind="bar",
-                       palette=sns.color_palette("Paired", 5),
+                       palette=sns.color_palette(
+                           "cubehelix",
+                           len(ocs_dd_long.variable.unique())),
                        x_order=sites_list,
                        aspect=1.25)
     g.despine(offset=10, trim=True)
@@ -147,7 +149,7 @@ def rename_columns(df):
                     'casa_gfed_135': 'CASA-GFED3, LRU=1.35',
                     'canibis_C4pctLRU': 'Can-IBIS, LRU=C3/C4',
                     'casa_m15_C4pctLRU': 'CASA-m15, LRU=C3/C4',
-                    'Kettle_Fsoil': 'Kettle Fsoil',
+                    'Fsoil_Kettle': 'Kettle Fsoil',
                     'Fsoil_Hybrid5Feb': 'Hybrid Fsoil',
                     'GEOSChem_bounds': 'GEOS-Chem boundaries',
                     'SiB_mech': 'SiB, mechanistic canopy',
@@ -205,7 +207,7 @@ if __name__ == "__main__":
                'CASA-GFED3, LRU=1.87', 'Kettle, LRU=C3/C4', 'Kettle, LRU=1.61',
                'SiB, mechanistic canopy', 'SiB, prescribed canopy',
                'Hybrid Fsoil',
-               'CASA-m15, LRU=1.61', 'Fsoil_Kettle', 'MPI, LRU=1.61',
+               'CASA-m15, LRU=1.61', 'Kettle Fsoil', 'MPI, LRU=1.61',
                'CASA-GFED3, LRU=C3/C4', 'CASA-GFED3, LRU=1.35',
                'Can-IBIS, LRU=C3/C4', 'CASA-m15, LRU=C3/C4']
     ocs_dd_new = normalize_drawdown(rename_columns(ocs_dd), vars=dd_vars)
@@ -217,7 +219,7 @@ if __name__ == "__main__":
                                       'Can-IBIS, LRU=1.61',
                                       'Can-IBIS, LRU=C3/C4',
                                       'SiB, mechanistic canopy',
-                                      'SiB, calculated canopy',
+                                      'SiB, prescribed canopy',
                                       'GEOS-Chem boundaries',
                                       'Hybrid Fsoil',
                                       'Kettle Fsoil'],
