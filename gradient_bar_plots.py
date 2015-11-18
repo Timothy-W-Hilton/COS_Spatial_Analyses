@@ -141,7 +141,7 @@ def draw_box_plot(df, sites_list):
                        kind="point",
                        palette=sns.color_palette(
                            "cubehelix",
-                           len(ocs_dd_long.variable.unique())),
+                           len(df.variable.unique())),
                        x_order=sites_list,
                        aspect=1.25)
     g.despine(offset=10, trim=True)
@@ -222,6 +222,30 @@ def draw_gradient_map(gradient_sites_dict):
     return(lru_map)
 
 
+def plot_all_gradients(ocs_dd, plot_vars, fname_suffix):
+
+    ocs_dd_long = pd.melt(ocs_dd.reset_index(),
+                          id_vars=['sample_site_code'],
+                          value_vars=plot_vars,
+                          value_name='drawdown')
+
+    tmpdir = os.getenv('SCRATCH')
+    g = draw_box_plot(ocs_dd_long, gradients['east_coast'])
+    plt.gcf().savefig(
+        os.path.join(tmpdir, 'barplots',
+                     'barplots_eastcoast{}.pdf'.format(fname_suffix)))
+
+    g = draw_box_plot(ocs_dd_long, gradients['wet_dry'])
+    plt.gcf().savefig(
+        os.path.join(tmpdir, 'barplots',
+                     'barplots_wetdry{}.pdf'.format(fname_suffix)))
+
+    g = draw_box_plot(ocs_dd_long, gradients['mid_continent'])
+    plt.gcf().savefig(
+        os.path.join(tmpdir, 'barplots',
+                     'barplots_midcontinent{}.pdf'.format(fname_suffix)))
+
+
 if __name__ == "__main__":
 
     gradients = {'wet_dry': ['CAR', 'BNE', 'WBI', 'OIL', 'NHA'],
@@ -241,32 +265,34 @@ if __name__ == "__main__":
                'Can-IBIS, LRU=C3/C4', 'CASA-m15, LRU=C3/C4']
     ocs_dd_new = rename_columns(ocs_dd)
     ocs_dd_new = normalize_drawdown(ocs_dd_new, vars=dd_vars)
-    ocs_dd_long = pd.melt(ocs_dd_new.reset_index(),
-                          id_vars=['sample_site_code'],
-                          value_vars=['NOAA obs',
-                                      'CASA-GFED3, LRU=1.61',
-                                      'CASA-GFED3, LRU=C3/C4',
-                                      'Can-IBIS, LRU=1.61',
-                                      'Can-IBIS, LRU=C3/C4',
-                                      'SiB, mechanistic canopy',
-                                      'SiB, prescribed canopy',
-                                      'GEOS-Chem boundaries',
-                                      'Hybrid Fsoil',
-                                      'Kettle Fsoil'],
-                          value_name='drawdown')
 
-    tmpdir = os.getenv('SCRATCH')
-    g = draw_box_plot(ocs_dd_long, gradients['east_coast'])
-    plt.gcf().savefig(os.path.join(tmpdir, 'barplots',
-                                   'barplots_eastcoast_casa_canibis.pdf'))
+    vars = ['NOAA obs',
+            'CASA-GFED3, LRU=1.61',
+            'CASA-GFED3, LRU=C3/C4',
+            'Can-IBIS, LRU=1.61',
+            'Can-IBIS, LRU=C3/C4',
+            'SiB, mechanistic canopy',
+            'SiB, prescribed canopy']
 
-    g = draw_box_plot(ocs_dd_long, gradients['wet_dry'])
-    plt.gcf().savefig(os.path.join(tmpdir, 'barplots',
-                                   'barplots_wetdry.pdf'))
+    plot_all_gradients(ocs_dd_new, vars, '_all')
 
-    g = draw_box_plot(ocs_dd_long, gradients['mid_continent'])
-    plt.gcf().savefig(os.path.join(tmpdir, 'barplots',
-                                   'barplots_midcontinent.pdf'))
+    vars = ['NOAA obs',
+            'CASA-GFED3, LRU=1.61',
+            'CASA-GFED3, LRU=C3/C4',
+            'CASA-GFED3, LRU=1.61, GC',
+            'CASA-GFED3, LRU=C3/C4, GC',
+            'Can-IBIS, LRU=1.61',
+            'Can-IBIS, LRU=C3/C4',
+            'Can-IBIS, LRU=1.61, GC',
+            'Can-IBIS, LRU=C3/C4, GC',
+            'SiB, mechanistic canopy',
+            'SiB, prescribed canopy',
+            'SiB, mechanistic canopy, GC',
+            'SiB, prescribed canopy, GC']
+
+    plot_all_gradients(ocs_dd_new, vars, '_GC')
 
     # gradient_map = draw_gradient_map(gradients)
     # gradient_map.fig.savefig(os.path.join(tmpdir, 'gradients_map.pdf'))
+
+    plt.close('all')
