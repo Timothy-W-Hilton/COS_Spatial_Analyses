@@ -71,8 +71,7 @@ def assemble_bar_plot_data(
     data_path = os.path.join(os.getenv('SCRATCH'),
                              '2015-11-16_all_runs.cpickle')
     stem_ocs_dd = get_STEM_cos_conc(data_path)
-    # ONLY CALL THIS ONCE!
-    stem_ocs_dd = calculate_GCbounds_cos(stem_ocs_dd)
+
     # place model drawdowns into the data frame
     for k, v in stem_ocs_dd.items():
         noaa_ocs_dd[k] = stem_ocs_dd[k][noaa_ocs_dd['stem_x'],
@@ -86,11 +85,10 @@ def calculate_GCbounds_cos(stem_ocs_dd, const_bounds=4.5e-10):
                      'ocs_dd', 'stem_x', 'stem_y']
     print "start"
 
-    import pdb; pdb.set_trace()
     GC_runs = {}
     for k in stem_ocs_dd.keys():
         if k not in do_not_adjust:
-            key_GC = '{}{}'.format(k, '_GCbounds')
+            key_GC = '{}{}'.format(k, ', GC')
             data_GC = (stem_ocs_dd[k] - const_bounds +
                        stem_ocs_dd['GEOSChem_bounds'])
             print 'adding {} to dict'.format(key_GC)
@@ -179,7 +177,13 @@ def rename_columns(df):
                     'GEOSChem_bounds': 'GEOS-Chem boundaries',
                     'SiB_mech': 'SiB, mechanistic canopy',
                     'SiB_calc': 'SiB, prescribed canopy'}
-    df = df.rename(columns=columns_dict)
+    for this_col in df.columns.values:
+        if this_col in columns_dict.keys():
+            df.rename(columns=lambda x: x.replace(this_col,
+                                                  columns_dict[this_col]),
+                      inplace=True)
+            print "replaced {} with {}".format(this_col,
+                                               columns_dict[this_col])
     return(df)
 
 
