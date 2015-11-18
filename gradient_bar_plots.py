@@ -32,11 +32,17 @@ def get_STEM_cos_conc(cpickle_fname=None, const_bounds_cos=4.5e-10):
         boundaries [COS]
     """
     cos_conc_daily = aq.load_aqout_data(cpickle_fname)
+    keys_to_remove = ['casa_gfed_pctm_bnd', 'casa_gfed_KV']
+    for k in keys_to_remove:
+        if k in cos_conc_daily['cos_mean']:
+            del cos_conc_daily['cos_mean'][k]
+            del cos_conc_daily['cos_std'][k]
+            del cos_conc_daily['t'][k]
+
+    cos_conc_daily['cos_mean'] = calculate_GCbounds_cos(
+        cos_conc_daily['cos_mean'])
     # aggregate daily means to a single July-August mean
     cos_conc = cos_conc_daily['cos_mean']
-
-    cos_conc['GEOSChem_bounds'] = calc_dynamic_boundary_effect(
-        cos_conc['GEOSChem_bounds'], const_bounds_cos)
 
     cos_conc.update((k, calc_drawdown.calc_STEM_COS_drawdown(v)) for
                     k, v in cos_conc.items())
@@ -65,13 +71,32 @@ def assemble_bar_plot_data(
     data_path = os.path.join(os.getenv('SCRATCH'),
                              '2015-11-16_all_runs.cpickle')
     stem_ocs_dd = get_STEM_cos_conc(data_path)
-
+    # ONLY CALL THIS ONCE!
+    stem_ocs_dd = calculate_GCbounds_cos(stem_ocs_dd)
     # place model drawdowns into the data frame
     for k, v in stem_ocs_dd.items():
         noaa_ocs_dd[k] = stem_ocs_dd[k][noaa_ocs_dd['stem_x'],
                                         noaa_ocs_dd['stem_y']]
 
     return(noaa_ocs_dd)
+
+
+def calculate_GCbounds_cos(stem_ocs_dd, const_bounds=4.5e-10):
+    do_not_adjust = ['sample_latitude', 'sample_longitude', 'analysis_value',
+                     'ocs_dd', 'stem_x', 'stem_y']
+    print "start"
+
+    import pdb; pdb.set_trace()
+    GC_runs = {}
+    for k in stem_ocs_dd.keys():
+        if k not in do_not_adjust:
+            key_GC = '{}{}'.format(k, '_GCbounds')
+            data_GC = (stem_ocs_dd[k] - const_bounds +
+                       stem_ocs_dd['GEOSChem_bounds'])
+            print 'adding {} to dict'.format(key_GC)
+            GC_runs.update({key_GC: data_GC})
+    stem_ocs_dd.update(GC_runs)
+    return(stem_ocs_dd)
 
 
 def calc_dynamic_boundary_effect(ocs_conc, const_bounds=4.5e-10):
@@ -203,14 +228,15 @@ if __name__ == "__main__":
     ocs_dd = assemble_bar_plot_data()
 
     dd_vars = ['NOAA obs', 'GEOS-Chem boundaries', 'CASA-GFED3, LRU=1.61',
-               'MPI, LRU=C3/C4', 'casa_gfed_pctm_bnd', 'Can-IBIS, LRU=1.61',
+               'MPI, LRU=C3/C4', 'Can-IBIS, LRU=1.61',
                'CASA-GFED3, LRU=1.87', 'Kettle, LRU=C3/C4', 'Kettle, LRU=1.61',
                'SiB, mechanistic canopy', 'SiB, prescribed canopy',
                'Hybrid Fsoil',
                'CASA-m15, LRU=1.61', 'Kettle Fsoil', 'MPI, LRU=1.61',
                'CASA-GFED3, LRU=C3/C4', 'CASA-GFED3, LRU=1.35',
                'Can-IBIS, LRU=C3/C4', 'CASA-m15, LRU=C3/C4']
-    ocs_dd_new = normalize_drawdown(rename_columns(ocs_dd), vars=dd_vars)
+    ocs_dd_new = rename_columns(ocs_dd)
+    ocs_dd_new = normalize_drawdown(ocs_dd_new, vars=dd_vars)
     ocs_dd_long = pd.melt(ocs_dd_new.reset_index(),
                           id_vars=['sample_site_code'],
                           value_vars=['NOAA obs',
