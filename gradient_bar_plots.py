@@ -4,7 +4,6 @@ matplotlib.use('AGG')
 import os
 import os.path
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -68,9 +67,7 @@ def assemble_bar_plot_data(
         stem_lon,
         stem_lat)
 
-    data_path = os.path.join(os.getenv('SCRATCH'),
-                             '2015-11-16_all_runs.cpickle')
-    stem_ocs_dd = get_STEM_cos_conc(data_path)
+    stem_ocs_dd = get_STEM_cos_conc(cpickle_fname)
 
     # place model drawdowns into the data frame
     for k, v in stem_ocs_dd.items():
@@ -248,51 +245,53 @@ def plot_all_gradients(ocs_dd, plot_vars, fname_suffix):
 
 if __name__ == "__main__":
 
-    gradients = {'wet_dry': ['CAR', 'BNE', 'WBI', 'OIL', 'NHA'],
-                 'east_coast': ['NHA', 'CMA', 'SCA'],
-                 'mid_continent': ['ETL', 'DND', 'LEF', 'WBI',
-                                   'BNE', 'SGP', 'TGC']}
+    try:
+        gradients = {'wet_dry': ['CAR', 'BNE', 'WBI', 'OIL', 'NHA'],
+                     'east_coast': ['NHA', 'CMA', 'SCA'],
+                     'mid_continent': ['ETL', 'DND', 'LEF', 'WBI',
+                                       'BNE', 'SGP', 'TGC']}
 
-    ocs_dd = assemble_bar_plot_data()
+        ocs_dd = assemble_bar_plot_data()
 
-    dd_vars = ['NOAA obs', 'GEOS-Chem boundaries', 'CASA-GFED3, LRU=1.61',
-               'MPI, LRU=C3/C4', 'Can-IBIS, LRU=1.61',
-               'CASA-GFED3, LRU=1.87', 'Kettle, LRU=C3/C4', 'Kettle, LRU=1.61',
-               'SiB, mechanistic canopy', 'SiB, prescribed canopy',
-               'Hybrid Fsoil',
-               'CASA-m15, LRU=1.61', 'Kettle Fsoil', 'MPI, LRU=1.61',
-               'CASA-GFED3, LRU=C3/C4', 'CASA-GFED3, LRU=1.35',
-               'Can-IBIS, LRU=C3/C4', 'CASA-m15, LRU=C3/C4']
-    ocs_dd_new = rename_columns(ocs_dd)
-    ocs_dd_new = normalize_drawdown(ocs_dd_new, vars=dd_vars)
+        dd_vars = ['NOAA obs', 'GEOS-Chem boundaries', 'CASA-GFED3, LRU=1.61',
+                   'MPI, LRU=C3/C4', 'Can-IBIS, LRU=1.61',
+                   'CASA-GFED3, LRU=1.87', 'Kettle, LRU=C3/C4',
+                   'Kettle, LRU=1.61',
+                   'SiB, mechanistic canopy', 'SiB, prescribed canopy',
+                   'Hybrid Fsoil',
+                   'CASA-m15, LRU=1.61', 'Kettle Fsoil', 'MPI, LRU=1.61',
+                   'CASA-GFED3, LRU=C3/C4', 'CASA-GFED3, LRU=1.35',
+                   'Can-IBIS, LRU=C3/C4', 'CASA-m15, LRU=C3/C4']
+        ocs_dd_new = rename_columns(ocs_dd)
+        ocs_dd_new = normalize_drawdown(ocs_dd_new, vars=dd_vars)
 
-    vars = ['NOAA obs',
-            'CASA-GFED3, LRU=1.61',
-            'CASA-GFED3, LRU=C3/C4',
-            'Can-IBIS, LRU=1.61',
-            'Can-IBIS, LRU=C3/C4',
-            'SiB, mechanistic canopy',
-            'SiB, prescribed canopy']
+        vars = ['NOAA obs',
+                'CASA-GFED3, LRU=1.61',
+                'CASA-GFED3, LRU=C3/C4',
+                'Can-IBIS, LRU=1.61',
+                'Can-IBIS, LRU=C3/C4',
+                'SiB, mechanistic canopy',
+                'SiB, prescribed canopy']
 
-    plot_all_gradients(ocs_dd_new, vars, '_all')
+        plot_all_gradients(ocs_dd_new, vars, '_all')
 
-    vars = ['NOAA obs',
-            'CASA-GFED3, LRU=1.61',
-            'CASA-GFED3, LRU=C3/C4',
-            'CASA-GFED3, LRU=1.61, GC',
-            'CASA-GFED3, LRU=C3/C4, GC',
-            'Can-IBIS, LRU=1.61',
-            'Can-IBIS, LRU=C3/C4',
-            'Can-IBIS, LRU=1.61, GC',
-            'Can-IBIS, LRU=C3/C4, GC',
-            'SiB, mechanistic canopy',
-            'SiB, prescribed canopy',
-            'SiB, mechanistic canopy, GC',
-            'SiB, prescribed canopy, GC']
+        vars = ['NOAA obs',
+                'CASA-GFED3, LRU=1.61',
+                'CASA-GFED3, LRU=C3/C4',
+                'CASA-GFED3, LRU=1.61, GC',
+                'CASA-GFED3, LRU=C3/C4, GC',
+                'Can-IBIS, LRU=1.61',
+                'Can-IBIS, LRU=C3/C4',
+                'Can-IBIS, LRU=1.61, GC',
+                'Can-IBIS, LRU=C3/C4, GC',
+                'SiB, mechanistic canopy',
+                'SiB, prescribed canopy',
+                'SiB, mechanistic canopy, GC',
+                'SiB, prescribed canopy, GC']
 
-    plot_all_gradients(ocs_dd_new, vars, '_GC')
+        plot_all_gradients(ocs_dd_new, vars, '_GC')
 
-    # gradient_map = draw_gradient_map(gradients)
-    # gradient_map.fig.savefig(os.path.join(tmpdir, 'gradients_map.pdf'))
-
-    plt.close('all')
+        # gradient_map = draw_gradient_map(gradients)
+        # gradient_map.fig.savefig(os.path.join(tmpdir, 'gradients_map.pdf'))
+    finally:
+        plt.close('all')
