@@ -253,6 +253,7 @@ if __name__ == "__main__":
 
         ocs_dd = assemble_bar_plot_data()
 
+        ocs_dd_new = rename_columns(ocs_dd)
         dd_vars = ['NOAA obs', 'GEOS-Chem boundaries', 'CASA-GFED3, LRU=1.61',
                    'MPI, LRU=C3/C4', 'Can-IBIS, LRU=1.61',
                    'CASA-GFED3, LRU=1.87', 'Kettle, LRU=C3/C4',
@@ -262,7 +263,8 @@ if __name__ == "__main__":
                    'CASA-m15, LRU=1.61', 'Kettle Fsoil', 'MPI, LRU=1.61',
                    'CASA-GFED3, LRU=C3/C4', 'CASA-GFED3, LRU=1.35',
                    'Can-IBIS, LRU=C3/C4', 'CASA-m15, LRU=C3/C4']
-        ocs_dd_new = rename_columns(ocs_dd)
+        dd_vars_GC = [''.join([k, ', GC']) for k in dd_vars[2:]]
+        dd_vars = dd_vars + dd_vars_GC
         ocs_dd_new = normalize_drawdown(ocs_dd_new, vars=dd_vars)
 
         vars = ['NOAA obs',
