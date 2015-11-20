@@ -131,7 +131,8 @@ def normalize_drawdown(ocs_dd,
                    'site is itself normalized subsequent normalizations '
                    'still work.'))
     for this_var in vars:
-        df[this_var] = df[this_var] / norm_factor
+        df[this_var] = df[this_var] / ocs_dd[this_var][norm_site]
+        # df[this_var] = df[this_var] / norm_factor
     return(df)
 
 
@@ -149,7 +150,7 @@ def draw_box_plot(df, sites_list):
                        x_order=sites_list,
                        aspect=1.25)
     g.despine(offset=10, trim=True)
-    g.set_axis_labels("site", "[OCS] drawdown, normalized to NOAA obs")
+    g.set_axis_labels("site", "[OCS] drawdown, normalized to NHA")
 
     return(g)
 
@@ -252,7 +253,7 @@ def plot_all_gradients(ocs_dd, plot_vars, fname_suffix):
         figs,
         os.path.join(os.getenv('HOME'),
                      'plots',
-                     'model_components_{}.svg'.format(fname_suffix)))
+                     'model_components_{}_nonorm.svg'.format(fname_suffix)))
     fj.join()
     fj.close_figs()
 
@@ -287,7 +288,7 @@ if __name__ == "__main__":
                 'Can-IBIS, LRU=C3/C4',
                 'SiB, mechanistic canopy',
                 'SiB, prescribed canopy']
-        plot_all_gradients(ocs_dd_norm, vars, 'C3C4')
+        plot_all_gradients(ocs_dd_renamed, vars, 'C3C4')
 
         vars = ['NOAA obs',
                 'CASA-GFED3, LRU=C3/C4',
@@ -298,7 +299,15 @@ if __name__ == "__main__":
                 'SiB, prescribed canopy',
                 'SiB, mechanistic canopy, GC',
                 'SiB, prescribed canopy, GC']
-        plot_all_gradients(ocs_dd_norm, vars, 'GC')
+        plot_all_gradients(ocs_dd_renamed, vars, 'GC')
+
+        vars = ['Can-IBIS, LRU=1.61',
+                'SiB, mechanistic canopy',
+                'GEOS-Chem boundaries',
+                'Kettle Fsoil',
+                'Hybrid Fsoil',
+                'Anthro']
+        plot_all_gradients(ocs_dd_renamed, vars, 'mixratio')
 
         # gradient_map = draw_gradient_map(gradients)
         # gradient_map.fig.savefig(os.path.join(tmpdir, 'gradients_map.pdf'))
