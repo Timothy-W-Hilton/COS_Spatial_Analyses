@@ -123,10 +123,12 @@ def normalize_drawdown(ocs_dd,
     is chosen because it is the maximum observed drawdown in the NOAA
     observations.
     """
+    df = ocs_dd.copy()
     for this_var in vars:
-        ocs_dd[this_var] = ocs_dd[this_var] / ocs_dd[this_var][norm_site]
+        df[this_var] = df[this_var] / df[this_var][norm_site]
+        # df[this_var] = df[this_var] / df['ocs_dd']
 
-    return(ocs_dd)
+    return(df)
 
 
 def draw_box_plot(df, sites_list):
@@ -175,14 +177,15 @@ def rename_columns(df):
                     'GEOSChem_bounds': 'GEOS-Chem boundaries',
                     'SiB_mech': 'SiB, mechanistic canopy',
                     'SiB_calc': 'SiB, prescribed canopy'}
-    for this_col in df.columns.values:
+    df_out = df.copy()
+    for this_col in df_out.columns.values:
         if this_col in columns_dict.keys():
-            df.rename(columns=lambda x: x.replace(this_col,
+            df_out.rename(columns=lambda x: x.replace(this_col,
                                                   columns_dict[this_col]),
                       inplace=True)
             print "replaced {} with {}".format(this_col,
                                                columns_dict[this_col])
-    return(df)
+    return(df_out)
 
 
 def draw_gradient_map(gradient_sites_dict):
@@ -229,15 +232,15 @@ def plot_all_gradients(ocs_dd, plot_vars, fname_suffix):
 
     figs = []
     g = draw_box_plot(ocs_dd_long, gradients['east_coast'])
-    g.ax.set_title('East Coast N -> S')
+    g.ax.set_title('East Coast N -- S')
     figs.append(plt.gcf())
 
     g = draw_box_plot(ocs_dd_long, gradients['wet_dry'])
-    g.ax.set_title('Dry -> Wet')
+    g.ax.set_title('West -- East (Dry -- Wet)')
     figs.append(plt.gcf())
 
     g = draw_box_plot(ocs_dd_long, gradients['mid_continent'])
-    g.ax.set_title('Midcontinent N -> S')
+    g.ax.set_title('Midcontinent N -- S')
     figs.append(plt.gcf())
 
     # save figs to single svg file
@@ -259,7 +262,7 @@ if __name__ == "__main__":
 
         ocs_dd = assemble_bar_plot_data()
 
-        ocs_dd_new = rename_columns(ocs_dd)
+        ocs_dd_renamed = rename_columns(ocs_dd)
         dd_vars = ['NOAA obs', 'GEOS-Chem boundaries', 'CASA-GFED3, LRU=1.61',
                    'MPI, LRU=C3/C4', 'Can-IBIS, LRU=1.61',
                    'CASA-GFED3, LRU=1.87', 'Kettle, LRU=C3/C4',
@@ -271,7 +274,7 @@ if __name__ == "__main__":
                    'Can-IBIS, LRU=C3/C4', 'CASA-m15, LRU=C3/C4']
         dd_vars_GC = [''.join([k, ', GC']) for k in dd_vars[2:]]
         dd_vars = dd_vars + dd_vars_GC
-        ocs_dd_new = normalize_drawdown(ocs_dd_new, vars=dd_vars)
+        ocs_dd_norm = normalize_drawdown(ocs_dd_renamed, vars=dd_vars)
 
         vars = ['NOAA obs',
                 'CASA-GFED3, LRU=1.61',
@@ -280,7 +283,7 @@ if __name__ == "__main__":
                 'Can-IBIS, LRU=C3/C4',
                 'SiB, mechanistic canopy',
                 'SiB, prescribed canopy']
-        plot_all_gradients(ocs_dd_new, vars, 'C3C4')
+        plot_all_gradients(ocs_dd_renamed, vars, 'C3C4')
 
         vars = ['NOAA obs',
                 'CASA-GFED3, LRU=C3/C4',
@@ -291,8 +294,7 @@ if __name__ == "__main__":
                 'SiB, prescribed canopy',
                 'SiB, mechanistic canopy, GC',
                 'SiB, prescribed canopy, GC']
-
-        plot_all_gradients(ocs_dd_new, vars, 'GC')
+        plot_all_gradients(ocs_dd_renamed, vars, 'GC')
 
         # gradient_map = draw_gradient_map(gradients)
         # gradient_map.fig.savefig(os.path.join(tmpdir, 'gradients_map.pdf'))
