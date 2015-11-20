@@ -18,10 +18,26 @@ from stem_pytools import STEM_parsers
 # for parsing and plotting NOAA [OCS] observations
 from stem_pytools import noaa_ocs
 # for finding files
-from stem_pytools import ecampbell300_data_paths as edp
+from stem_pytools import NERSC_data_paths as ndp
 # for plotting observations on a map of N America
 from stem_pytools import na_map
 from map_grid import map_grid_main
+from stem_pytools import aqout_postprocess as aqpp
+
+
+def pickle_stem_runs(fname_cpickle=os.path.join(
+        os.getenv('SCRATCH'),
+        'STEM_all_runs.cpickle')):
+    """
+    create a cpickle file containing Jul-Aug daily [COS] mean,
+    standard deviation, and time stamps.
+
+    :param fname_cpickle: full path of the cpickle file to be created.
+        Default is $SCRATCH/STEM_runs.cpickle
+    """
+    aqpp.assemble_data(ndp.get_Spatial_Paper_runs(),
+                       fname_cpickle)
+    print("wrote {}".format(fname_cpickle))
 
 
 def get_aqout_data_path():
@@ -228,8 +244,8 @@ if __name__ == "__main__":
 
     if plot_site_mean_drawdown_switch:
         ocs_dd, ocs_daily = get_JA_site_mean_drawdown(get_noaa_COS_data_path())
-        # c4runs = edp.get_C3C4runs()
-        basc_runs = edp.get_BASC_runs()
+        # c4runs = ndp.get_C3C4runs()
+        basc_runs = ndp.get_BASC_runs()
         fig, map_objs, cos_cmap, cos_norm = map_grid_main(
             aqout_data=os.path.join(os.getenv('HOME'), 'Data', 'STEM',
                                     'aq_out_data_BASC.cpickle'),
