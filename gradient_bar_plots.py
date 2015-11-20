@@ -1,6 +1,7 @@
 import matplotlib
 matplotlib.use('AGG')
 
+import warnings
 import os
 import os.path
 import pandas as pd
@@ -124,10 +125,13 @@ def normalize_drawdown(ocs_dd,
     observations.
     """
     df = ocs_dd.copy()
+    norm_factor = df['NOAA obs'].values.copy()
+    warnings.warn(('normalization factor is set to NOAA_obs; the'
+                   'factor must be *copied* so that when the normalization '
+                   'site is itself normalized subsequent normalizations '
+                   'still work.'))
     for this_var in vars:
-        df[this_var] = df[this_var] / df[this_var][norm_site]
-        # df[this_var] = df[this_var] / df['ocs_dd']
-
+        df[this_var] = df[this_var] / norm_factor
     return(df)
 
 
@@ -145,7 +149,7 @@ def draw_box_plot(df, sites_list):
                        x_order=sites_list,
                        aspect=1.25)
     g.despine(offset=10, trim=True)
-    g.set_axis_labels("site", "[OCS] drawdown (normalized to NHA)")
+    g.set_axis_labels("site", "[OCS] drawdown, normalized to NOAA obs")
 
     return(g)
 
@@ -283,7 +287,7 @@ if __name__ == "__main__":
                 'Can-IBIS, LRU=C3/C4',
                 'SiB, mechanistic canopy',
                 'SiB, prescribed canopy']
-        plot_all_gradients(ocs_dd_renamed, vars, 'C3C4')
+        plot_all_gradients(ocs_dd_norm, vars, 'C3C4')
 
         vars = ['NOAA obs',
                 'CASA-GFED3, LRU=C3/C4',
@@ -294,7 +298,7 @@ if __name__ == "__main__":
                 'SiB, prescribed canopy',
                 'SiB, mechanistic canopy, GC',
                 'SiB, prescribed canopy, GC']
-        plot_all_gradients(ocs_dd_renamed, vars, 'GC')
+        plot_all_gradients(ocs_dd_norm, vars, 'GC')
 
         # gradient_map = draw_gradient_map(gradients)
         # gradient_map.fig.savefig(os.path.join(tmpdir, 'gradients_map.pdf'))
