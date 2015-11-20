@@ -12,6 +12,7 @@ from stem_pytools import noaa_ocs
 from stem_pytools import domain
 from stem_pytools import aqout_postprocess as aq
 from stem_pytools import calc_drawdown
+from timutils.mpl_fig_joiner import FigJoiner
 import map_grid
 import draw_c3c4LRU_map
 
@@ -226,22 +227,27 @@ def plot_all_gradients(ocs_dd, plot_vars, fname_suffix):
                           value_vars=plot_vars,
                           value_name='drawdown')
 
-    tmpdir = os.getenv('SCRATCH')
+    figs = []
     g = draw_box_plot(ocs_dd_long, gradients['east_coast'])
-    plt.gcf().savefig(
-        os.path.join(tmpdir, 'barplots',
-                     'barplots_eastcoast{}.svg'.format(fname_suffix)))
+    g.ax.set_title('East Coast N -> S')
+    figs.append(plt.gcf())
 
     g = draw_box_plot(ocs_dd_long, gradients['wet_dry'])
-    plt.gcf().savefig(
-        os.path.join(tmpdir, 'barplots',
-                     'barplots_wetdry{}.svg'.format(fname_suffix)))
+    g.ax.set_title('Dry -> Wet')
+    figs.append(plt.gcf())
 
     g = draw_box_plot(ocs_dd_long, gradients['mid_continent'])
-    plt.gcf().savefig(
-        os.path.join(tmpdir, 'barplots',
-                     'barplots_midcontinent{}.svg'.format(fname_suffix)))
+    g.ax.set_title('Midcontinent N -> S')
+    figs.append(plt.gcf())
 
+    # save figs to single svg file
+    fj = FigJoiner(
+        figs,
+        os.path.join(os.getenv('HOME'),
+                     'plots',
+                     'model_components_{}.svg'.format(fname_suffix)))
+    fj.join()
+    fj.close_figs()
 
 if __name__ == "__main__":
 
@@ -274,7 +280,7 @@ if __name__ == "__main__":
                 'Can-IBIS, LRU=C3/C4',
                 'SiB, mechanistic canopy',
                 'SiB, prescribed canopy']
-        plot_all_gradients(ocs_dd_new, vars, '_C3C4')
+        plot_all_gradients(ocs_dd_new, vars, 'C3C4')
 
         vars = ['NOAA obs',
                 'CASA-GFED3, LRU=C3/C4',
@@ -286,7 +292,7 @@ if __name__ == "__main__":
                 'SiB, mechanistic canopy, GC',
                 'SiB, prescribed canopy, GC']
 
-        plot_all_gradients(ocs_dd_new, vars, '_GC')
+        plot_all_gradients(ocs_dd_new, vars, 'GC')
 
         # gradient_map = draw_gradient_map(gradients)
         # gradient_map.fig.savefig(os.path.join(tmpdir, 'gradients_map.pdf'))
