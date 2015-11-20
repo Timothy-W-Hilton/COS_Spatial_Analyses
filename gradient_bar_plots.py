@@ -130,7 +130,7 @@ def normalize_drawdown(ocs_dd,
 
 def draw_box_plot(df, sites_list):
     sns.set_style('ticks')
-    sns.set_context('talk')
+    sns.set_context('paper')
     g = sns.factorplot(x="sample_site_code",
                        y="drawdown",
                        hue='variable',
@@ -142,7 +142,7 @@ def draw_box_plot(df, sites_list):
                        x_order=sites_list,
                        aspect=1.25)
     g.despine(offset=10, trim=True)
-    g.set_axis_labels("site", "[OCS] drawdown (ppt)")
+    g.set_axis_labels("site", "[OCS] drawdown (normalized to NHA)")
 
     return(g)
 
@@ -230,17 +230,17 @@ def plot_all_gradients(ocs_dd, plot_vars, fname_suffix):
     g = draw_box_plot(ocs_dd_long, gradients['east_coast'])
     plt.gcf().savefig(
         os.path.join(tmpdir, 'barplots',
-                     'barplots_eastcoast{}.pdf'.format(fname_suffix)))
+                     'barplots_eastcoast{}.svg'.format(fname_suffix)))
 
     g = draw_box_plot(ocs_dd_long, gradients['wet_dry'])
     plt.gcf().savefig(
         os.path.join(tmpdir, 'barplots',
-                     'barplots_wetdry{}.pdf'.format(fname_suffix)))
+                     'barplots_wetdry{}.svg'.format(fname_suffix)))
 
     g = draw_box_plot(ocs_dd_long, gradients['mid_continent'])
     plt.gcf().savefig(
         os.path.join(tmpdir, 'barplots',
-                     'barplots_midcontinent{}.pdf'.format(fname_suffix)))
+                     'barplots_midcontinent{}.svg'.format(fname_suffix)))
 
 
 if __name__ == "__main__":
@@ -274,17 +274,12 @@ if __name__ == "__main__":
                 'Can-IBIS, LRU=C3/C4',
                 'SiB, mechanistic canopy',
                 'SiB, prescribed canopy']
-
-        plot_all_gradients(ocs_dd_new, vars, '_all')
+        plot_all_gradients(ocs_dd_new, vars, '_C3C4')
 
         vars = ['NOAA obs',
-                'CASA-GFED3, LRU=1.61',
                 'CASA-GFED3, LRU=C3/C4',
-                'CASA-GFED3, LRU=1.61, GC',
                 'CASA-GFED3, LRU=C3/C4, GC',
-                'Can-IBIS, LRU=1.61',
                 'Can-IBIS, LRU=C3/C4',
-                'Can-IBIS, LRU=1.61, GC',
                 'Can-IBIS, LRU=C3/C4, GC',
                 'SiB, mechanistic canopy',
                 'SiB, prescribed canopy',
