@@ -41,7 +41,7 @@ def get_STEM_cos_conc(cpickle_fname=None, const_bounds_cos=4.5e-10):
             del cos_conc_daily['t'][k]
 
     cos_conc_daily['cos_mean'] = calculate_GCbounds_cos(
-        cos_conc_daily['cos_mean'])
+        cos_conc_daily['cos_mean'], const_bounds_cos)
     # aggregate daily means to a single July-August mean
     cos_conc = cos_conc_daily['cos_mean']
 
@@ -53,7 +53,7 @@ def get_STEM_cos_conc(cpickle_fname=None, const_bounds_cos=4.5e-10):
 
 
 def assemble_bar_plot_data(
-        cpickle_fname=os.path.join(os.getenv('SCRATCH'),
+        cpickle_fname=os.path.join(os.getenv('HOME'),
                                    '2015-11-16_all_runs.cpickle')):
     noaa_dir = sau.get_noaa_COS_data_path()
     noaa_ocs_dd, ocs_daily = sau.get_JA_site_mean_drawdown(noaa_dir)
@@ -79,24 +79,7 @@ def assemble_bar_plot_data(
     return(noaa_ocs_dd)
 
 
-def calculate_GCbounds_cos(stem_ocs_dd, const_bounds=4.5e-10):
-    do_not_adjust = ['sample_latitude', 'sample_longitude', 'analysis_value',
-                     'ocs_dd', 'stem_x', 'stem_y']
-    print "start"
-
-    GC_runs = {}
-    for k in stem_ocs_dd.keys():
-        if k not in do_not_adjust:
-            key_GC = '{}{}'.format(k, ', GC')
-            data_GC = (stem_ocs_dd[k] - const_bounds +
-                       stem_ocs_dd['GEOSChem_bounds'])
-            print 'adding {} to dict'.format(key_GC)
-            GC_runs.update({key_GC: data_GC})
-    stem_ocs_dd.update(GC_runs)
-    return(stem_ocs_dd)
-
-
-def calc_dynamic_boundary_effect(ocs_conc, const_bounds=4.5e-10):
+def calculate_GCbounds_cos(stem_ocs_dd, const_bounds=4.5e-10, verbose=False):
     """Calculate drawdown enhancement or reduction because of dynamic
      boundaries relative to static boundary conditions.  Subtract out
      the 450 pptv static boundary condition from the dynamic
@@ -105,11 +88,29 @@ def calc_dynamic_boundary_effect(ocs_conc, const_bounds=4.5e-10):
      coupled with no surface COS flux must result in [COS] = 450 pptv
      at all places, times.
 
-    :param ocs_conc: array of [OCS], molecules m-3
-    :param const_bounds: [COS] for the constant boundary conditions
+    ARGS:
+    ocs_conc (dict): dict containing `array-lke
+        <http://docs.scipy.org/doc/numpy/user/basics.creation.html#converting-python-array-like-objects-to-numpy-arrays>`_
+        [COS] values (molecules m-3)
+    const_bounds (scalar): [COS] for the constant boundary conditions
+        (molecules m-3)
+    verbose ({False}|True): if True, display message to stdout for
+        each stem_ocs_dd field adjusted
     """
-    ocs_conc -= const_bounds
-    return(ocs_conc)
+    do_not_adjust = ['sample_latitude', 'sample_longitude', 'analysis_value',
+                     'ocs_dd', 'stem_x', 'stem_y']
+
+    GC_runs = {}
+    for k in stem_ocs_dd.keys():
+        if k not in do_not_adjust:
+            key_GC = '{}{}'.format(k, ', GC')
+            data_GC = (stem_ocs_dd[k] - const_bounds +
+                       stem_ocs_dd['GEOSChem_bounds'])
+            if verbose:
+                print 'adding {} to dict'.format(key_GC)
+            GC_runs.update({key_GC: data_GC})
+    stem_ocs_dd.update(GC_runs)
+    return(stem_ocs_dd)
 
 
 def normalize_drawdown(ocs_dd,
