@@ -40,6 +40,11 @@ def get_STEM_cos_conc(cpickle_fname=None, const_bounds_cos=4.5e-10):
             del cos_conc_daily['cos_std'][k]
             del cos_conc_daily['t'][k]
 
+    print(('multiplying Anthro [COS] by 1000 '
+           'as per email from Andrew'))
+    cos_conc_daily['cos_mean']['Anthro_Kettle'] *= 1e3
+    cos_conc_daily['cos_mean']['Anthro_Andrew'] *= 1e3
+
     cos_conc_daily['cos_mean'] = calculate_GCbounds_cos(
         cos_conc_daily['cos_mean'], const_bounds_cos)
     # aggregate daily means to a single July-August mean
@@ -54,7 +59,7 @@ def get_STEM_cos_conc(cpickle_fname=None, const_bounds_cos=4.5e-10):
 
 def assemble_bar_plot_data(
         cpickle_fname=os.path.join(os.getenv('HOME'),
-                                   '2015-11-16_all_runs.cpickle')):
+                                   'STEM_all_runs_AGU2015.cpickle')):
     noaa_dir = sau.get_noaa_COS_data_path()
     noaa_ocs_dd, ocs_daily = sau.get_JA_site_mean_drawdown(noaa_dir)
 
@@ -126,14 +131,15 @@ def normalize_drawdown(ocs_dd,
     observations.
     """
     df = ocs_dd.copy()
-    norm_factor = df['NOAA obs'].values.copy()
-    warnings.warn(('normalization factor is set to NOAA_obs; the'
-                   'factor must be *copied* so that when the normalization '
-                   'site is itself normalized subsequent normalizations '
-                   'still work.'))
+    # norm_factor = df['NOAA obs'].values.copy()
+    # warnings.warn(('normalization factor is set to NOAA_obs; the'
+    #                'factor must be *copied* so that when the normalization '
+    #                'site is itself normalized subsequent normalizations '
+    #                'still work.'))
     for this_var in vars:
         df[this_var] = df[this_var] / ocs_dd[this_var][norm_site]
         # df[this_var] = df[this_var] / norm_factor
+
     return(df)
 
 
@@ -182,7 +188,9 @@ def rename_columns(df):
                     'Fsoil_Hybrid5Feb': 'Hybrid Fsoil',
                     'GEOSChem_bounds': 'GEOS-Chem boundaries',
                     'SiB_mech': 'SiB, mechanistic canopy',
-                    'SiB_calc': 'SiB, prescribed canopy'}
+                    'SiB_calc': 'SiB, prescribed canopy',
+                    'Anthro_Kettle': 'Anthropogenic, Kettle',
+                    'Anthro_Andrew': 'Anthropogenic, Zumkehr'}
     df_out = df.copy()
     for this_col in df_out.columns.values:
         if this_col in columns_dict.keys():
@@ -239,24 +247,28 @@ def plot_all_gradients(ocs_dd, plot_vars, fname_suffix):
     figs = []
     g = draw_box_plot(ocs_dd_long, gradients['east_coast'])
     g.ax.set_title('East Coast N -- S')
-    figs.append(plt.gcf())
-
-    g = draw_box_plot(ocs_dd_long, gradients['wet_dry'])
-    g.ax.set_title('West -- East (Dry -- Wet)')
-    figs.append(plt.gcf())
-
-    g = draw_box_plot(ocs_dd_long, gradients['mid_continent'])
-    g.ax.set_title('Midcontinent N -- S')
-    figs.append(plt.gcf())
-
-    # save figs to single svg file
-    fj = FigJoiner(
-        figs,
+    plt.gcf().savefig(
         os.path.join(os.getenv('HOME'),
                      'plots',
-                     'model_components_{}_nonorm.svg'.format(fname_suffix)))
-    fj.join()
-    fj.close_figs()
+                     'ECoast_model_components_{}_NHAnorm.svg'.format(fname_suffix)))
+    # figs.append(plt.gcf())
+
+    # g = draw_box_plot(ocs_dd_long, gradients['wet_dry'])
+    # g.ax.set_title('West -- East (Dry -- Wet)')
+    # figs.append(plt.gcf())
+
+    # g = draw_box_plot(ocs_dd_long, gradients['mid_continent'])
+    # g.ax.set_title('Midcontinent N -- S')
+    # figs.append(plt.gcf())
+
+    # # save figs to single svg file
+    # fj = FigJoiner(
+    #     figs,
+    #     os.path.join(os.getenv('HOME'),
+    #                  'plots',
+    #                  'model_components_{}_NHAnorm.svg'.format(fname_suffix)))
+    # fj.join()
+    # fj.close_figs()
 
 if __name__ == "__main__":
 
@@ -280,36 +292,25 @@ if __name__ == "__main__":
                    'Can-IBIS, LRU=C3/C4', 'CASA-m15, LRU=C3/C4']
         dd_vars_GC = [''.join([k, ', GC']) for k in dd_vars[2:]]
         dd_vars = dd_vars + dd_vars_GC
+
         ocs_dd_norm = normalize_drawdown(ocs_dd_renamed, vars=dd_vars)
 
         vars = ['NOAA obs',
+                'SiB, prescribed canopy',
+                'SiB, mechanistic canopy',
                 'CASA-GFED3, LRU=1.61',
                 'CASA-GFED3, LRU=C3/C4',
+                'Kettle, LRU=1.61',
                 'Can-IBIS, LRU=1.61',
-                'Can-IBIS, LRU=C3/C4',
-                'SiB, mechanistic canopy',
-                'SiB, prescribed canopy']
-        plot_all_gradients(ocs_dd_renamed, vars, 'C3C4')
-
-        vars = ['NOAA obs',
-                'CASA-GFED3, LRU=C3/C4',
-                'CASA-GFED3, LRU=C3/C4, GC',
-                'Can-IBIS, LRU=C3/C4',
-                'Can-IBIS, LRU=C3/C4, GC',
-                'SiB, mechanistic canopy',
-                'SiB, prescribed canopy',
-                'SiB, mechanistic canopy, GC',
-                'SiB, prescribed canopy, GC']
-        plot_all_gradients(ocs_dd_renamed, vars, 'GC')
-
-        vars = ['Can-IBIS, LRU=1.61',
-                'SiB, mechanistic canopy',
-                'GEOS-Chem boundaries',
                 'Kettle Fsoil',
-                'Hybrid Fsoil',
-                'Anthro']
-        plot_all_gradients(ocs_dd_renamed, vars, 'mixratio')
+                'Hybrid Fsoil']
+        plot_all_gradients(ocs_dd_norm, vars, 'AGU')
 
+        # # show east coast sites
+        # ocs_dd_renamed.ix[['NHA', 'SCA', 'CMA']][['analysis_value', 'NOAA obs']]
+        # # show east coast mean
+        # ocs_dd_renamed.ix[['NHA', 'SCA', 'CMA']][['analysis_value',
+        #                                           'NOAA obs']].mean()
         # gradient_map = draw_gradient_map(gradients)
         # gradient_map.fig.savefig(os.path.join(tmpdir, 'gradients_map.pdf'))
     finally:
