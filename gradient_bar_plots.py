@@ -63,6 +63,10 @@ def get_STEM_cos_conc(cpickle_fname=None, const_bounds_cos=4.5e-10):
                                                     cos_conc['Anthro_Kettle'])
     cos_conc['CASA-GFED3, Zumkehr Anthropogenic'] = (cos_conc['casa_gfed_161'] +
                                                      cos_conc['Anthro_Andrew'])
+    cos_conc['CASA-GFED3, Kettle Fsoil'] = (cos_conc['casa_gfed_161'] +
+                                            cos_conc['Fsoil_Kettle'])
+    cos_conc['CASA-GFED3, Hybrid Fsoil'] = (cos_conc['casa_gfed_161'] +
+                                            cos_conc['Fsoil_Hybrid5Feb'])
 
     return(cos_conc)
 
@@ -302,9 +306,11 @@ if __name__ == "__main__":
                    'CASA-GFED3, LRU=C3/C4', 'CASA-GFED3, LRU=1.35',
                    'Can-IBIS, LRU=C3/C4', 'CASA-m15, LRU=C3/C4',
                    'CASA-GFED3, Kettle Anthropogenic',
-                   'CASA-GFED3, Zumkehr Anthropogenic']
-        dd_vars_GC = [''.join([k, ', GC']) for k in dd_vars[2:]]
-        dd_vars = dd_vars + dd_vars_GC
+                   'CASA-GFED3, Zumkehr Anthropogenic',
+                   'CASA-GFED3, Kettle Fsoil',
+                   'CASA-GFED3, Hybrid Fsoil']
+        # dd_vars_GC = [''.join([k, ', GC']) for k in dd_vars[2:]]
+        # dd_vars = dd_vars + dd_vars_GC
 
         ocs_dd_norm = normalize_drawdown(ocs_dd_renamed, vars=dd_vars)
 
@@ -316,7 +322,9 @@ if __name__ == "__main__":
                 'Kettle, LRU=1.61',
                 'Can-IBIS, LRU=1.61',
                 'CASA-GFED3, Kettle Anthropogenic',
-                'CASA-GFED3, Zumkehr Anthropogenic']
+                'CASA-GFED3, Zumkehr Anthropogenic',
+                'CASA-GFED3, Kettle Fsoil',
+                'CASA-GFED3, Hybrid Fsoil']
         # 'CASA-GFED3, Kettle Anthropogenic'
         plot_all_gradients(ocs_dd_norm, vars, 'AGU')
 
