@@ -45,6 +45,10 @@ def get_STEM_cos_conc(cpickle_fname=None, const_bounds_cos=4.5e-10):
     cos_conc_daily['cos_mean']['Anthro_Kettle'] *= 1e3
     cos_conc_daily['cos_mean']['Anthro_Andrew'] *= 1e3
 
+    cos_conc_daily['cos_mean']['CASA-GFED3, Kettle Anthropogenic'] = cos_conc_daily['cos_mean']['casa_gfed_161'] + cos_conc_daily['cos_mean']['Anthro_Kettle']
+    cos_conc_daily['cos_mean']['CASA-GFED3, Zumkehr Anthropogenic'] = cos_conc_daily['cos_mean']['casa_gfed_161'] + cos_conc_daily['cos_mean']['Anthro_Andrew']
+
+
     cos_conc_daily['cos_mean'] = calculate_GCbounds_cos(
         cos_conc_daily['cos_mean'], const_bounds_cos)
     # aggregate daily means to a single July-August mean
@@ -54,6 +58,12 @@ def get_STEM_cos_conc(cpickle_fname=None, const_bounds_cos=4.5e-10):
                     k, v in cos_conc.items())
     cos_conc.update((k, map_grid.daily_to_JulAug(v))
                     for k, v in cos_conc.items())
+
+    cos_conc['CASA-GFED3, Kettle Anthropogenic'] = (cos_conc['casa_gfed_161'] +
+                                                    cos_conc['Anthro_Kettle'])
+    cos_conc['CASA-GFED3, Zumkehr Anthropogenic'] = (cos_conc['casa_gfed_161'] +
+                                                     cos_conc['Anthro_Andrew'])
+
     return(cos_conc)
 
 
@@ -137,6 +147,7 @@ def normalize_drawdown(ocs_dd,
     #                'site is itself normalized subsequent normalizations '
     #                'still work.'))
     for this_var in vars:
+        print('Normalizing {}'.format(this_var))
         df[this_var] = df[this_var] / ocs_dd[this_var][norm_site]
         # df[this_var] = df[this_var] / norm_factor
 
@@ -289,7 +300,9 @@ if __name__ == "__main__":
                    'Hybrid Fsoil',
                    'CASA-m15, LRU=1.61', 'Kettle Fsoil', 'MPI, LRU=1.61',
                    'CASA-GFED3, LRU=C3/C4', 'CASA-GFED3, LRU=1.35',
-                   'Can-IBIS, LRU=C3/C4', 'CASA-m15, LRU=C3/C4']
+                   'Can-IBIS, LRU=C3/C4', 'CASA-m15, LRU=C3/C4',
+                   'CASA-GFED3, Kettle Anthropogenic',
+                   'CASA-GFED3, Zumkehr Anthropogenic']
         dd_vars_GC = [''.join([k, ', GC']) for k in dd_vars[2:]]
         dd_vars = dd_vars + dd_vars_GC
 
@@ -302,8 +315,9 @@ if __name__ == "__main__":
                 'CASA-GFED3, LRU=C3/C4',
                 'Kettle, LRU=1.61',
                 'Can-IBIS, LRU=1.61',
-                'Kettle Fsoil',
-                'Hybrid Fsoil']
+                'CASA-GFED3, Kettle Anthropogenic',
+                'CASA-GFED3, Zumkehr Anthropogenic']
+        # 'CASA-GFED3, Kettle Anthropogenic'
         plot_all_gradients(ocs_dd_norm, vars, 'AGU')
 
         # # show east coast sites
