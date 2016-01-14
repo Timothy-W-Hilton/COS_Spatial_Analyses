@@ -48,32 +48,33 @@ def get_STEM_cos_conc(cpickle_fname=None, const_bounds_cos=4.5e-10):
     cos_conc_daily['cos_mean']['CASA-GFED3, Kettle Anthropogenic'] = cos_conc_daily['cos_mean']['casa_gfed_161'] + cos_conc_daily['cos_mean']['Anthro_Kettle']
     cos_conc_daily['cos_mean']['CASA-GFED3, Zumkehr Anthropogenic'] = cos_conc_daily['cos_mean']['casa_gfed_161'] + cos_conc_daily['cos_mean']['Anthro_Andrew']
 
+    # calculate CASA-GFED plus soil fluxes, anthro fluxes
+    cos_conc_daily['cos_mean']['CASA-GFED3, Kettle Anthropogenic'] = (cos_conc_daily['cos_mean']['casa_gfed_161'] +
+                                                    cos_conc_daily['cos_mean']['Anthro_Kettle'])
+    cos_conc_daily['cos_mean']['CASA-GFED3, Zumkehr Anthropogenic'] = (cos_conc_daily['cos_mean']['casa_gfed_161'] +
+                                                     cos_conc_daily['cos_mean']['Anthro_Andrew'])
+    cos_conc_daily['cos_mean']['CASA-GFED3, Kettle Fsoil'] = (cos_conc_daily['cos_mean']['casa_gfed_161'] +
+                                            cos_conc_daily['cos_mean']['Fsoil_Kettle'])
+    cos_conc_daily['cos_mean']['CASA-GFED3, Hybrid Fsoil'] = (cos_conc_daily['cos_mean']['casa_gfed_161'] +
+                                            cos_conc_daily['cos_mean']['Fsoil_Hybrid5Feb'])
 
     cos_conc_daily['cos_mean'] = calculate_GCbounds_cos(
         cos_conc_daily['cos_mean'], const_bounds_cos)
-    # aggregate daily means to a single July-August mean
-    cos_conc = cos_conc_daily['cos_mean']
 
+    # don't need standard devation for this analysis
+    cos_conc = cos_conc_daily['cos_mean']
+    # aggregate daily means to a single July-August mean
     cos_conc.update((k, calc_drawdown.calc_STEM_COS_drawdown(v)) for
                     k, v in cos_conc.items())
     cos_conc.update((k, map_grid.daily_to_JulAug(v))
                     for k, v in cos_conc.items())
-
-    cos_conc['CASA-GFED3, Kettle Anthropogenic'] = (cos_conc['casa_gfed_161'] +
-                                                    cos_conc['Anthro_Kettle'])
-    cos_conc['CASA-GFED3, Zumkehr Anthropogenic'] = (cos_conc['casa_gfed_161'] +
-                                                     cos_conc['Anthro_Andrew'])
-    cos_conc['CASA-GFED3, Kettle Fsoil'] = (cos_conc['casa_gfed_161'] +
-                                            cos_conc['Fsoil_Kettle'])
-    cos_conc['CASA-GFED3, Hybrid Fsoil'] = (cos_conc['casa_gfed_161'] +
-                                            cos_conc['Fsoil_Hybrid5Feb'])
 
     return(cos_conc)
 
 
 def assemble_bar_plot_data(
         cpickle_fname=os.path.join(os.getenv('HOME'),
-                                   'STEM_all_runs_AGU2015.cpickle')):
+                                   'STEM_all_runs.cpickle')):
     noaa_dir = sau.get_noaa_COS_data_path()
     noaa_ocs_dd, ocs_daily = sau.get_JA_site_mean_drawdown(noaa_dir)
 
@@ -117,18 +118,18 @@ def calculate_GCbounds_cos(stem_ocs_dd, const_bounds=4.5e-10, verbose=False):
         each stem_ocs_dd field adjusted
     """
     do_not_adjust = ['sample_latitude', 'sample_longitude', 'analysis_value',
-                     'ocs_dd', 'stem_x', 'stem_y']
+                     'ocs_dd', 'stem_x', 'stem_y', 'climatological_bnd']
 
-    GC_runs = {}
+    bounds_runs = {}
     for k in stem_ocs_dd.keys():
         if k not in do_not_adjust:
-            key_GC = '{}{}'.format(k, ', GC')
-            data_GC = (stem_ocs_dd[k] - const_bounds +
-                       stem_ocs_dd['GEOSChem_bounds'])
+            key_GC = '{}{}'.format(k, ', clim')
+            data_GC = (stem_ocs_dd[k][0:-1] - const_bounds +
+                       stem_ocs_dd['climatological_bnd'])
             if verbose:
                 print 'adding {} to dict'.format(key_GC)
-            GC_runs.update({key_GC: data_GC})
-    stem_ocs_dd.update(GC_runs)
+            bounds_runs.update({key_GC: data_GC})
+    stem_ocs_dd.update(bounds_runs)
     return(stem_ocs_dd)
 
 
@@ -202,6 +203,7 @@ def rename_columns(df):
                     'Fsoil_Kettle': 'Kettle Fsoil',
                     'Fsoil_Hybrid5Feb': 'Hybrid Fsoil',
                     'GEOSChem_bounds': 'GEOS-Chem boundaries',
+                    'climatological_bnd': 'climatological boundaries',
                     'SiB_mech': 'SiB, mechanistic canopy',
                     'SiB_calc': 'SiB, prescribed canopy',
                     'Anthro_Kettle': 'Anthropogenic, Kettle',
@@ -210,8 +212,8 @@ def rename_columns(df):
     for this_col in df_out.columns.values:
         if this_col in columns_dict.keys():
             df_out.rename(columns=lambda x: x.replace(this_col,
-                                                  columns_dict[this_col]),
-                      inplace=True)
+                                                      columns_dict[this_col]),
+                          inplace=True)
             print "replaced {} with {}".format(this_col,
                                                columns_dict[this_col])
     return(df_out)
@@ -296,7 +298,8 @@ if __name__ == "__main__":
         ocs_dd = assemble_bar_plot_data()
 
         ocs_dd_renamed = rename_columns(ocs_dd)
-        dd_vars = ['NOAA obs', 'GEOS-Chem boundaries', 'CASA-GFED3, LRU=1.61',
+        dd_vars = ['NOAA obs', 'GEOS-Chem boundaries',
+                   'climatological boundaries', 'CASA-GFED3, LRU=1.61',
                    'MPI, LRU=C3/C4', 'Can-IBIS, LRU=1.61',
                    'CASA-GFED3, LRU=1.87', 'Kettle, LRU=C3/C4',
                    'Kettle, LRU=1.61',
@@ -309,8 +312,9 @@ if __name__ == "__main__":
                    'CASA-GFED3, Zumkehr Anthropogenic',
                    'CASA-GFED3, Kettle Fsoil',
                    'CASA-GFED3, Hybrid Fsoil']
-        # dd_vars_GC = [''.join([k, ', GC']) for k in dd_vars[2:]]
-        # dd_vars = dd_vars + dd_vars_GC
+        dd_vars_bounds = [''.join([k, ', clim']) for k in dd_vars[2:]
+                          if k is not 'climatological boundaries']
+        dd_vars = dd_vars + dd_vars_bounds
 
         ocs_dd_norm = normalize_drawdown(ocs_dd_renamed, vars=dd_vars)
 
@@ -324,9 +328,10 @@ if __name__ == "__main__":
                 'CASA-GFED3, Kettle Anthropogenic',
                 'CASA-GFED3, Zumkehr Anthropogenic',
                 'CASA-GFED3, Kettle Fsoil',
-                'CASA-GFED3, Hybrid Fsoil']
+                'CASA-GFED3, Hybrid Fsoil',
+                'climatological boundaries']
         # 'CASA-GFED3, Kettle Anthropogenic'
-        plot_all_gradients(ocs_dd_norm, vars, 'AGU')
+        plot_all_gradients(ocs_dd_norm, vars, '08Jan')
 
         # # show east coast sites
         # ocs_dd_renamed.ix[['NHA', 'SCA', 'CMA']][['analysis_value', 'NOAA obs']]
