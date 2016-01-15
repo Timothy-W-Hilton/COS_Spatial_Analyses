@@ -9,9 +9,9 @@ from IOAPIpytools.ioapi_pytools import boundaries_from_csv
 
 if __name__ == "__main__":
     PFA = NOAASite('PFA', 493.54335, 26.31656333)
-    ESP = NOAASite('PFA', 495.7402393, 6.118293878)
+    ESP = NOAASite('ESP', 495.7402393, 6.118293878)
     THD = NOAASite('THD', 538.1678958, 25.6922375)
-    TGC = NOAASite('THD', 519.1636667, -12.30926667)
+    TGC = NOAASite('TGC', 519.1636667, -12.30926667)
     NHA = NOAASite('NHA', 466.444445, 75.521758)
     SCA = NOAASite('SCA', 510.726333, 24.069413)
     CMA = NOAASite('CMA', 490.787018,  56.442238)
@@ -24,22 +24,12 @@ if __name__ == "__main__":
     # tgc for rest of south, and maybe an average of nha/sca/cma for the
     # east (which shouldn't matter).
 
-    bounds = np.hstack((np.tile(THD.column_cos[:, np.newaxis], 62),  # SW
-                        np.tile(TGC.column_cos[:, np.newaxis], 62),  # SE
-                        np.tile(E_mean.column_cos[:, np.newaxis], 126),  # E
-                        np.tile(PFA.column_cos[:, np.newaxis], 124),  # N
-                        np.tile(PFA.column_cos[:, np.newaxis], 42),  # W
-                        np.tile(ESP.column_cos[:, np.newaxis], 42),  # W
-                        np.tile(THD.column_cos[:, np.newaxis], 42)))  # W
-
-
-    # fake_bounds = np.ones([22, 1])
-    # bounds = np.hstack((np.tile(fake_bounds, 63),  # SW
-    #                     np.tile(fake_bounds * 2.0, 63),  # SE
-    #                     np.tile(fake_bounds * 3.0, 124),  # E
-    #                     np.tile(fake_bounds * 5.0, 126 + 40),  # N, NW
-    #                     np.tile(fake_bounds * 6.0, 42),  # W
-    #                     np.tile(fake_bounds * 7.0, 42)))  # W
+    bounds = np.hstack((np.tile(TGC.column_cos[:, np.newaxis], 31),
+                        np.tile(E_mean.column_cos[:, np.newaxis], 93),
+                        np.tile(PFA.column_cos[:, np.newaxis], 126 + 42),
+                        np.tile(ESP.column_cos[:, np.newaxis], 42),
+                        np.tile(THD.column_cos[:, np.newaxis], 42 + 42),
+                        np.tile(TGC.column_cos[:, np.newaxis], 82)))
 
     pptv_2_molecules_m3 = 1e-12
     pptv_2_ppbv = 1e-3
