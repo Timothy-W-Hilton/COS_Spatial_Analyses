@@ -10,3 +10,5 @@ dist/*
 *.x
 *.mod
 *.csv
+
+STEM_TestRuns/
