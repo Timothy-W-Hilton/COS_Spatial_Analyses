@@ -43,8 +43,8 @@ def map_init(cos):
 
 
 def get_norm_cmap(cmap_arg=plt.get_cmap('Blues')):
-    cmap, norm = midpt_norm.get_discrete_midpt_cmap_norm(vmin=-85,
-                                                         vmax=85,
+    cmap, norm = midpt_norm.get_discrete_midpt_cmap_norm(vmin=-30,
+                                                         vmax=30,
                                                          midpoint=0.0,
                                                          bands_above_mdpt=7,
                                                          bands_below_mdpt=7,
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     data_dir = os.path.join('/project', 'projectdirs', 'm2319',
                             'STEM_Runs',
                             'STEM_NAmerica_Climatological_Bounds', 'output')
-    outfile = 'climatological_bounds.mp4'
+    outfile = 'climatological_bounds_3030.mp4'
 
     cos = sp.parse_STEM_var(nc_fname=os.path.join(
         data_dir, 'AQOUT.climatological_bnd.nc'),
