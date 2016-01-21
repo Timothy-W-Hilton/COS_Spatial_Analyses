@@ -329,9 +329,10 @@ if __name__ == "__main__":
                 'CASA-GFED3, Zumkehr Anthropogenic',
                 'CASA-GFED3, Kettle Fsoil',
                 'CASA-GFED3, Hybrid Fsoil',
-                'climatological boundaries']
-        # 'CASA-GFED3, Kettle Anthropogenic'
-        plot_all_gradients(ocs_dd_norm, vars, '08Jan')
+                'CASA-GFED3, LRU=1.61, clim',
+                'SiB, mechanistic canopy, clim',
+                'Can-IBIS, LRU=1.61, clim']
+        plot_all_gradients(ocs_dd_norm, vars, '20Jan')
 
         # # show east coast sites
         # ocs_dd_renamed.ix[['NHA', 'SCA', 'CMA']][['analysis_value', 'NOAA obs']]
