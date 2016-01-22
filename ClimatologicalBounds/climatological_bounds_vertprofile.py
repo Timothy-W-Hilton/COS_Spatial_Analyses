@@ -119,10 +119,15 @@ def plot_vertical_profiles(sites_list):
     for this_site in sites_list:
         ax.plot(this_site.z_obs_mean.ocs_interp,
                 this_site.z_obs_mean.z_agl,
-                label=this_site.sitecode)
+                label=this_site.sitecode,
+                linewidth=2)
+        ax.scatter(this_site.z_obs_mean.analysis_value,
+                   this_site.z_obs_mean.z_agl,
+                   marker='x', s=60)
     ax.set_title('NOAA sites Jul-Aug climatological mean [COS]')
     ax.set_ylabel('height above ground (m)')
     ax.set_xlabel('[COS] (pptv)')
+    ax.set_ylim([0, 16000])
     ax.legend(loc='best')
     fig.savefig('jul_aug_column_profiles.pdf')
     plt.close(fig)
