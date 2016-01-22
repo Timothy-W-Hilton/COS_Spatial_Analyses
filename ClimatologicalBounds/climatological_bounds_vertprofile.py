@@ -6,7 +6,7 @@ import os.path
 import numpy as np
 import netCDF4
 import pandas as pd
-
+import brewer2mpl
 
 from IOAPIpytools.ioapi_pytools import boundaries_from_csv
 from stem_pytools import noaa_ocs
@@ -115,6 +115,10 @@ class site_clim_mean(object):
 def plot_vertical_profiles(sites_list):
     """plot vertical profiles of each site in the argument sites_list
     """
+    # ax.set_color_cycle(palettable.colorbrewer.qualitative.Dark2_8.mpl_colors)
+    bmap = brewer2mpl.get_map('Set2', 'qualitative', 8)
+    colors = bmap.mpl_colors
+    matplotlib.rcParams['axes.color_cycle'] = colors
     fig, ax = plt.subplots(figsize=(10, 10))
     for this_site in sites_list:
         ax.plot(this_site.z_obs_mean.ocs_interp,
