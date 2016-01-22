@@ -1,10 +1,13 @@
+import matplotlib
+matplotlib.use('AGG')
+import matplotlib.pyplot as plt
 import os
 import os.path
 import numpy as np
 import netCDF4
 import pandas as pd
 
-from climatological_bounds import NOAASite
+
 from IOAPIpytools.ioapi_pytools import boundaries_from_csv
 from stem_pytools import noaa_ocs
 from stem_pytools import domain
@@ -25,7 +28,7 @@ class site_clim_mean(object):
             noaa_dir = os.path.join(os.getenv('PROJ'), 'Data', 'NOAA_95244993')
         fname = os.path.join(
             noaa_dir,
-            'ocs_{}_aircraft-pfp_1_hats_event.txt'.format(sitecode))
+            'ocs_{}_aircraft-pfp_1_hats_event.txt'.format(sitecode.lower()))
         self.noaa_site = noaa_ocs.NOAA_OCS.parse_file(fname)
         self.z_obs_mean = None
         self.z_all_agl = None
@@ -86,76 +89,93 @@ class site_clim_mean(object):
                                    how='outer', sort=True)
         self.z_obs_mean['ocs_interp'] = self.z_obs_mean['analysis_value']
 
+        idx_min = self.z_obs_mean.sample_altitude.idxmin()
+        idx_max = self.z_obs_mean.sample_altitude.idxmax()
         ocs_interp = np.interp(
             self.z_obs_mean.z_agl,
             rm_nan(self.z_obs_mean.sample_altitude.values),
             rm_nan(self.z_obs_mean.analysis_value.values),
-            left=self.z_obs_mean.analysis_value.min(),
-            right=self.z_obs_mean.analysis_value.max())
+            left=self.z_obs_mean.analysis_value[idx_min],
+            right=self.z_obs_mean.analysis_value[idx_max])
         nan_idx = np.where(np.isnan(self.z_obs_mean['analysis_value']))
         self.z_obs_mean['ocs_interp'].iloc[nan_idx] = ocs_interp[nan_idx]
 
+    def get_col_vals(self):
+        """return array containing all July-August mean vertical column
+        values, with missing values filled.  Missing values
+        between the lowest (in altitude) observed value and the
+        highest (in altitude) observed value are interpolated;
+        missing values outside that range are set to the
+        higest/lowest (in altitude) observed value.
+        """
+        return(self.z_obs_mean.ocs_interp.values)
+
+
+def plot_vertical_profiles(sites_list):
+    """plot vertical profiles of each site in the argument sites_list
+    """
+    fig, ax = plt.subplots(figsize=(10, 10))
+    for this_site in sites_list:
+        ax.plot(this_site.z_obs_mean.ocs_interp,
+                this_site.z_obs_mean.z_agl)
+    ax.set_title('NOAA sites Jul-Aug climatological mean [COS]')
+    ax.set_ylabel('height above ground (m)')
+    ax.set_xlabel('[COS] (pptv)')
+    fig.savefig('jul_aug_column_profiles.pdf')
+    plt.close(fig)
+
+
 if __name__ == "__main__":
 
-    thd = site_clim_mean('thd')
-    pfa = site_clim_mean('pfa')
-    esp = site_clim_mean('esp')
-    tgc = site_clim_mean('tgc')
-    nha = site_clim_mean('nha')
-    sca = site_clim_mean('sca')
-    cma = site_clim_mean('cma')
+    THD = site_clim_mean('THD')
+    PFA = site_clim_mean('PFA')
+    ESP = site_clim_mean('ESP')
+    TGC = site_clim_mean('TGC')
+    NHA = site_clim_mean('NHA')
+    SCA = site_clim_mean('SCA')
+    CMA = site_clim_mean('CMA')
 
-    # foo.get_jul_aug()
-    # foo.get_z_lev_mean()
-    # foo.get_all_z_agl()
+    plot_vertical_profiles([THD, PFA, ESP, TGC, NHA, SCA, CMA])
 
-    if False:
-        PFA = NOAASite('PFA', 493.54335, 26.31656333)
-        ESP = NOAASite('ESP', 495.7402393, 6.118293878)
-        THD = NOAASite('THD', 538.1678958, 25.6922375)
-        TGC = NOAASite('TGC', 519.1636667, -12.30926667)
-        NHA = NOAASite('NHA', 466.444445, 75.521758)
-        SCA = NOAASite('SCA', 510.726333, 24.069413)
-        CMA = NOAASite('CMA', 490.787018,  56.442238)
 
-        E_mean = NOAASite('E_mean', 489.319265, 52.011136)
+    # starting in "lower left" with SW corner of domain and going counter
+    # clockwise, pfa could do north and northern pacific, esp a little
+    # lower on the pacific, and thd for rest of pacific and southwestern,
+    # tgc for rest of south, and maybe an average of nha/sca/cma for the
+    # east (which shouldn't matter).
 
-        # starting in "lower left" with SW corner of domain and going counter
-        # clockwise, pfa could do north and northern pacific, esp a little
-        # lower on the pacific, and thd for rest of pacific and southwestern,
-        # tgc for rest of south, and maybe an average of nha/sca/cma for the
-        # east (which shouldn't matter).
+    bounds = np.hstack((np.tile(TGC.get_col_vals(), 31),
+                        np.tile(NHA.get_col_vals(), 31),
+                        np.tile(CMA.get_col_vals(), 31),
+                        np.tile(SCA.get_col_vals(), 31),
+                        np.tile(PFA.get_col_vals(), 126 + 42),
+                        np.tile(ESP.get_col_vals(), 42),
+                        np.tile(THD.get_col_vals(), 42 + 42),
+                        np.tile(TGC.get_col_vals(), 82)))
 
-        bounds = np.hstack((np.tile(TGC.column_cos[:, np.newaxis], 31),
-                            np.tile(E_mean.column_cos[:, np.newaxis], 93),
-                            np.tile(PFA.column_cos[:, np.newaxis], 126 + 42),
-                            np.tile(ESP.column_cos[:, np.newaxis], 42),
-                            np.tile(THD.column_cos[:, np.newaxis], 42 + 42),
-                            np.tile(TGC.column_cos[:, np.newaxis], 82)))
+    pptv_2_molecules_m3 = 1e-12
+    pptv_2_ppbv = 1e-3
+    fname_csv = 'simple_climatological_bounds.csv'
+    fname_bdy = 'climatological_COS_bdy_22levs_124x124.nc'
+    fname_griddesc = os.path.join(os.environ['HOME'],
+                                  'Code', 'Regrid',
+                                  'GEOS-Chem_Regrid', 'GRIDDESC_GC')
+    nlevs = 22
+    fdesc = ("PFA for N and N pacific, ESP a little "
+             "lower on the pacific, and THD for rest of pacific and "
+             "SW, TGC for rest of S, and NHA/CMA/SCA mean for the E "
+             "(which shouldn't matter).")
+    # delete_if_exists(fname_csv)
+    # np.savetxt(fname_csv,
+    #            bounds.reshape([-1, 1]) * pptv_2_molecules_m3,
+    #            delimiter=',')
 
-        pptv_2_molecules_m3 = 1e-12
-        pptv_2_ppbv = 1e-3
-        fname_csv = 'simple_climatological_bounds.csv'
-        fname_bdy = 'climatological_COS_bdy_22levs_124x124.nc'
-        fname_griddesc = os.path.join(os.environ['HOME'],
-                                      'Code', 'Regrid',
-                                      'GEOS-Chem_Regrid', 'GRIDDESC_GC')
-        nlevs = 22
-        fdesc = ("PFA for N and N pacific, ESP a little "
-                 "lower on the pacific, and THD for rest of pacific and "
-                 "SW, TGC for rest of S, and NHA/CMA/SCA mean for the E "
-                 "(which shouldn't matter).")
-        # delete_if_exists(fname_csv)
-        # np.savetxt(fname_csv,
-        #            bounds.reshape([-1, 1]) * pptv_2_molecules_m3,
-        #            delimiter=',')
+    if True:
+        boundaries_from_csv(fname_csv, fname_bdy,
+                            fname_griddesc, 'ARCNAGRID', nlevs, fdesc)
 
-        if True:
-            boundaries_from_csv(fname_csv, fname_bdy,
-                                fname_griddesc, 'ARCNAGRID', nlevs, fdesc)
-
-            # place the climatological bounds in the dummy boundary file
-            nc = netCDF4.Dataset(fname_bdy, 'a')
-            nc.variables['CO2_TRACER1'][...] = (bounds[np.newaxis, ...] *
-                                                pptv_2_ppbv)
-            nc.close()
+        # place the climatological bounds in the dummy boundary file
+        nc = netCDF4.Dataset(fname_bdy, 'a')
+        nc.variables['CO2_TRACER1'][...] = (bounds[np.newaxis, ...] *
+                                            pptv_2_ppbv)
+        nc.close()
