@@ -29,6 +29,7 @@ class site_clim_mean(object):
         fname = os.path.join(
             noaa_dir,
             'ocs_{}_aircraft-pfp_1_hats_event.txt'.format(sitecode.lower()))
+        self.sitecode = sitecode
         self.noaa_site = noaa_ocs.NOAA_OCS.parse_file(fname)
         self.z_obs_mean = None
         self.z_all_agl = None
@@ -117,10 +118,12 @@ def plot_vertical_profiles(sites_list):
     fig, ax = plt.subplots(figsize=(10, 10))
     for this_site in sites_list:
         ax.plot(this_site.z_obs_mean.ocs_interp,
-                this_site.z_obs_mean.z_agl)
+                this_site.z_obs_mean.z_agl,
+                label=this_site.sitecode)
     ax.set_title('NOAA sites Jul-Aug climatological mean [COS]')
     ax.set_ylabel('height above ground (m)')
     ax.set_xlabel('[COS] (pptv)')
+    ax.legend(loc='best')
     fig.savefig('jul_aug_column_profiles.pdf')
     plt.close(fig)
 
