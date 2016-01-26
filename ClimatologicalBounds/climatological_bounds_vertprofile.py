@@ -53,13 +53,19 @@ class site_clim_mean(object):
             topo_fname=os.path.join(topo_dir, 'TOPO-124x124.nc'),
             wrfheight_fname=os.path.join(topo_dir,
                                          'wrfheight-124x124-22levs.nc'))
-        self.z_obs_mean = self.noaa_site.obs.groupby('z_stem').mean()
+
+        bin_edges = np.arange(0, 20000, 500)
+        self.noaa_site.obs['altitude_bin'] = np.digitize(
+            self.noaa_site.obs.sample_altitude, bin_edges)
+        groups = self.noaa_site.obs.groupby('altitude_bin')
+        self.z_obs_mean = groups.mean()
         self.z_obs_mean = self.z_obs_mean[['x_stem', 'y_stem',
                                            'sample_altitude',
                                            'analysis_value']]
-        # change the index (which is the z level after the groupby to
-        # a column)
-        self.z_obs_mean.reset_index(level=0, inplace=True)
+        # # change the index (which is the z level after the groupby to
+        # # a column)
+        self.z_obs_mean.reset_index(drop=True, inplace=True)
+
         # a handful of obs are in adjacent STEM cells, resulting in
         # non-integral mean x or y cell locations after the mean is
         # taken.  I think that rounding will pick the the "mode" x and
@@ -68,6 +74,16 @@ class site_clim_mean(object):
         self.y_stem = np.int(np.unique(np.round(self.z_obs_mean['y_stem']))[0])
         self.z_obs_mean['x_stem'][:] = self.x_stem
         self.z_obs_mean['y_stem'][:] = self.y_stem
+
+        self.z_obs_mean['z_stem'] = domain.get_stem_z_from_altitude(
+            self.z_obs_mean.sample_altitude.values,
+            stem_x=self.z_obs_mean.x_stem.values,
+            stem_y=self.z_obs_mean.y_stem.values)
+
+        self.z_obs_mean = self.z_obs_mean[['x_stem', 'y_stem',
+                                           'z_stem', 'sample_altitude',
+                                           'analysis_value']]
+
 
     def get_all_z_agl(self):
         """get all STEM Z cell heights above ground level (from surface to
@@ -149,6 +165,7 @@ if __name__ == "__main__":
 
     plot_vertical_profiles([THD, PFA, ESP, TGC, NHA, SCA, CMA])
 
+def do_not_run():
 
     # starting in "lower left" with SW corner of domain and going counter
     # clockwise, pfa could do north and northern pacific, esp a little
