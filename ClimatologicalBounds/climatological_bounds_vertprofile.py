@@ -136,14 +136,14 @@ def plot_vertical_profiles(sites_list):
     colors = bmap.mpl_colors
     matplotlib.rcParams['axes.color_cycle'] = colors
     fig, ax = plt.subplots(figsize=(10, 10))
-    for this_site in sites_list:
+    for i, this_site in enumerate(sites_list):
         ax.plot(this_site.z_obs_mean.ocs_interp,
                 this_site.z_obs_mean.z_agl,
                 label=this_site.sitecode,
                 linewidth=2)
         ax.scatter(this_site.z_obs_mean.analysis_value,
                    this_site.z_obs_mean.z_agl,
-                   marker='x', s=60)
+                   marker='o', s=60, c=colors[i])
     ax.set_title('NOAA sites Jul-Aug climatological mean [COS]')
     ax.set_ylabel('height above ground (m)')
     ax.set_xlabel('[COS] (pptv)')
