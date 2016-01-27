@@ -21,14 +21,26 @@ def rm_nan(arr):
 
 
 class site_clim_mean(object):
-    """class to calculate climatological mean vertical OCS profile"""
+    """class to calculate climatological mean vertical OCS profile for
+    a NOAA observation site.
+    """
 
-    def __init__(self, sitecode, noaa_dir=None):
+    def __init__(self, sitecode, alt_bin_size=1000, noaa_dir=None):
+        """class constructor.
+
+        ARGS:
+        alt_bin_size (int): size of bins to group observation
+            altitudes into (meters). Default is 1000 m.
+        noaa_dir (str): full path to the directory containing NOAA
+            observation files.  Default is $PROJ/Data/NOAA_95244993
+        """
+
         if noaa_dir is None:
             noaa_dir = os.path.join(os.getenv('PROJ'), 'Data', 'NOAA_95244993')
         fname = os.path.join(
             noaa_dir,
             'ocs_{}_aircraft-pfp_1_hats_event.txt'.format(sitecode.lower()))
+        self.alt_bin_size = alt_bin_size
         self.sitecode = sitecode
         self.noaa_site = noaa_ocs.NOAA_OCS.parse_file(fname)
         self.z_obs_mean = None
@@ -54,7 +66,10 @@ class site_clim_mean(object):
             wrfheight_fname=os.path.join(topo_dir,
                                          'wrfheight-124x124-22levs.nc'))
 
-        bin_edges = np.arange(0, 20000, 500)
+        bin_min = 0  # bottom of bottom altitude bin, meters
+        bin_max = 16000   # top of top altitude bin, meters
+        bin_width = 1000  # size of altitude bins, meters
+        bin_edges = np.arange(bin_min, bin_max, bin_width)
         self.noaa_site.obs['altitude_bin'] = np.digitize(
             self.noaa_site.obs.sample_altitude, bin_edges)
         groups = self.noaa_site.obs.groupby('altitude_bin')
@@ -83,6 +98,10 @@ class site_clim_mean(object):
         self.z_obs_mean = self.z_obs_mean[['x_stem', 'y_stem',
                                            'z_stem', 'sample_altitude',
                                            'analysis_value']]
+        # after binning some z levels end up with multiple
+        # observations; average them together.
+        self.z_obs_mean = self.z_obs_mean.groupby('z_stem').mean()
+        self.z_obs_mean.reset_index(inplace=True)
 
 
     def get_all_z_agl(self):
@@ -144,7 +163,8 @@ def plot_vertical_profiles(sites_list):
         ax.scatter(this_site.z_obs_mean.analysis_value,
                    this_site.z_obs_mean.z_agl,
                    marker='o', s=60, c=colors[i])
-    ax.set_title('NOAA sites Jul-Aug climatological mean [COS]')
+    ax.set_title(('NOAA sites Jul-Aug climatological mean [COS],'
+                  ' {} m altitude bins'.format(sites_list[0].alt_bin_size)))
     ax.set_ylabel('height above ground (m)')
     ax.set_xlabel('[COS] (pptv)')
     ax.set_ylim([0, 16000])
