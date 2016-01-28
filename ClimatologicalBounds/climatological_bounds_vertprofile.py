@@ -26,7 +26,7 @@ def rm_nan(arr):
     return(arr[np.isfinite(arr)].flatten())
 
 
-class site_clim_mean(object):
+class SiteClimMean(object):
     """class to calculate climatological mean vertical OCS profile for
     a NOAA observation site.
     """
@@ -153,11 +153,21 @@ class site_clim_mean(object):
         return(self.z_obs_mean.ocs_interp.values)
 
 
-def plot_vertical_profiles(sites_list):
+def plot_vertical_profiles(sites_list, title_suffix=None):
     """plot vertical profiles of each site in the argument sites_list
+
+    ARGS:
+    sites_list (list): list of SiteClimMean objects containing the
+        vertical profiles to be plotted.
+    title_suffix (string): optional string to appear as the second
+        line of the plot title
+
+    RETURNS:
+    None
     """
     # ax.set_color_cycle(palettable.colorbrewer.qualitative.Dark2_8.mpl_colors)
-    bmap = brewer2mpl.get_map('Set2', 'qualitative', 8)
+    ncolors = 8
+    bmap = brewer2mpl.get_map('Set2', 'qualitative', ncolors)
     colors = bmap.mpl_colors
     matplotlib.rcParams['axes.color_cycle'] = colors
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -168,9 +178,11 @@ def plot_vertical_profiles(sites_list):
                 linewidth=2)
         ax.scatter(this_site.z_obs_mean.analysis_value,
                    this_site.z_obs_mean.z_agl,
-                   marker='o', s=60, c=colors[i])
+                   marker='o', s=60, c=colors[i % ncolors])
     ax.set_title(('NOAA sites Jul-Aug climatological mean [COS],'
-                  ' {} m altitude bins'.format(sites_list[0].alt_bin_size)))
+                  ' {} m altitude bins\n{}'.format(
+                      sites_list[0].alt_bin_size,
+                      title_suffix)))
     ax.set_ylabel('height above ground (m)')
     ax.set_xlabel('[COS] (pptv)')
     ax.set_ylim([0, 16000])
@@ -195,7 +207,10 @@ def find_nearest_noaa_site(stem_domain):
     stem_lat = stem_domain.get_lat()
     noaa_sites = noaa_ocs.get_sites_summary(os.path.join(
         os.getenv('PROJ'), 'Data', 'NOAA_95244993'))
+    # drop sites with too few Jul/Aug data (see longer comment below)
     noaa_sites = noaa_sites[noaa_sites.site_code != 'WGC']
+    noaa_sites = noaa_sites[noaa_sites.site_code != 'OIL']
+    noaa_sites = noaa_sites.reset_index(drop=True)
 
     idx = domain.find_nearest_stem_xy(stem_lon,
                                       stem_lat,
@@ -250,13 +265,18 @@ if __name__ == "__main__":
         os.path.join(os.getenv('PROJ'), 'Data', 'NOAA_95244993'))
     sites_list = list(sites.obs.sample_site_code.unique())
 
+    # drop WGC because there are no Jul/Aug observations
     if 'WGC' in sites_list: sites_list.remove('WGC')
+    # drop OIL because of weird-looking column profile from only two
+    # days of data, with three nearby sites (AAO, WBI, HIL) with much
+    # more data and very different column means.
+    if 'OIL' in sites_list: sites_list.remove('OIL')
     lateral_bounds_sites_list = ['THD', 'PFA', 'ESP',
                                  'TGC', 'NHA', 'SCA', 'CMA']
     sites_dict = {}
     for s in sites_list:
         try:
-            sites_dict.update({s: site_clim_mean(s)})
+            sites_dict.update({s: SiteClimMean(s)})
         except IndexError:
             print("unable to process {}".format(s))
 
@@ -267,10 +287,17 @@ if __name__ == "__main__":
     top_bnd = get_top_bound_field(d, nearest_site_array, sites_dict)
     map_nearest_noaa_site(d, idx, top_bnd, noaa_sites)
 
+    # plot_vertical_profiles([sites_dict[k] for k in lateral_bounds_sites_list],
+    #                        'lateral bounds sites')
+    # plot_vertical_profiles([sites_dict[k] for k in sites_list], 'all sites')
+    upper_midwest = ['OIL', 'HIL', 'WBI', 'AAO']
+    # plot_vertical_profiles([sites_dict[k] for k in upper_midwest],
+    #                        'Upper Midwest')
+
 
 def do_not_run():
 
-    plot_vertical_profiles([sites_dict[k] for k in lateral_bounds_sites_list])
+
 
     # starting in "lower left" with SW corner of domain and going counter
     # clockwise, pfa could do north and northern pacific, esp a little
