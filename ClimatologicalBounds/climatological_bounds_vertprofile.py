@@ -11,11 +11,17 @@ import brewer2mpl
 from IOAPIpytools.ioapi_pytools import boundaries_from_csv
 from stem_pytools import noaa_ocs
 from stem_pytools import domain
+from stem_pytools import STEM_mapper
 
 
 def rm_nan(arr):
-    """remove NaNs from a numpy array.  Return a flattened (i.e. 1-D)
-    array containing all non-NaN values from arr.
+    """remove NaNs from a numpy array.
+
+    ARGS:
+    arr (array-like): an array of values, possible containing np.NaN
+
+    RETURNS:
+    a flattened (i.e. 1-D) array containing all non-NaN values from arr.
     """
     return(arr[np.isfinite(arr)].flatten())
 
@@ -169,23 +175,102 @@ def plot_vertical_profiles(sites_list):
     ax.set_xlabel('[COS] (pptv)')
     ax.set_ylim([0, 16000])
     ax.legend(loc='best')
-    fig.savefig('jul_aug_column_profiles.pdf')
+    fig.savefig('jul_aug_column_profiles0.pdf')
     plt.close(fig)
+
+
+def find_nearest_noaa_site(stem_domain):
+    """Find the nearest NOAA observation site to each horizontal stem grid cell.
+
+    ARGS:
+    stem_domain (stem_pytools.domain.STEM_Domain): description of the
+        STEM domain
+
+    RETURNS:
+    a 2-D numpy array of the same size as the STEM horizontal domain
+    containing the site code of the nearest NOAA observation location
+    """
+
+    stem_lon = stem_domain.get_lon()
+    stem_lat = stem_domain.get_lat()
+    noaa_sites = noaa_ocs.get_sites_summary(os.path.join(
+        os.getenv('PROJ'), 'Data', 'NOAA_95244993'))
+    noaa_sites = noaa_sites[noaa_sites.site_code != 'WGC']
+
+    idx = domain.find_nearest_stem_xy(stem_lon,
+                                      stem_lat,
+                                      noaa_sites.longitude.values,
+                                      noaa_sites.latitude.values)
+    result = np.ndarray(shape=idx[0].shape, dtype=object)
+    result[:] = ''
+    for i in range(stem_lon.shape[0]):
+        for j in range(stem_lon.shape[1]):
+            result[i, j] = noaa_sites.site_code[idx[0][i, j]]
+
+    return(idx, noaa_sites, result)
+
+
+def get_top_bound_field(stem_domain, nearest_site_array, noaa_sites_dict):
+
+    nx = nearest_site_array.shape[0]
+    ny = nearest_site_array.shape[1]
+    stem_domain.get_STEMZ_height()
+    nz = stem_domain.asl.shape[0] - 1
+    bnd = np.zeros([nx, ny])
+    for i in range(nx):
+        for j in range(ny):
+            bnd[i, j] = noaa_sites_dict[
+                nearest_site_array[i, j]].z_obs_mean['ocs_interp'][nz]
+    return(bnd)
+
+
+def map_nearest_noaa_site(stem_domain, idx, bnd, noaa_sites):
+    stem_lon = stem_domain.get_lon()
+    stem_lat = stem_domain.get_lat()
+
+    m = STEM_mapper.Mapper124x124(bnd).draw_map(
+        fast_or_pretty='pretty',
+        cmap=plt.get_cmap('Blues'),
+        t_str='NOAA sites Jul-Aug climatological mean [COS] top bounds')
+    m.map.fig.set_figheight(30)
+    m.map.fig.set_figwidth(30)
+    x, y = m.map.map(stem_lon, stem_lat)
+    for i in range(0, stem_lon.shape[0], 5):
+        for j in range(0, stem_lon.shape[1], 5):
+            m.map.ax_map.text(x[i, j], y[i, j],
+                              noaa_sites.site_code[idx[0][i, j]])
+    m.map.fig.savefig('top_bnd.pdf', fontsize=1)
 
 
 if __name__ == "__main__":
 
-    THD = site_clim_mean('THD')
-    PFA = site_clim_mean('PFA')
-    ESP = site_clim_mean('ESP')
-    TGC = site_clim_mean('TGC')
-    NHA = site_clim_mean('NHA')
-    SCA = site_clim_mean('SCA')
-    CMA = site_clim_mean('CMA')
+    # calculate interpolated climatological column mean [COS] at each
+    # site
+    sites = noaa_ocs.get_all_NOAA_airborne_data(
+        os.path.join(os.getenv('PROJ'), 'Data', 'NOAA_95244993'))
+    sites_list = list(sites.obs.sample_site_code.unique())
 
-    plot_vertical_profiles([THD, PFA, ESP, TGC, NHA, SCA, CMA])
+    if 'WGC' in sites_list: sites_list.remove('WGC')
+    lateral_bounds_sites_list = ['THD', 'PFA', 'ESP',
+                                 'TGC', 'NHA', 'SCA', 'CMA']
+    sites_dict = {}
+    for s in sites_list:
+        try:
+            sites_dict.update({s: site_clim_mean(s)})
+        except IndexError:
+            print("unable to process {}".format(s))
+
+    # create a top boundary file
+    d = domain.STEM_Domain(
+        os.path.join(os.getenv('SARIKA_INPUT'), 'TOPO-124x124.nc'))
+    idx, noaa_sites, nearest_site_array = find_nearest_noaa_site(d)
+    top_bnd = get_top_bound_field(d, nearest_site_array, sites_dict)
+    map_nearest_noaa_site(d, idx, top_bnd, noaa_sites)
+
 
 def do_not_run():
+
+    plot_vertical_profiles([sites_dict[k] for k in lateral_bounds_sites_list])
 
     # starting in "lower left" with SW corner of domain and going counter
     # clockwise, pfa could do north and northern pacific, esp a little
