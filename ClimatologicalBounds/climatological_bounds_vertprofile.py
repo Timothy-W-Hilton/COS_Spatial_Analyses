@@ -153,6 +153,112 @@ class SiteClimMean(object):
         return(self.z_obs_mean.ocs_interp.values)
 
 
+class ClimatologicalTopBound(object):
+    """class to create a climatological mean July-August top boundary
+    file from a list of NOAA observation sites.
+    """
+
+    def __init__(self,
+                 domain,
+                 sites_list,
+                 sites_dict=None,
+                 noaa_dir=os.path.join(
+                     os.getenv('PROJ'), 'Data', 'NOAA_95244993')):
+        """create a ClimatologicalTopBound object
+
+        ARGS:
+        sites_list (list): list of three-letter NOAA site codes to be
+            included
+        domain: stem_domain (stem_pytools.domain.STEM_Domain):
+            description of the STEM domain to create a top boundary
+            for
+        noaa_dir (string): full path to the directory containing NOAA
+            observation files.  Default is $PROJ/Data/NOAA_95244993
+        """
+        self.noaa_dir = noaa_dir
+        self.d = domain
+        self.sites_dict = sites_dict
+        self.find_nearest_noaa_site()
+        self.get_top_bound_field()
+
+    def find_nearest_noaa_site(self):
+        """Find the nearest NOAA observation site to each horizontal stem grid cell.
+
+        populates self.idx, self.noaa_sites, self.result
+        self.noaa_sites (pandas.DataFrame): data frame with columns
+           site_code, latitude, and longitude describing the sites
+           used in the top boundary
+        self.idx (numpy.ndarray): a 2-D numpy array of the same size
+           as the STEM horizontal domain containing the index in
+           self.noaa_sites of the nearest NOAA observation location
+        self.nearest_site_array (numpy.ndarray): a 2-D numpy array of
+           the same size as the STEM horizontal domain containing the
+           site code of the nearest NOAA observation location
+        """
+
+        stem_lon = self.d.get_lon()
+        stem_lat = self.d.get_lat()
+        self.sites_summary = noaa_ocs.get_sites_summary(self.noaa_dir)
+        # drop sites with too few Jul/Aug data (see longer comment below)
+        self.sites_summary = self.sites_summary[
+            self.sites_summary.site_code != 'WGC']
+        self.sites_summary = self.sites_summary[
+            self.sites_summary.site_code != 'OIL']
+        self.sites_summary = self.sites_summary.reset_index(drop=True)
+
+        self.idx = domain.find_nearest_stem_xy(
+            stem_lon,
+            stem_lat,
+            self.sites_summary.longitude.values,
+            self.sites_summary.latitude.values)
+        self.nearest_site_array = np.ndarray(
+            shape=self.idx[0].shape, dtype=object)
+        self.nearest_site_array[:] = ''
+        for i in range(stem_lon.shape[0]):
+            for j in range(stem_lon.shape[1]):
+                self.nearest_site_array[i, j] = self.sites_summary.site_code[
+                    self.idx[0][i, j]]
+
+    def get_top_bound_field(self):
+        """populate the top boundary array (self.top_bnd) with
+        climatological mean [COS] from nearest noaa site at Z = top of
+        domain (22 for the 60-km N American domain)
+        """
+        nx = self.nearest_site_array.shape[0]
+        ny = self.nearest_site_array.shape[1]
+        self.d.get_STEMZ_height()
+        nz = self.d.asl.shape[0] - 1
+        self.top_bnd = np.zeros([nx, ny])
+        for i in range(nx):
+            for j in range(ny):
+                self.top_bnd[i, j] = self.sites_dict[
+                    self.nearest_site_array[i, j]].z_obs_mean['ocs_interp'][nz]
+
+    def map_nearest_noaa_site(self):
+        """Plot the top boundary using
+        stem_pytools.STEM_mapper.Mapper124x124, and save the map to
+        ./top_bnd.pdf
+        """
+        stem_lon = self.d.get_lon()
+        stem_lat = self.d.get_lat()
+
+        m = STEM_mapper.Mapper124x124(self.top_bnd).draw_map(
+            fast_or_pretty='pretty',
+            cmap=plt.get_cmap('Blues'),
+            t_str='NOAA sites Jul-Aug climatological mean [COS] top bounds')
+        m.map.fig.set_figheight(30)
+        m.map.fig.set_figwidth(30)
+        x, y = m.map.map(stem_lon, stem_lat)
+        for i in range(0, stem_lon.shape[0], 5):
+            for j in range(0, stem_lon.shape[1], 5):
+                m.map.ax_map.text(x[i, j],
+                                  y[i, j],
+                                  self.sites_summary.site_code[
+                                      self.idx[0][i, j]])
+        m.map.fig.savefig('top_bnd.pdf', fontsize=1)
+
+
+
 def plot_vertical_profiles(sites_list, title_suffix=None):
     """plot vertical profiles of each site in the argument sites_list
 
@@ -191,72 +297,6 @@ def plot_vertical_profiles(sites_list, title_suffix=None):
     plt.close(fig)
 
 
-def find_nearest_noaa_site(stem_domain):
-    """Find the nearest NOAA observation site to each horizontal stem grid cell.
-
-    ARGS:
-    stem_domain (stem_pytools.domain.STEM_Domain): description of the
-        STEM domain
-
-    RETURNS:
-    a 2-D numpy array of the same size as the STEM horizontal domain
-    containing the site code of the nearest NOAA observation location
-    """
-
-    stem_lon = stem_domain.get_lon()
-    stem_lat = stem_domain.get_lat()
-    noaa_sites = noaa_ocs.get_sites_summary(os.path.join(
-        os.getenv('PROJ'), 'Data', 'NOAA_95244993'))
-    # drop sites with too few Jul/Aug data (see longer comment below)
-    noaa_sites = noaa_sites[noaa_sites.site_code != 'WGC']
-    noaa_sites = noaa_sites[noaa_sites.site_code != 'OIL']
-    noaa_sites = noaa_sites.reset_index(drop=True)
-
-    idx = domain.find_nearest_stem_xy(stem_lon,
-                                      stem_lat,
-                                      noaa_sites.longitude.values,
-                                      noaa_sites.latitude.values)
-    result = np.ndarray(shape=idx[0].shape, dtype=object)
-    result[:] = ''
-    for i in range(stem_lon.shape[0]):
-        for j in range(stem_lon.shape[1]):
-            result[i, j] = noaa_sites.site_code[idx[0][i, j]]
-
-    return(idx, noaa_sites, result)
-
-
-def get_top_bound_field(stem_domain, nearest_site_array, noaa_sites_dict):
-
-    nx = nearest_site_array.shape[0]
-    ny = nearest_site_array.shape[1]
-    stem_domain.get_STEMZ_height()
-    nz = stem_domain.asl.shape[0] - 1
-    bnd = np.zeros([nx, ny])
-    for i in range(nx):
-        for j in range(ny):
-            bnd[i, j] = noaa_sites_dict[
-                nearest_site_array[i, j]].z_obs_mean['ocs_interp'][nz]
-    return(bnd)
-
-
-def map_nearest_noaa_site(stem_domain, idx, bnd, noaa_sites):
-    stem_lon = stem_domain.get_lon()
-    stem_lat = stem_domain.get_lat()
-
-    m = STEM_mapper.Mapper124x124(bnd).draw_map(
-        fast_or_pretty='pretty',
-        cmap=plt.get_cmap('Blues'),
-        t_str='NOAA sites Jul-Aug climatological mean [COS] top bounds')
-    m.map.fig.set_figheight(30)
-    m.map.fig.set_figwidth(30)
-    x, y = m.map.map(stem_lon, stem_lat)
-    for i in range(0, stem_lon.shape[0], 5):
-        for j in range(0, stem_lon.shape[1], 5):
-            m.map.ax_map.text(x[i, j], y[i, j],
-                              noaa_sites.site_code[idx[0][i, j]])
-    m.map.fig.savefig('top_bnd.pdf', fontsize=1)
-
-
 if __name__ == "__main__":
 
     # calculate interpolated climatological column mean [COS] at each
@@ -283,9 +323,8 @@ if __name__ == "__main__":
     # create a top boundary file
     d = domain.STEM_Domain(
         os.path.join(os.getenv('SARIKA_INPUT'), 'TOPO-124x124.nc'))
-    idx, noaa_sites, nearest_site_array = find_nearest_noaa_site(d)
-    top_bnd = get_top_bound_field(d, nearest_site_array, sites_dict)
-    map_nearest_noaa_site(d, idx, top_bnd, noaa_sites)
+    top_bnd = ClimatologicalTopBound(d, sites_list, sites_dict)
+    top_bnd.map_nearest_noaa_site()
 
     # plot_vertical_profiles([sites_dict[k] for k in lateral_bounds_sites_list],
     #                        'lateral bounds sites')
