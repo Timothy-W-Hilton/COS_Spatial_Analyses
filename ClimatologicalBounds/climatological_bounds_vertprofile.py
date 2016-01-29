@@ -8,7 +8,7 @@ import netCDF4
 import pandas as pd
 import brewer2mpl
 
-from IOAPIpytools.ioapi_pytools import boundaries_from_csv
+from IOAPIpytools.ioapi_pytools import boundaries_from_csv, dummy_top_bounds
 from stem_pytools import noaa_ocs
 from stem_pytools import domain
 from stem_pytools import STEM_mapper
@@ -285,11 +285,24 @@ class ClimatologicalTopBound(object):
                 self.top_bnd[i, j] = self.sites_dict[
                     self.nearest_site_array[i, j]].z_obs_mean['ocs_interp'][nz]
 
-    def to_ioapi(self):
+    def write_ioapi(self, fname_bdy='top_bounds.nc'):
         """write a Models-3 I/O API top boundary file from the
         object's top_bnd field.
+
+        ARGS:
+        fname_bdy (string): name of the boundary file to create
         """
-        pass  # TODO thilton@ucmerced.edu: implement the function :)
+        fdesc = "climatological mean [COS] from nearest noaa site at Z = 22)"
+        dummy_top_bounds(fname_bdy,
+                         Consts().fname_griddesc,
+                         'ARCNAGRID',
+                         fdesc)
+
+        # place the climatological bounds in the dummy boundary file
+        nc = netCDF4.Dataset(fname_bdy, 'a')
+        nc.variables['CO2_TRACER1'][...] = (
+            self.top_bnd[np.newaxis, np.newaxis, ...] * Consts().pptv_2_ppbv)
+        nc.close()
 
     def map_nearest_noaa_site(self):
         """Plot the top boundary using
@@ -469,6 +482,7 @@ if __name__ == "__main__":
     # --
     # create a top boundary file
     top_bnd = ClimatologicalTopBound(d, sites_list, sites_dict)
+    top_bnd.write_ioapi(fname_bdy='upbound_124x124-climatological_124x124.nc')
     top_bnd.map_nearest_noaa_site()
 
     # plot_vertical_profiles([sites_dict[k] for k in lateral_bounds_sites_list],
