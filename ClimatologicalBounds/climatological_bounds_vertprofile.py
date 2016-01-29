@@ -26,6 +26,55 @@ def rm_nan(arr):
     return(arr[np.isfinite(arr)].flatten())
 
 
+class Consts(object):
+    """Class to contain several constants useful for the climatological
+    bounds
+
+    ARGS:
+
+    fname_griddesc (string): full path to the Models-3 I/O API
+        GRIDDESC file describing the STEM domain grid.  Default is
+        $HOME/Code/Regrid/GEOS-Chem_Regrid/GRIDDESC_GC
+    noaa_dir (str): full path to the directory containing NOAA
+        observation files.  Default is $PROJ/Data/NOAA_95244993
+    topo_fname (string): full path to the Models-3 I/O API topography
+        file.  Default is $SARIKA_INPUT/TOPO-124x124.nc
+    wrf_height_fname (string): full path to the Models-3 I/O API WRF height
+        file.  Default is $SARIKA_INPUT/wrfheight-124x124-22levs.nc
+
+    ATTRIBUTES:
+
+    fname_griddesc (string): full path to the Models-3 I/O API
+        GRIDDESC file describing the STEM domain grid.
+    noaa_dir (str): full path to the directory containing NOAA
+        observation files.  Default is $PROJ/Data/NOAA_95244993
+    topo_fname (string): full path to the Models-3 I/O API topography
+        file.  Default is $SARIKA_INPUT/TOPO-124x124.nc
+    wrf_height_fname (string): full path to the Models-3 I/O API WRF height
+        file.  Default is $SARIKA_INPUT/wrfheight-124x124-22levs.nc
+    pptv_2_molecules_m3 (real) = conversion factor for converting
+        parts per trillion by volume (pptv) to molecules per m^3
+    pptv_2_ppbv = conversion factor for converting parts per trillion
+        by volume (pptv) to parts per billion by volume (ppbv)
+    """
+
+    def __init__(self,
+                 fname_griddesc=os.path.join(os.environ['HOME'],
+                                             'Code', 'Regrid',
+                                             'GEOS-Chem_Regrid',
+                                             'GRIDDESC_GC'),
+                 noaa_dir=os.path.join(
+                     os.getenv('PROJ'), 'Data', 'NOAA_95244993')):
+        self.fname_griddesc = fname_griddesc
+        self.noaa_dir = noaa_dir
+        self.topo_fname = os.path.join(os.getenv('SARIKA_INPUT'),
+                                       'TOPO-124x124.nc')
+        self.wrfheight_fname = os.path.join(os.getenv('SARIKA_INPUT'),
+                                            'wrfheight-124x124-22levs.nc')
+        self.pptv_2_molecules_m3 = 1e-12
+        self.pptv_2_ppbv = 1e-3
+
+
 class SiteClimMean(object):
     """class to calculate climatological mean vertical OCS profile for
     a NOAA observation site.
@@ -109,7 +158,6 @@ class SiteClimMean(object):
         self.z_obs_mean = self.z_obs_mean.groupby('z_stem').mean()
         self.z_obs_mean.reset_index(inplace=True)
 
-
     def get_all_z_agl(self):
         """get all STEM Z cell heights above ground level (from surface to
         top of domain).
@@ -167,11 +215,14 @@ class ClimatologicalTopBound(object):
         """create a ClimatologicalTopBound object
 
         ARGS:
-        sites_list (list): list of three-letter NOAA site codes to be
-            included
         domain: stem_domain (stem_pytools.domain.STEM_Domain):
             description of the STEM domain to create a top boundary
             for
+        sites_list (list): list of three-letter NOAA site codes to be
+            included
+        sites_dict (dict): dict containing one SiteClimMean object for
+            each site in sites_list, with the keys the codes in
+            site_list.
         noaa_dir (string): full path to the directory containing NOAA
             observation files.  Default is $PROJ/Data/NOAA_95244993
         """
@@ -234,6 +285,12 @@ class ClimatologicalTopBound(object):
                 self.top_bnd[i, j] = self.sites_dict[
                     self.nearest_site_array[i, j]].z_obs_mean['ocs_interp'][nz]
 
+    def to_ioapi(self):
+        """write a Models-3 I/O API top boundary file from the
+        object's top_bnd field.
+        """
+        pass  # TODO thilton@ucmerced.edu: implement the function :)
+
     def map_nearest_noaa_site(self):
         """Plot the top boundary using
         stem_pytools.STEM_mapper.Mapper124x124, and save the map to
@@ -257,6 +314,91 @@ class ClimatologicalTopBound(object):
                                       self.idx[0][i, j]])
         m.map.fig.savefig('top_bnd.pdf', fontsize=1)
 
+
+class ClimatologicalLateralBoundNAmerica(object):
+    """class to create a climatological mean July-August lateral boundary
+    file for the 60-km N Pole Stereographic North America STEM domain
+    from sites THD, PFA, ESP, TGC, NHA, SCA, and CMA.
+
+    """
+
+    def __init__(self,
+                 sites_dict):
+        """set up a ClimatologicalLateralBoundNAmerica instance.
+
+        sites_dict (dict): dict containing one SiteClimMean object for
+           THD, PFA, ESP, TGC, NHA, SCA, and CMA.  Other sites may be
+           present in the dict; they will be ignored.
+        """
+
+        # starting in "lower left" with SW corner of domain and going counter
+        # clockwise, pfa could do north and northern pacific, esp a little
+        # lower on the pacific, and thd for rest of pacific and southwestern,
+        # tgc for rest of south, and maybe an average of nha/sca/cma for the
+        # east (which shouldn't matter).
+
+        self.bounds = np.hstack(
+            (np.tile(sites_dict['TGC'].get_col_vals(), 31),
+             np.tile(sites_dict['NHA'].get_col_vals(), 31),
+             np.tile(sites_dict['CMA'].get_col_vals(), 31),
+             np.tile(sites_dict['SCA'].get_col_vals(), 31),
+             np.tile(sites_dict['PFA'].get_col_vals(), 126 + 42),
+             np.tile(sites_dict['ESP'].get_col_vals(), 42),
+             np.tile(sites_dict['THD'].get_col_vals(), 42 + 42),
+             np.tile(sites_dict['TGC'].get_col_vals(), 82)))
+
+    def write_bounds_ioapi_file(
+            self,
+            fname_bdy='climatological_COS_bdy_22levs_124x124.nc'):
+
+        """write a lateral boundary file in I/O API format
+
+        ARGS:
+        fname_bdy (string): name for the boundary file to create.
+        """
+
+        fname_csv = 'simple_climatological_bounds.csv'
+
+        nlevs = 22
+        fdesc = ("PFA for N and N pacific, ESP a little "
+                 "lower on the pacific, and THD for rest of pacific and "
+                 "SW, TGC for rest of S, and NHA/CMA/SCA mean for the E "
+                 "(which shouldn't matter).")
+        # delete_if_exists(fname_csv)
+        # np.savetxt(fname_csv,
+        #            bounds.reshape([-1, 1]) * pptv_2_molecules_m3,
+        #            delimiter=',')
+
+        # write a "dummy" boundary file filled with 0.0
+        boundaries_from_csv(fname_csv, fname_bdy,
+                            Consts().fname_griddesc,
+                            'ARCNAGRID', nlevs, fdesc)
+
+        # place the climatological bounds in the dummy boundary file
+        nc = netCDF4.Dataset(fname_bdy, 'a')
+        nc.variables['CO2_TRACER1'][...] = (self.bounds[np.newaxis, ...] *
+                                            Consts().pptv_2_ppbv)
+        nc.close()
+
+
+def create_sites_dict(sites_list):
+    """create a dict of SiteClimMean object from a list of site codes
+
+    ARGS:
+    sites_list (list): list of three-letter NOAA site codes to include
+       in the dict.  These will be the keys of the dict.
+
+    RETURNS:
+    dict containing one SiteClimMean object for each site in
+       sites_list, with the keys the codes in site_list.
+    """
+    sites_dict = {}
+    for s in sites_list:
+        try:
+            sites_dict.update({s: SiteClimMean(s)})
+        except IndexError:
+            print("unable to process {}".format(s))
+    return(sites_dict)
 
 
 def plot_vertical_profiles(sites_list, title_suffix=None):
@@ -299,30 +441,33 @@ def plot_vertical_profiles(sites_list, title_suffix=None):
 
 if __name__ == "__main__":
 
-    # calculate interpolated climatological column mean [COS] at each
-    # site
-    sites = noaa_ocs.get_all_NOAA_airborne_data(
-        os.path.join(os.getenv('PROJ'), 'Data', 'NOAA_95244993'))
-    sites_list = list(sites.obs.sample_site_code.unique())
+    # --
+    # get STEM domain parameteres
+    d = domain.STEM_Domain(Consts().topo_fname)
 
+    # --
+    # read NOAA [COS] observations data
+    sites = noaa_ocs.get_all_NOAA_airborne_data(Consts().noaa_dir)
+    sites_list = list(sites.obs.sample_site_code.unique())
     # drop WGC because there are no Jul/Aug observations
-    if 'WGC' in sites_list: sites_list.remove('WGC')
+    if 'WGC' in sites_list:
+        sites_list.remove('WGC')
     # drop OIL because of weird-looking column profile from only two
     # days of data, with three nearby sites (AAO, WBI, HIL) with much
     # more data and very different column means.
-    if 'OIL' in sites_list: sites_list.remove('OIL')
+    if 'OIL' in sites_list:
+        sites_list.remove('OIL')
     lateral_bounds_sites_list = ['THD', 'PFA', 'ESP',
                                  'TGC', 'NHA', 'SCA', 'CMA']
-    sites_dict = {}
-    for s in sites_list:
-        try:
-            sites_dict.update({s: SiteClimMean(s)})
-        except IndexError:
-            print("unable to process {}".format(s))
+    sites_dict = create_sites_dict(sites_list)
 
+    # --
+    # create the lateral boundary file for N America
+    lat_bnd = ClimatologicalLateralBoundNAmerica(sites_dict)
+    lat_bnd.write_bounds_ioapi_file()
+
+    # --
     # create a top boundary file
-    d = domain.STEM_Domain(
-        os.path.join(os.getenv('SARIKA_INPUT'), 'TOPO-124x124.nc'))
     top_bnd = ClimatologicalTopBound(d, sites_list, sites_dict)
     top_bnd.map_nearest_noaa_site()
 
@@ -332,50 +477,3 @@ if __name__ == "__main__":
     upper_midwest = ['OIL', 'HIL', 'WBI', 'AAO']
     # plot_vertical_profiles([sites_dict[k] for k in upper_midwest],
     #                        'Upper Midwest')
-
-
-def do_not_run():
-
-
-
-    # starting in "lower left" with SW corner of domain and going counter
-    # clockwise, pfa could do north and northern pacific, esp a little
-    # lower on the pacific, and thd for rest of pacific and southwestern,
-    # tgc for rest of south, and maybe an average of nha/sca/cma for the
-    # east (which shouldn't matter).
-
-    bounds = np.hstack((np.tile(TGC.get_col_vals(), 31),
-                        np.tile(NHA.get_col_vals(), 31),
-                        np.tile(CMA.get_col_vals(), 31),
-                        np.tile(SCA.get_col_vals(), 31),
-                        np.tile(PFA.get_col_vals(), 126 + 42),
-                        np.tile(ESP.get_col_vals(), 42),
-                        np.tile(THD.get_col_vals(), 42 + 42),
-                        np.tile(TGC.get_col_vals(), 82)))
-
-    pptv_2_molecules_m3 = 1e-12
-    pptv_2_ppbv = 1e-3
-    fname_csv = 'simple_climatological_bounds.csv'
-    fname_bdy = 'climatological_COS_bdy_22levs_124x124.nc'
-    fname_griddesc = os.path.join(os.environ['HOME'],
-                                  'Code', 'Regrid',
-                                  'GEOS-Chem_Regrid', 'GRIDDESC_GC')
-    nlevs = 22
-    fdesc = ("PFA for N and N pacific, ESP a little "
-             "lower on the pacific, and THD for rest of pacific and "
-             "SW, TGC for rest of S, and NHA/CMA/SCA mean for the E "
-             "(which shouldn't matter).")
-    # delete_if_exists(fname_csv)
-    # np.savetxt(fname_csv,
-    #            bounds.reshape([-1, 1]) * pptv_2_molecules_m3,
-    #            delimiter=',')
-
-    if True:
-        boundaries_from_csv(fname_csv, fname_bdy,
-                            fname_griddesc, 'ARCNAGRID', nlevs, fdesc)
-
-        # place the climatological bounds in the dummy boundary file
-        nc = netCDF4.Dataset(fname_bdy, 'a')
-        nc.variables['CO2_TRACER1'][...] = (bounds[np.newaxis, ...] *
-                                            pptv_2_ppbv)
-        nc.close()
