@@ -12,6 +12,7 @@ from IOAPIpytools.ioapi_pytools import boundaries_from_csv, dummy_top_bounds
 from stem_pytools import noaa_ocs
 from stem_pytools import domain
 from stem_pytools import STEM_mapper
+from stem_pytools.STEM_parsers import parse_STEM_var
 
 
 def rm_nan(arr):
@@ -198,7 +199,7 @@ class SiteClimMean(object):
         missing values outside that range are set to the
         higest/lowest (in altitude) observed value.
         """
-        return(self.z_obs_mean.ocs_interp.values)
+        return(self.z_obs_mean.ocs_interp.values[:, np.newaxis])
 
 
 class ClimatologicalTopBound(object):
@@ -452,6 +453,17 @@ def plot_vertical_profiles(sites_list, title_suffix=None):
     plt.close(fig)
 
 
+def top_bounds_QC(top_fname):
+    """plot a map of top boundary file to make sure orientation is correct"""
+    cos = parse_STEM_var('upbound_124x124-climatological_124x124.nc',
+                         varname='CO2_TRACER1')
+    m = STEM_mapper.Mapper124x124(cos['data'].squeeze())
+    m.draw_map(fast_or_pretty='pretty',
+               t_str='Climatological top bounds I/O API',
+               cmap=plt.get_cmap('Blues'))
+    m.map.fig.savefig('./top_bounds_ioapi_map.png')
+    plt.close(m.map.fig)
+
 if __name__ == "__main__":
 
     # --
@@ -484,6 +496,7 @@ if __name__ == "__main__":
     top_bnd = ClimatologicalTopBound(d, sites_list, sites_dict)
     top_bnd.write_ioapi(fname_bdy='upbound_124x124-climatological_124x124.nc')
     top_bnd.map_nearest_noaa_site()
+    top_bounds_QC('upbound_124x124-climatological_124x124.nc')
 
     # plot_vertical_profiles([sites_dict[k] for k in lateral_bounds_sites_list],
     #                        'lateral bounds sites')
