@@ -1,3 +1,8 @@
+"""Classes, functions, and main function to create STEM boundary files
+in I/O API format containing vertical column mean, July-August
+climatological mean, observed [COS] from NOAA airborne observations.
+"""
+
 import matplotlib
 matplotlib.use('AGG')
 import matplotlib.pyplot as plt
@@ -24,7 +29,7 @@ def rm_nan(arr):
     RETURNS:
     a flattened (i.e. 1-D) array containing all non-NaN values from arr.
     """
-    return(arr[np.isfinite(arr)].flatten())
+    return arr[np.isfinite(arr)].flatten()
 
 
 class Consts(object):
@@ -109,6 +114,9 @@ class SiteClimMean(object):
         self.get_all_z_agl()
 
     def get_jul_aug(self):
+        """pare down observations data frame to July and August
+        observations only
+        """
         jul_aug = self.noaa_site.obs.query('sample_month in [7, 8]')
         self.noaa_site.obs = jul_aug
 
@@ -234,7 +242,8 @@ class ClimatologicalTopBound(object):
         self.get_top_bound_field()
 
     def find_nearest_noaa_site(self):
-        """Find the nearest NOAA observation site to each horizontal stem grid cell.
+        """Find the nearest NOAA observation site to each horizontal
+        stem grid cell.
 
         populates self.idx, self.noaa_sites, self.result
         self.noaa_sites (pandas.DataFrame): data frame with columns
@@ -411,8 +420,8 @@ def create_sites_dict(sites_list):
         try:
             sites_dict.update({s: SiteClimMean(s)})
         except IndexError:
-            print("unable to process {}".format(s))
-    return(sites_dict)
+            print "unable to process {}".format(s)
+    return sites_dict
 
 
 def plot_vertical_profiles(sites_list, title_suffix=None):

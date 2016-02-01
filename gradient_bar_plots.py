@@ -83,7 +83,7 @@ def assemble_bar_plot_data(
     stem_lat = d.get_lat()
 
     (noaa_ocs_dd['stem_x'],
-     noaa_ocs_dd['stem_y']) = noaa_ocs.find_nearest_stem_xy(
+     noaa_ocs_dd['stem_y']) = domain.find_nearest_stem_xy(
         noaa_ocs_dd.sample_longitude,
         noaa_ocs_dd.sample_latitude,
         stem_lon,
@@ -331,7 +331,7 @@ if __name__ == "__main__":
                 'CASA-GFED3, Hybrid Fsoil',
                 'climatological boundaries']
         # 'CASA-GFED3, Kettle Anthropogenic'
-        plot_all_gradients(ocs_dd_norm, vars, '08Jan')
+        plot_all_gradients(ocs_dd_norm, vars, '01Feb')
 
         # # show east coast sites
         # ocs_dd_renamed.ix[['NHA', 'SCA', 'CMA']][['analysis_value', 'NOAA obs']]
