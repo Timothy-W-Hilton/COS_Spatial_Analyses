@@ -1,19 +1,19 @@
 import matplotlib
 matplotlib.use('AGG')
 
-import warnings
 import os
 import os.path
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 import spatial_analysis_utilities as sau
 from stem_pytools import noaa_ocs
 from stem_pytools import domain
 from stem_pytools import aqout_postprocess as aq
 from stem_pytools import calc_drawdown
-from timutils.mpl_fig_joiner import FigJoiner
+# from timutils.mpl_fig_joiner import FigJoiner
 import map_grid
 import draw_c3c4LRU_map
 
@@ -159,9 +159,23 @@ def normalize_drawdown(ocs_dd,
     return(df)
 
 
+def get_line_styles(df):
+    """assign linestyles for gradient plots.  For now, use dashed
+    lines for climatological boundaries and solid lines for everything
+    else.
+    """
+    n_vars = df.variable.unique().size
+    my_linestyles = list(np.tile(['-'], n_vars))
+    is_clim = np.where(["clim" in x for x in df.variable.unique()])[0]
+    for idx in is_clim:
+        my_linestyles[idx] = '--'
+    return my_linestyles
+
+
 def draw_box_plot(df, sites_list):
     sns.set_style('ticks')
     sns.set_context('paper')
+
     g = sns.factorplot(x="sample_site_code",
                        y="drawdown",
                        hue='variable',
@@ -171,7 +185,11 @@ def draw_box_plot(df, sites_list):
                            "cubehelix",
                            len(df.variable.unique())),
                        x_order=sites_list,
-                       aspect=1.25)
+                       aspect=1.25,
+                       linestyles=get_line_styles(df))
+    # make the left and top axes only extend across the part of the
+    # plot where the data are.  That is, make the axis look like "| _"
+    # and not "L"
     g.despine(offset=10, trim=True)
     g.set_axis_labels("site", "[OCS] drawdown, normalized to NHA")
 
