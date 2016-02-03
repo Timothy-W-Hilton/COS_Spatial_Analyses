@@ -263,11 +263,13 @@ def plot_all_gradients(ocs_dd, plot_vars, fname_suffix):
 
     figs = []
     g = draw_box_plot(ocs_dd_long, gradients['east_coast'])
-    g.ax.set_title('East Coast N -- S')
+    g.ax.set_title('East Coast N -- S (climatological column mean bounds)')
     plt.gcf().savefig(
         os.path.join(os.getenv('HOME'),
                      'plots',
                      'ECoast_model_components_{}_NHAnorm.svg'.format(fname_suffix)))
+
+    return g
     # figs.append(plt.gcf())
 
     # g = draw_box_plot(ocs_dd_long, gradients['wet_dry'])
@@ -329,9 +331,10 @@ if __name__ == "__main__":
                 'CASA-GFED3, Zumkehr Anthropogenic',
                 'CASA-GFED3, Kettle Fsoil',
                 'CASA-GFED3, Hybrid Fsoil',
-                'climatological boundaries']
-        # 'CASA-GFED3, Kettle Anthropogenic'
-        plot_all_gradients(ocs_dd_norm, vars, '01Feb')
+                'CASA-GFED3, LRU=1.61, clim',
+                'SiB, mechanistic canopy, clim',
+                'Can-IBIS, LRU=1.61, clim']
+        g = plot_all_gradients(ocs_dd_norm, vars, '02Feb')
 
         # # show east coast sites
         # ocs_dd_renamed.ix[['NHA', 'SCA', 'CMA']][['analysis_value', 'NOAA obs']]
