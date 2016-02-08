@@ -1,19 +1,19 @@
 import matplotlib
 matplotlib.use('AGG')
 
-import warnings
 import os
 import os.path
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 import spatial_analysis_utilities as sau
 from stem_pytools import noaa_ocs
 from stem_pytools import domain
 from stem_pytools import aqout_postprocess as aq
 from stem_pytools import calc_drawdown
-from timutils.mpl_fig_joiner import FigJoiner
+# from timutils.mpl_fig_joiner import FigJoiner
 import map_grid
 import draw_c3c4LRU_map
 
@@ -83,7 +83,7 @@ def assemble_bar_plot_data(
     stem_lat = d.get_lat()
 
     (noaa_ocs_dd['stem_x'],
-     noaa_ocs_dd['stem_y']) = noaa_ocs.find_nearest_stem_xy(
+     noaa_ocs_dd['stem_y']) = domain.find_nearest_stem_xy(
         noaa_ocs_dd.sample_longitude,
         noaa_ocs_dd.sample_latitude,
         stem_lon,
@@ -159,9 +159,23 @@ def normalize_drawdown(ocs_dd,
     return(df)
 
 
+def get_line_styles(df):
+    """assign linestyles for gradient plots.  For now, use dashed
+    lines for climatological boundaries and solid lines for everything
+    else.
+    """
+    n_vars = df.variable.unique().size
+    my_linestyles = list(np.tile(['-'], n_vars))
+    is_clim = np.where(["clim" in x for x in df.variable.unique()])[0]
+    for idx in is_clim:
+        my_linestyles[idx] = '--'
+    return my_linestyles
+
+
 def draw_box_plot(df, sites_list):
     sns.set_style('ticks')
     sns.set_context('paper')
+
     g = sns.factorplot(x="sample_site_code",
                        y="drawdown",
                        hue='variable',
@@ -171,7 +185,11 @@ def draw_box_plot(df, sites_list):
                            "cubehelix",
                            len(df.variable.unique())),
                        x_order=sites_list,
-                       aspect=1.25)
+                       aspect=1.25,
+                       linestyles=get_line_styles(df))
+    # make the left and top axes only extend across the part of the
+    # plot where the data are.  That is, make the axis look like "| _"
+    # and not "L"
     g.despine(offset=10, trim=True)
     g.set_axis_labels("site", "[OCS] drawdown, normalized to NHA")
 
@@ -263,11 +281,13 @@ def plot_all_gradients(ocs_dd, plot_vars, fname_suffix):
 
     figs = []
     g = draw_box_plot(ocs_dd_long, gradients['east_coast'])
-    g.ax.set_title('East Coast N -- S')
+    g.ax.set_title('East Coast N -- S (climatological column mean bounds)')
     plt.gcf().savefig(
         os.path.join(os.getenv('HOME'),
                      'plots',
                      'ECoast_model_components_{}_NHAnorm.svg'.format(fname_suffix)))
+
+    return g
     # figs.append(plt.gcf())
 
     # g = draw_box_plot(ocs_dd_long, gradients['wet_dry'])
@@ -332,7 +352,7 @@ if __name__ == "__main__":
                 'CASA-GFED3, LRU=1.61, clim',
                 'SiB, mechanistic canopy, clim',
                 'Can-IBIS, LRU=1.61, clim']
-        plot_all_gradients(ocs_dd_norm, vars, '20Jan')
+        g = plot_all_gradients(ocs_dd_norm, vars, '02Feb')
 
         # # show east coast sites
         # ocs_dd_renamed.ix[['NHA', 'SCA', 'CMA']][['analysis_value', 'NOAA obs']]
