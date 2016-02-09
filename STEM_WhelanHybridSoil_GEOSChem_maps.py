@@ -68,7 +68,7 @@ def get_COS_concentration(run_key):
     print('parsing AQOUT and calculating daily stats')
     this_run = ndp.get_runs()[run_key]
     aqc = aqp.aqout_container(this_run.aqout_path)
-    aqc.parse(t0=datetime(2008, 7, 8), t1=datetime(2008, 8, 31, 23, 59, 59))
+    aqc.parse(t0=datetime(2008, 7, 1), t1=datetime(2008, 8, 31, 23, 59, 59))
     if "Anthro" in run_key:
         print(('multiplying {} [COS] by 1000 '
                'as per email from Andrew').format(run_key))
@@ -145,7 +145,7 @@ if __name__ == "__main__":
     # f_or_p = 'pretty'
     # STEM_mapper.Mapper124x124(np.mean(dd[:], axis=0).squeeze()).draw_map(
     #     fast_or_pretty=f_or_p,
-    #     t_str=('8 Jul - 31 Aug 2008 mean STEM drawdown, '
+    #     t_str=('1 Jul - 31 Aug 2008 mean STEM drawdown, '
     #            'GEOS-Chem Boundaries'),
     #     cmap=cmap,
     #     norm=norm)
@@ -174,34 +174,63 @@ if __name__ == "__main__":
 #     plt.gcf().savefig(os.path.join(os.getenv('HOME'),
 #                                    'plots', 'cos_GCbounds_FreeTrop.png'))
 
-
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    aqc, dd, raw_data = get_COS_concentration('Anthro_Andrew')
+    aqc, dd, raw_data = get_COS_concentration('climatological_bnd')
     free_trop_mean, abl_mean = calc_ABL_FreeTrop_Mean_COS(aqc)
 
+    dd_all = calc_drawdown.calc_STEM_COS_drawdown(raw_data)
+
     print('drawing map')
-    vmin = np.mean(dd[:], axis=0).min()
-    vmax = np.mean(dd[:], axis=0).max()
-    vmin = -10
-    vmax = 1
-    cmap, norm = midpt_norm.get_discrete_midpt_cmap_norm(vmin=vmin,
-                                                         vmax=vmax,
+    # this_data = dd_all[10, ...].squeeze()
+    this_data = np.mean(dd[10:, ...].squeeze(), axis=0)
+
+    hrs_per_week = 24 * 7
+    # this_data = np.mean(dd[8:, ...], axis=0).squeeze()
+    cmap, norm = midpt_norm.get_discrete_midpt_cmap_norm(vmin=this_data.min(),
+                                                         vmax=this_data.max(),
                                                          midpoint=0.0,
-                                                         bands_above_mdpt=2,
-                                                         bands_below_mdpt=9)
+                                                         bands_above_mdpt=7,
+                                                         bands_below_mdpt=3)
     f_or_p = 'pretty'
-    STEM_mapper.Mapper124x124(np.mean(dd[:], axis=0).squeeze()).draw_map(
+    # STEM_mapper.Mapper124x124(np.mean(dd[:], axis=0).squeeze()).draw_map(
+    STEM_mapper.Mapper124x124(this_data).draw_map(
         fast_or_pretty=f_or_p,
-        t_str=('8 Jul - 31 Aug 2008 mean STEM drawdown, '
-               'Zumkehr Anthro fluxes'),
+        t_str=('Jul-Aug mean STEM drawdown, '
+               'climatological boundaries'),
         cmap=cmap,
         norm=norm)
     plt.gcf().savefig(os.path.join(os.getenv('HOME'),
-                                   'plots', 'dd_map_Anthro_Zumkehr.pdf'))
+                                   'plots', 'dd_map_clim_bounds.png'))
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    # aqc, dd, raw_data = get_COS_concentration('Anthro_Andrew')
+    # free_trop_mean, abl_mean = calc_ABL_FreeTrop_Mean_COS(aqc)
+
+    # print('drawing map')
+    # vmin = np.mean(dd[:], axis=0).min()
+    # vmax = np.mean(dd[:], axis=0).max()
+    # vmin = -10
+    # vmax = 1
+    # cmap, norm = midpt_norm.get_discrete_midpt_cmap_norm(vmin=vmin,
+    #                                                      vmax=vmax,
+    #                                                      midpoint=0.0,
+    #                                                      bands_above_mdpt=2,
+    #                                                      bands_below_mdpt=9)
+    # f_or_p = 'pretty'
+    # STEM_mapper.Mapper124x124(np.mean(dd[:], axis=0).squeeze()).draw_map(
+    #     fast_or_pretty=f_or_p,
+    #     t_str=('8 Jul - 31 Aug 2008 mean STEM drawdown, '
+    #            'Zumkehr Anthro fluxes'),
+    #     cmap=cmap,
+    #     norm=norm)
+    # plt.gcf().savefig(os.path.join(os.getenv('HOME'),
+    #                                'plots', 'dd_map_Anthro_Zumkehr.pdf'))
 
     plt.close('all')
 
