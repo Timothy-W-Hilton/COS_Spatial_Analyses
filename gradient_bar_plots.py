@@ -73,8 +73,8 @@ def get_STEM_cos_conc(cpickle_fname=None, const_bounds_cos=4.5e-10):
 
 
 def assemble_bar_plot_data(
-        cpickle_fname=os.path.join(os.getenv('HOME'),
-                                   'STEM_all_runs.cpickle')):
+    cpickle_fname=os.path.join(os.getenv('HOME'),
+                               'STEM_all_runs.cpickle')):
     noaa_dir = sau.get_noaa_COS_data_path()
     noaa_ocs_dd, ocs_daily = sau.get_JA_site_mean_drawdown(noaa_dir)
 
