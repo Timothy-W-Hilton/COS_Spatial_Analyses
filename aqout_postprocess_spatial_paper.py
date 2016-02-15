@@ -31,8 +31,10 @@ class AqoutContainerSpatialPaper(aqpp.aqout_container):
         AqoutContainerSpatialPaper docstring)
         """
 
-        midday_mask = np.array(map(aqpp.is_midday, self.t))
-        self.cos_total = self.cos_total[midday_mask, ...]
+        is_midday_bool = np.array(map(aqpp.is_midday, self.t))
+        is_not_midday = np.ones_like(self.cos_total)
+        is_not_midday[is_midday_bool, ...] = 0
+        self.cos_total = np.ma.masked_where(is_not_midday == 1, self.cos_total)
         self.dd_JA_midday = self.calc_drawdown().squeeze()
 
     def calc_JA_midday_drawdown_stderr(self):
