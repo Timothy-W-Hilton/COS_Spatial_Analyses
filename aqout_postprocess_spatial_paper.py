@@ -5,6 +5,8 @@ specific to the spatial paper).
 
 import numpy as np
 from stem_pytools import aqout_postprocess as aqpp
+from stem_pytools import noaa_ocs
+from stem_pytools import domain as domain_tools
 from timutils import std_error
 
 
@@ -36,6 +38,7 @@ class AqoutContainerSpatialPaper(aqpp.aqout_container):
         is_not_midday[is_midday_bool, ...] = 0
         self.cos_total = np.ma.masked_where(is_not_midday == 1, self.cos_total)
         self.dd_JA_midday = self.calc_drawdown().squeeze()
+        self.dd_JA_midday_mean = self.dd_JA_midday.mean(axis=0)
 
     def calc_JA_midday_drawdown_stderr(self):
         """calculates and populates fields, dd_se, dd_se_neff, dd_neff (see
@@ -51,3 +54,37 @@ class AqoutContainerSpatialPaper(aqpp.aqout_container):
         self.dd_se = se.std_err
         self.dd_se_neff = se.std_err_neff
         self.dd_neff = se.neff
+
+    def extract_noaa_sites(self, noaa_dir):
+        """extract drawdown, standard error for each NOAA observation site
+
+        populates field noaa_site_vals with a Pandas data frame
+        indexed by three-letter NOAA site code, with columns dd
+        (drawdown, pptv) and se (standard error, pptv)
+
+        ARGS:
+        noaa_dir (string): fully path the to the directory containing
+           the noaa data
+        """
+
+        site_vals = noaa_ocs.get_sites_summary(noaa_dir)
+        domain = domain_tools.STEM_Domain()
+
+        stem_x, stem_y = domain_tools.find_nearest_stem_xy(
+            site_vals['longitude'],
+            site_vals['latitude'],
+            domain.get_lon(),
+            domain.get_lat())
+        site_vals['stem_x'] = stem_x
+        site_vals['stem_y'] = stem_y
+
+        site_vals['dd'] = self.dd_JA_midday_mean[site_vals.stem_x,
+                                                 site_vals.stem_y]
+        site_vals['dd_neff'] = self.dd_neff[site_vals.stem_x,
+                                            site_vals.stem_y]
+        site_vals['dd_se'] = self.dd_se[site_vals.stem_x,
+                                        site_vals.stem_y]
+        site_vals['dd_se_neff'] = self.dd_se_neff[site_vals.stem_x,
+                                                  site_vals.stem_y]
+        self.site_vals = site_vals
+        site_vals.insert(0, 'model', self.key)
