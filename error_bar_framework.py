@@ -15,10 +15,15 @@ aqcs = {k: AqoutContainerSpatialPaper(v.aqout_path, key=k)
 fnames = []
 
 # for k, this_aqc in aqcs.items()[(1, -1)]:
-# subset = dict((k, aqcs[k]) for k in ['casa_gfed_161', 'casa_m15_C4pctLRU'])
+# aqcs = dict((k, aqcs_all[k]) for k in ['casa_gfed_161'])
+# aqcs = dict((k, aqcs_all[k]) for k in ['casa_gfed_161', 'canibis_161'])
+
 for k, this_aqc in aqcs.items():
     print "processing {}".format(k)
-    this_aqc.parse(t0=None, t1=None, verbose=True)
+    # this_aqc.parse(t0=None, t1=None, verbose=True)
+    this_aqc.parse(t0=datetime(2008, 7, 8),
+                   t1=datetime(2008, 8, 31, 23, 59, 59),
+                   verbose=True)
     this_aqc.sum()
     # this_aqc.calc_stats()
     this_aqc.calc_JA_midday_drawdown()
@@ -27,7 +32,7 @@ for k, this_aqc in aqcs.items():
         '/project/projectdirs/m2319/Data/NOAA_95244993/')
 
 all = pd.concat([this_model.site_vals for this_model in aqcs.values()])
-all.to_csv('./model_components.csv')
+all.to_csv('./model_components_18Feb.csv')
 print datetime.now() - t0
 
 # se_map = STEM_mapper.Mapper124x124(aqcs['canibis_161'].dd_se)
