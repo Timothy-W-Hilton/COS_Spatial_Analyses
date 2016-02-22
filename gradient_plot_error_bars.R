@@ -62,9 +62,10 @@ dummy_data <- function() {
 ##' @return
 ##' @author Timothy W. Hilton
 ##' @export
-CI_plotter <- function(dd, ci, col, x_offset, marker) {
+CI_plotter <- function(dd, ci_hi, ci_lo, col, x_offset, marker) {
     n_sites <- length(dd)
-    plotCI(1:n_sites + x_offset, dd, ci, col=col, pch=marker, add=TRUE)
+    plotCI(1:n_sites + x_offset, dd, uiw=ci_hi, liw=ci_lo,
+           col=col, pch=marker, add=TRUE)
 }
 
 ##' .. produce a scatter plot with error bars of STEM model component
@@ -81,7 +82,7 @@ CI_plotter <- function(dd, ci, col, x_offset, marker) {
 ##' @return
 ##' @author Timothy W. Hilton
 ##' @export
-gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff') {
+gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff', norm=FALSE) {
     n_sites <- nlevels(df[['site_code']])
     n_models <- nlevels(df[['model']])
     site_names <- levels(df[['site_code']])
@@ -101,22 +102,32 @@ gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff') {
     ## dfw_dd: "data frame, wide; confidence interval"
     dfw_ci <- dfw_se * 1.96 ## 95% confidence interval
 
+    if (norm) {
+        dd_list <- ci_normalizer(dfw_dd, dfw_ci, 'NHA')
+        t_str <- "normalized drawdown with 95% confidence intervals"
+    } else {
+        dd_list <- list(dd=dfw_dd, ci_hi=dfw_ci, ci_lo=dfw_ci)
+        t_str <- "drawdown with 95% confidence intervals"
+    }
+
     plotCI(1:n_sites,
-           dfw_dd[[1]],
-           dfw_ci[[1]],
+           dd_list[['dd']][[1]],
+           uiw=dfw_ci[['ci_hi']][[1]],
+           liw=dfw_ci[['ci_lo']][[1]],
            xaxt='n',
-           main="drawdown with 95% confidence intervals",
+           main=t_str,
            ylab='Drawdown  (pptv)',
            xlab='site',
            col=pal[[1]],
-           ylim=range(cbind(dfw_dd + dfw_ci, dfw_dd - dfw_ci)),
+           ylim=range(cbind(dd_list[['dd']] + dd_list[['ci_hi']],
+                            dd_list[['dd']] - dd_list[['ci_lo']])),
            xlim=c(1, n_sites + 1),
            pch=marker_sequence[[1]])
     ## points(x, y, col=pal[[1]], type='l')
     axis(1, at=1:n_sites, labels=site_names)
 
     x_offset <- seq(from=0.0, by=0.05, length.out=n_models)
-    mapply(CI_plotter, dfw_dd, dfw_ci,
+    mapply(CI_plotter, dd_list[['dd']], dd_list[['ci_hi']], dd_list[['ci_lo']],
            pal, x_offset, marker_sequence[1:n_models])
 
     legend(x='right', legend=models, pch=marker_sequence, col=pal)
@@ -129,6 +140,6 @@ fig3a_data <- df[df[['site_code']] %in% c('NHA', 'CMA', 'SCA') &
                                           'SiB_mech', 'canibis_C4pctLRU'),
                  c('model', 'site_code', 'dd', 'dd_se_neff')]
 fig3a_data <- droplevels(fig3a_data)
-pdf('ECoast_gradient_with_std_error.pdf')
-data <- gradient_CI_plot(fig3a_data)
+pdf('ECoast_gradient_with_std_error_norm.pdf')
+data <- gradient_CI_plot(fig3a_data, norm=TRUE)
 dev.off()
