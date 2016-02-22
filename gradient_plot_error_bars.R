@@ -69,12 +69,14 @@ gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff') {
                      model, dd_se_neff)
     dfw_se <- dfw_se[, !names(dfw_se) %in% "site_code"]
 
+    dfw_se <- dfw_se * 1.96 ## 95% confidence interval
+
     plotCI(1:n_sites,
            dfw_dd[[1]],
            dfw_se[[1]],
            xaxt='n',
            main="drawdown with error bars",
-           ylab='Drawdown',
+           ylab='Drawdown  (pptv)',
            xlab='site',
            col=pal[[1]],
            ylim=range(cbind(dfw_dd + dfw_se, dfw_dd - dfw_se)),
@@ -84,7 +86,8 @@ gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff') {
     axis(1, at=1:n_sites, labels=site_names)
 
     x_offset <- seq(from=0.0, by=0.1, length.out=n_models)
-    mapply(CI_plotter, dfw_dd, dfw_se, pal, x_offset, marker_sequence[1:n_models])
+    mapply(CI_plotter, dfw_dd, dfw_se,
+           pal, x_offset, marker_sequence[1:n_models])
 
     legend(x='right', legend=models, pch=marker_sequence, col=pal)
 }
@@ -95,4 +98,6 @@ fig3a_data <- df[df[['site_code']] %in% c('NHA', 'CMA', 'SCA') &
                                           'SiB_mech', 'canibis_C4pctLRU'),
                  c('model', 'site_code', 'dd', 'dd_se_neff')]
 fig3a_data <- droplevels(fig3a_data)
+pdf('ECoast_gradient_with_std_error.pdf')
 gradient_CI_plot(fig3a_data)
+dev.off()
