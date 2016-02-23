@@ -2,6 +2,14 @@ library(plotrix)
 library(RColorBrewer)
 library(tidyr)  # could also use reshape2
 
+horizontal_spacer <- function(npoints, gapwidth) {
+    width_total <- gapwidth * (npoints - 1)
+    offsets <- seq(from=-(width_total / 2.0),
+                   to=(width_total / 2.0),
+                   length.out=npoints)
+    return(offsets)
+}
+
 row_normalizer <- function(dd, norm_site='NHA') {
     norm_data <- dd[norm_site, ]
     for (i in seq(1, nrow(dd))) {
@@ -100,7 +108,6 @@ gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff', norm=FALSE,
     row.names(dfw_dd) <- dfw_dd[['site_code']]
     dfw_dd <- dfw_dd[, !names(dfw_dd) %in% "site_code"]
     ## make sure sites are in the requested order
-    browser()
     dfw_dd <- dfw_dd[site_names, ]
 
     dfw_se <- spread(df[, c('model', 'site_code', 'dd_se_neff')],
@@ -120,7 +127,8 @@ gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff', norm=FALSE,
         t_str <- "drawdown with 95% confidence intervals"
     }
 
-    plotCI(1:n_sites,
+    x_offset <- horizontal_spacer(n_models, 0.075)
+    plotCI(1:n_sites + x_offset[[1]],
            dd_list[['dd']][[1]],
            uiw=dfw_ci[['ci_hi']][[1]],
            liw=dfw_ci[['ci_lo']][[1]],
@@ -131,12 +139,11 @@ gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff', norm=FALSE,
            col=pal[[1]],
            ylim=range(cbind(dd_list[['dd']] + dd_list[['ci_hi']],
                             dd_list[['dd']] - dd_list[['ci_lo']])),
-           xlim=c(1, n_sites + 1),
+           xlim=c(1 + min(x_offset), n_sites + max(x_offset)),
            pch=marker_sequence[[1]])
     ## points(x, y, col=pal[[1]], type='l')
     axis(1, at=1:n_sites, labels=site_names)
 
-    x_offset <- seq(from=0.0, by=0.05, length.out=n_models)
     mapply(CI_plotter, dd_list[['dd']], dd_list[['ci_hi']], dd_list[['ci_lo']],
            pal, x_offset, marker_sequence[1:n_models])
 
