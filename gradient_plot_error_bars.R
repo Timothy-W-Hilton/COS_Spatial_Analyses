@@ -82,23 +82,33 @@ CI_plotter <- function(dd, ci_hi, ci_lo, col, x_offset, marker) {
 ##' @return
 ##' @author Timothy W. Hilton
 ##' @export
-gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff', norm=FALSE) {
+gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff', norm=FALSE,
+                             site_names=list()) {
     n_sites <- nlevels(df[['site_code']])
     n_models <- nlevels(df[['model']])
-    site_names <- levels(df[['site_code']])
     models <- levels(df[['model']])
     pal <- brewer.pal(n_models, 'Dark2')
     marker_sequence <- c(0, 1, 3, 4, 5)
 
+    if (length(site_names) == 0) {
+        site_names <- levels(df[['site_code']])
+    }
+
     ## dfw_dd: "data frame, wide; drawdown"
     dfw_dd <- spread(df[, c('model', 'site_code', 'dd')],
                      model, dd)
+    row.names(dfw_dd) <- dfw_dd[['site_code']]
     dfw_dd <- dfw_dd[, !names(dfw_dd) %in% "site_code"]
-    row.names(dfw_dd) <- site_names
+    ## make sure sites are in the requested order
+    browser()
+    dfw_dd <- dfw_dd[site_names, ]
+
     dfw_se <- spread(df[, c('model', 'site_code', 'dd_se_neff')],
                      model, dd_se_neff)
+    row.names(dfw_se) <- dfw_se[['site_code']]
     dfw_se <- dfw_se[, !names(dfw_se) %in% "site_code"]
-    row.names(dfw_se) <- site_names
+    ## make sure sites are in the requested order
+    dfw_se <- dfw_se[site_names, ]
     ## dfw_dd: "data frame, wide; confidence interval"
     dfw_ci <- dfw_se * 1.96 ## 95% confidence interval
 
@@ -141,5 +151,5 @@ fig3a_data <- df[df[['site_code']] %in% c('NHA', 'CMA', 'SCA') &
                  c('model', 'site_code', 'dd', 'dd_se_neff')]
 fig3a_data <- droplevels(fig3a_data)
 pdf('ECoast_gradient_with_std_error_norm.pdf')
-data <- gradient_CI_plot(fig3a_data, norm=TRUE)
+data <- gradient_CI_plot(fig3a_data, norm=FALSE, site_names=c('NHA', 'CMA', 'SCA'))
 dev.off()
