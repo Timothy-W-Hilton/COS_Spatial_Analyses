@@ -2,14 +2,35 @@ library(plotrix)
 library(RColorBrewer)
 library(tidyr)  # could also use reshape2
 
-horizontal_spacer <- function(npoints, gapwidth) {
+##' offsets are calculated from an arbitrary center
+##'
+##' @title calculate horizontal offsets for N points with specified
+##' interval
+##' @param npoints (int): number of points in the sequence
+##' @param gapwidth (float): space between consecutive points
+##' @return numeric array containing npoints horizontal offset values
+##' @author Timothy W. Hilton
+##' @export
+calculate_hoffset <- function(npoints, gapwidth) {
     width_total <- gapwidth * (npoints - 1)
     offsets <- seq(from=-(width_total / 2.0),
                    to=(width_total / 2.0),
                    length.out=npoints)
     return(offsets)
 }
-
+##' Normalize all rows in a data frame to the row with label
+##' norm_site.  Helper function for ci_normalizer -- should not be
+##' called by user.
+##'
+##'
+##' @title normalize data frame rows (helper function)
+##' @param dd (data frame): data frame containing drawdown
+##' observations, labeled by site code (rows) and model (columns)
+##' @param norm_site (string): site code (also the row label) of the
+##' site to normalize against.
+##' @return dd, normalized to site_code
+##' @author Timothy W. Hilton
+##' @export
 row_normalizer <- function(dd, norm_site='NHA') {
     norm_data <- dd[norm_site, ]
     for (i in seq(1, nrow(dd))) {
@@ -17,7 +38,24 @@ row_normalizer <- function(dd, norm_site='NHA') {
     }
     return(dd)
 }
-
+##' Normalization is calculated relative to the specified site.  The
+##' normalized confidence intervals are calculated by finding the
+##' large span within dd and ci, and nomalizing against the specified
+##' site.
+##'
+##' @title Normalize a data frame containing confidence intervals.
+##' @param dd (data frame): data frame containing drawdown
+##' observations, labeled by site code (rows) and model (columns)
+##' @param ci (data frame): data frame containing drawdown confidence
+##' intervals, labeled by site code (rows) and model (columns)
+##' @param norm_site (string): site code (also the row label) of the
+##' site to normalize against.
+##' @return list labeled "dd", "ci_hi", and "ci_lo".  Each element
+##' contains a data frame labeled by site code (rows) and model
+##' (columns) containing normalized drawdowns, upper confidence
+##' intervals, and lower confidence intervals, respectively.
+##' @author Timothy W. Hilton
+##' @export
 ci_normalizer <- function(dd, ci, norm_site='NHA') {
     dd_hi <- dd + ci
     dd_lo <- dd - ci
@@ -32,12 +70,19 @@ ci_normalizer <- function(dd, ci, norm_site='NHA') {
     return(list(dd=ddnorm, ci_hi=ci_hi, ci_lo=ci_lo))
 }
 
-
+##' return a dummy set of random "observations" and "confidence
+##' intervals" with the same row and column labels that the real data
+##' will have.  Useful for testing the plotting code and whether
+##' plotrix is able to produce the plot I want.
+##'
+##' @title generate a set of random "observations" and "confidence
+##' intervals"
+##' @return list with labels "dd", "ci".  Each element contains a data
+##' frame labeled by site code (rows) and model (columns) containing
+##' normalized drawdowns and confidence intervals, respectively.
+##' @author Timothy W. Hilton
+##' @export
 dummy_data <- function() {
-    ## return a dummy set of random "observations" and "confidence
-    ## intervals" with the same row and column labels that the real
-    ## data will have.  Useful for testing the plotting code and
-    ## whether plotrix is able to produce the plot I want.
     models <- c('CASA-GFED3', 'Can-IBIS', 'SiB mech')
     site_names <- c('NHA', 'CMA', 'SCA', 'WBI', 'THD')
     marker_sequence <- c('o', 'x', 5, '+', '*')
@@ -127,7 +172,7 @@ gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff', norm=FALSE,
         t_str <- "drawdown with 95% confidence intervals"
     }
 
-    x_offset <- horizontal_spacer(n_models, 0.075)
+    x_offset <- calculate_hoffset(n_models, 0.075)
     plotCI(1:n_sites + x_offset[[1]],
            dd_list[['dd']][[1]],
            uiw=dfw_ci[['ci_hi']][[1]],
