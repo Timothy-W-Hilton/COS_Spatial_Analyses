@@ -28,6 +28,38 @@ class AqoutContainerSpatialPaper(aqpp.aqout_container):
        size" adjusted for autocorrelation within the STEM [COS].  The
        number of effectively independent [COS] data points from STEM.
     """
+    def parse(self, const_bounds=450, *args, **kwargs):
+        """Parse aqout data by calling parent class parse method.  Then apply:
+
+        (1) corrections to anthropogenic fluxes (multiply by 1e3, as
+        per email from Andrew Zumkehr).  Anthro STEM runs are
+        identified by the substring "Anthro" existing in self.key
+        (2) adjustments to climatic boundaries totals: substract the
+        constant bounds [COS] of 450 ppt from all non-boundary run
+        AQOUT files, then add the bounds STEM run [COS] to each, then
+        remove the bounds run AQOUT from self.
+
+        ARGS:
+        const_bounds (scalar): the constant [COS] (in pptv) used in
+           constant boundaries STEM runs
+        """
+        # call the parent class parse method
+        super(AqoutContainerSpatialPaper, self).parse(*args, **kwargs)
+
+        for i, this_key in enumerate(self.aq_keys):
+            print(('multiplying Anthro [COS] by 1000 '
+                   'as per email from Andrew'))
+            if 'Anthro' in this_key:
+                self.data[i] = self.data[i] * 1e3
+
+        for i, this_key in enumerate(self.aq_keys):
+            if 'climatological_bnd' in this_key:
+                print 'adjusting {} for climatolotical bounds'.format(self.key)
+                for j in range(len(self.data)):
+                    if (j != i):
+                        self.data[j] = (self.data[j] -
+                                        const_bounds + self.data[i])
+
     def calc_JA_midday_drawdown(self):
         """calculates and populates fields dd_JA_midday (see
         AqoutContainerSpatialPaper docstring)

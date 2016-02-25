@@ -25,9 +25,9 @@ all_combos = [[this_run for this_run in this_set if this_run is not None]
 
 aqcs = {"-".join(this_set): AqoutContainerSpatialPaper(
     aqout_paths=[runs[this_run].aqout_path for this_run in this_set],
+    aq_keys=this_set,
     key="-".join(this_set)) for this_set in all_combos}
-# aqcs = {k: v for k, v in aqcs_all.items()[0:2]}
-
+#aqcs = {k: v for k, v in aqcs_all.items()[0:2]}
 
 # for k, this_aqc in aqcs.items()[(1, -1)]:
 # aqcs = dict((k, aqcs_all[k]) for k in ['casa_gfed_161'])
@@ -47,7 +47,7 @@ for k, this_aqc in aqcs.items():
         '/project/projectdirs/m2319/Data/NOAA_95244993/')
 
 all = pd.concat([this_model.site_vals for this_model in aqcs.values()])
-all.to_csv('./model_components_24Feb.csv')
+all.to_csv('./model_components_25Feb.csv')
 print datetime.now() - t0
 
 # se_map = STEM_mapper.Mapper124x124(aqcs['canibis_161'].dd_se)
