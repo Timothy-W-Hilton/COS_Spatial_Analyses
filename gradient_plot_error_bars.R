@@ -173,7 +173,7 @@ gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff', norm=FALSE,
         t_str <- "drawdown with 95% confidence intervals"
     }
 
-    x_offset <- calculate_hoffset(n_models, 0.075)
+    x_offset <- calculate_hoffset(n_models, 0.01)
     plotCI(1:n_sites + x_offset[[1]],
            dd_list[['dd']][[1]],
            uiw=dfw_ci[['ci_hi']][[1]],
@@ -193,25 +193,44 @@ gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff', norm=FALSE,
     mapply(CI_plotter, dd_list[['dd']], dd_list[['ci_hi']], dd_list[['ci_lo']],
            pal, x_offset, marker_sequence[1:n_models])
 
-    legend(x='right', legend=models, pch=marker_sequence, col=pal)
+    ## legend(x='right', legend=models, pch=marker_sequence, col=pal)
     return(list(dd=dfw_dd, ci=dfw_ci))
 }
 
+myboot <- function(x) {
+    boot(x[['dd']],
+         statistic=function(data, ind) return(mean(data[ind])),
+         R=5000)
+}
+
 df <- read.csv('./model_components_25Feb.csv')
-dfl <- split(df, f=df[['site_code']], drop=TRUE)
-sca_canibis= subset(dfl[['SCA']], grepl('canibis', model) & !grepl('climatological', model))
-sca_casagfed= subset(dfl[['SCA']], grepl('casa_gfed', model) & !grepl('climatological', model))
-results <- list(canibis=boot(sca_canibis[['dd']],
-                    statistic=function(data, ind) return(mean(data[ind])),
-                    R=1000),
-                casagfed=boot(sca_casagfed[['dd']],
-                    statistic=function(data, ind) return(mean(data[ind])),
-                    R=1000))
+df[['clim_bounds']] <- 'CONST'
+df[['clim_bounds']][grepl('climatological', df[['model']])] <- 'CLIM'
+df[['clim_bounds']] <- as.factor(df[['clim_bounds']])
+
+dfl <- split(df, f=df[, c('site_code', 'clim_bounds')], drop=TRUE)
+## dfl <- lapply(dfl, function(x) x[sort(x[['model']]), ])
+## bar <- cbind(dfl[['SCA.CLIM']][, c('model', 'dd')],
+##              dfl[['SCA.CONST']][c('model', 'dd')])
+
+boot_results <- lapply(dfl[c('NHA.CONST', 'NHA.CLIM',
+                             'CMA.CONST', 'CMA.CLIM',
+                             'SCA.CONST', 'SCA.CLIM')],
+                       FUN=myboot)
+boot_ci_results <- lapply(boot_results, boot.ci,
+                          type=c("norm","basic", "perc", "bca"))
+dfboot <- data.frame(row.names=names(boot_results),
+                     dd=rep(NA, length(boot_results)),
+                     ci_lo=rep(NA, length(boot_results)),
+                     ci_hi=rep(NA, length(boot_results)))
+for (this_set in names(boot_results)) {
+    dfboot[[this_set, 'dd']] <- boot_results[[this_set]][['t0']]
+    dfboot[[this_set, 'ci_lo']] <- boot_ci_results[[this_set]][['basic']][[4]]
+    dfboot[[this_set, 'ci_hi']] <- boot_ci_results[[this_set]][['basic']][[5]]
+}
 
 
-fig3a_data <- df[df[['site_code']] %in% c('NHA', 'CMA', 'SCA') &
-                     df[['model']] %in% c('casa_gfed_161', 'SiB_calc',
-                                          'SiB_mech', 'canibis_C4pctLRU'),
+fig3a_data <- df[df[['site_code']] %in% c('NHA', 'CMA', 'SCA'),
                  c('model', 'site_code', 'dd', 'dd_se_neff')]
 fig3a_data <- droplevels(fig3a_data)
 data <- gradient_CI_plot(fig3a_data, norm=FALSE, site_names=c('NHA', 'CMA', 'SCA'))
