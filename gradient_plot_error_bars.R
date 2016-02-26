@@ -150,7 +150,11 @@ gradient_CI_plot <- function(df,
     x_offset <- calculate_hoffset(n_models, 0.075)
     ylim <- range(df[df[['site']] %in% site_names, c('ci_lo', 'ci_hi')])
 
-    with(subset(df, site %in% site_names & Fplant==models[[1]]),
+    idx = (df[['site']] %in% site_names) & (df[['Fplant']]==models[[1]])
+    this_df <- df[idx, ]
+    row.names(this_df) <- this_df[['site']]
+    this_df <- this_df[site_names, ]
+    with(this_df,
          plotCI(1:n_sites + x_offset[[1]],
                 dd, uiw=(ci_hi - dd), liw=(dd - ci_lo),
                 xaxt='n',
@@ -164,7 +168,11 @@ gradient_CI_plot <- function(df,
     axis(1, at=1:n_sites, labels=site_names)
 
     for (i in 2:n_models) {
-        with(subset(df, site %in% site_names & Fplant==models[[i]]),
+        idx = (df[['site']] %in% site_names) & (df[['Fplant']]==models[[i]])
+        this_df <- df[idx, ]
+        row.names(this_df) <- this_df[['site']]
+        this_df <- this_df[site_names, ]
+        with(this_df,
              plotCI(x=1:n_sites + x_offset[[i]],
                     y=dd, uiw=ci_hi - dd, liw=dd - ci_lo,
                     add=TRUE,
