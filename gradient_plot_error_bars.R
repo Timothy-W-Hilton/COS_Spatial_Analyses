@@ -1,6 +1,7 @@
 library(plotrix)
 library(RColorBrewer)
 library(tidyr)  # could also use reshape2
+library(boot)
 
 ##' offsets are calculated from an arbitrary center
 ##'
@@ -196,12 +197,21 @@ gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff', norm=FALSE,
     return(list(dd=dfw_dd, ci=dfw_ci))
 }
 
-df <- read.csv('./model_components_18Feb.csv')
+df <- read.csv('./model_components_25Feb.csv')
+dfl <- split(df, f=df[['site_code']], drop=TRUE)
+sca_canibis= subset(dfl[['SCA']], grepl('canibis', model) & !grepl('climatological', model))
+sca_casagfed= subset(dfl[['SCA']], grepl('casa_gfed', model) & !grepl('climatological', model))
+results <- list(canibis=boot(sca_canibis[['dd']],
+                    statistic=function(data, ind) return(mean(data[ind])),
+                    R=1000),
+                casagfed=boot(sca_casagfed[['dd']],
+                    statistic=function(data, ind) return(mean(data[ind])),
+                    R=1000))
+
+
 fig3a_data <- df[df[['site_code']] %in% c('NHA', 'CMA', 'SCA') &
                      df[['model']] %in% c('casa_gfed_161', 'SiB_calc',
                                           'SiB_mech', 'canibis_C4pctLRU'),
                  c('model', 'site_code', 'dd', 'dd_se_neff')]
 fig3a_data <- droplevels(fig3a_data)
-pdf('ECoast_gradient_with_std_error_norm.pdf')
 data <- gradient_CI_plot(fig3a_data, norm=FALSE, site_names=c('NHA', 'CMA', 'SCA'))
-dev.off()
