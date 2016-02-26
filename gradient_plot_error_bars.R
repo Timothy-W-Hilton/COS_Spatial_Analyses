@@ -136,65 +136,20 @@ CI_plotter <- function(dd, ci_hi, ci_lo, col, x_offset, marker) {
 ##' @return
 ##' @author Timothy W. Hilton
 ##' @export
-gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff', norm=FALSE,
-                             site_names=list()) {
-    n_sites <- nlevels(df[['site_code']])
-    n_models <- nlevels(df[['model']])
-    models <- levels(df[['model']])
-    pal <- brewer.pal(n_models, 'Dark2')
-    marker_sequence <- c(0, 1, 3, 4, 5)
-
-    if (length(site_names) == 0) {
-        site_names <- levels(df[['site_code']])
-    }
-
-    ## dfw_dd: "data frame, wide; drawdown"
-    dfw_dd <- spread(df[, c('model', 'site_code', 'dd')],
-                     model, dd)
-    row.names(dfw_dd) <- dfw_dd[['site_code']]
-    dfw_dd <- dfw_dd[, !names(dfw_dd) %in% "site_code"]
-    ## make sure sites are in the requested order
-    dfw_dd <- dfw_dd[site_names, ]
-
-    dfw_se <- spread(df[, c('model', 'site_code', 'dd_se_neff')],
-                     model, dd_se_neff)
-    row.names(dfw_se) <- dfw_se[['site_code']]
-    dfw_se <- dfw_se[, !names(dfw_se) %in% "site_code"]
-    ## make sure sites are in the requested order
-    dfw_se <- dfw_se[site_names, ]
-    ## dfw_dd: "data frame, wide; confidence interval"
-    dfw_ci <- dfw_se * 1.96 ## 95% confidence interval
-
-    if (norm) {
-        dd_list <- ci_normalizer(dfw_dd, dfw_ci, 'NHA')
-        t_str <- "normalized drawdown with 95% confidence intervals"
-    } else {
-        dd_list <- list(dd=dfw_dd, ci_hi=dfw_ci, ci_lo=dfw_ci)
-        t_str <- "drawdown with 95% confidence intervals"
-    }
-
-    x_offset <- calculate_hoffset(n_models, 0.01)
-    plotCI(1:n_sites + x_offset[[1]],
-           dd_list[['dd']][[1]],
-           uiw=dfw_ci[['ci_hi']][[1]],
-           liw=dfw_ci[['ci_lo']][[1]],
-           xaxt='n',
-           main=t_str,
-           ylab='Drawdown  (pptv)',
-           xlab='site',
-           col=pal[[1]],
-           ylim=range(cbind(dd_list[['dd']] + dd_list[['ci_hi']],
-                            dd_list[['dd']] - dd_list[['ci_lo']])),
-           xlim=c(1 + min(x_offset), n_sites + max(x_offset)),
-           pch=marker_sequence[[1]])
-    ## points(x, y, col=pal[[1]], type='l')
+gradient_CI_plot <- function(df,
+                             dd_col='dd',
+                             ci_hi_col='ci_hi',
+                             ci_lo_col='ci_lo',
+                             t_str='gradient plot') {
+    n_sites <- nrow(df)
+    site_names <- row.names(df)
+    with(df,
+         plotCI(1:length(dd), dd, uiw=(ci_hi - dd), liw=(dd - ci_lo),
+                xaxt='n',
+                main=t_str,
+                ylab='Drawdown  (pptv)',
+                xlab='site'))
     axis(1, at=1:n_sites, labels=site_names)
-
-    mapply(CI_plotter, dd_list[['dd']], dd_list[['ci_hi']], dd_list[['ci_lo']],
-           pal, x_offset, marker_sequence[1:n_models])
-
-    ## legend(x='right', legend=models, pch=marker_sequence, col=pal)
-    return(list(dd=dfw_dd, ci=dfw_ci))
 }
 
 myboot <- function(x) {
@@ -204,33 +159,42 @@ myboot <- function(x) {
 }
 
 df <- read.csv('./model_components_25Feb.csv')
-df[['clim_bounds']] <- 'CONST'
-df[['clim_bounds']][grepl('climatological', df[['model']])] <- 'CLIM'
-df[['clim_bounds']] <- as.factor(df[['clim_bounds']])
+df[['Fbounds']] <- 'CONST'
+df[['Fbounds']][grepl('climatological', df[['model']])] <- 'CLIM'
+df[['Fbounds']] <- as.factor(df[['clim_bounds']])
+components <- strsplit(x=as.character(df[['model']]), split='-')
+df[['Fplant']] <- unlist(lapply(components, function(x) x[[1]]))
+df[['Fsoil']] <- unlist(lapply(components, function(x) x[[2]]))
+df[['Fanthro']] <- unlist(lapply(components, function(x) x[[3]]))
 
-dfl <- split(df, f=df[, c('site_code', 'clim_bounds')], drop=TRUE)
-## dfl <- lapply(dfl, function(x) x[sort(x[['model']]), ])
-## bar <- cbind(dfl[['SCA.CLIM']][, c('model', 'dd')],
-##              dfl[['SCA.CONST']][c('model', 'dd')])
+dfl <- split(df[, c('site_code', 'Fplant', 'Fsoil', 'Fanthro',
+                    'Fbounds', 'dd')],
+             f=df[, c('site_code', 'Fplant')], drop=TRUE)
 
-boot_results <- lapply(dfl[c('NHA.CONST', 'NHA.CLIM',
-                             'CMA.CONST', 'CMA.CLIM',
-                             'SCA.CONST', 'SCA.CLIM')],
+boot_results <- lapply(dfl,
                        FUN=myboot)
 boot_ci_results <- lapply(boot_results, boot.ci,
                           type=c("norm","basic", "perc", "bca"))
 dfboot <- data.frame(row.names=names(boot_results),
                      dd=rep(NA, length(boot_results)),
                      ci_lo=rep(NA, length(boot_results)),
-                     ci_hi=rep(NA, length(boot_results)))
+                     ci_hi=rep(NA, length(boot_results)),
+                     Fplant=rep(NA, length(boot_results)),
+                     site=rep(NA, length(boot_results)))
 for (this_set in names(boot_results)) {
+
+    browser()
     dfboot[[this_set, 'dd']] <- boot_results[[this_set]][['t0']]
     dfboot[[this_set, 'ci_lo']] <- boot_ci_results[[this_set]][['basic']][[4]]
     dfboot[[this_set, 'ci_hi']] <- boot_ci_results[[this_set]][['basic']][[5]]
+    dfboot[[this_set, 'site']] <- unlist(strsplit(this_set, '\\.'))[[1]]
+    dfboot[[this_set, 'Fplant']] <- unlist(strsplit(this_set, '\\.'))[[2]]
 }
 
+gradient_CI_plot(dfboot[c('NHA', 'CMA', 'SCA'), ],
+                 t_str='E Coast vertical drawdown')
+dev.copy2pdf(file='gradient_ECoast_bootstrapCIs.pdf')
 
-fig3a_data <- df[df[['site_code']] %in% c('NHA', 'CMA', 'SCA'),
-                 c('model', 'site_code', 'dd', 'dd_se_neff')]
-fig3a_data <- droplevels(fig3a_data)
-data <- gradient_CI_plot(fig3a_data, norm=FALSE, site_names=c('NHA', 'CMA', 'SCA'))
+gradient_CI_plot(dfboot[c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'), ],
+                 t_str='dry to wet vertical drawdown')
+dev.copy2pdf(file='gradient_WetDry_bootstrapCIs.pdf')
