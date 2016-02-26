@@ -3,6 +3,15 @@ library(RColorBrewer)
 library(tidyr)  # could also use reshape2
 library(boot)
 
+human_readable_model_names <- function() {
+    return(list(canibis_161='Can-IBIS, LRU=1.61',
+                canibis_C4pctLRU= 'Can-IBIS, LRU=C3/C4',
+                casa_gfed_161='CASA=GFED3, LRU=1.61',
+                casa_gfed_C4pctLRU='CASA=GFED3, LRU=C3/C4',
+                SiB_calc='SiB, LRU=1.61',
+                SiB_mech='SiB, mechanistic LRU'))
+}
+
 ##' offsets are calculated from an arbitrary center
 ##'
 ##' @title calculate horizontal offsets for N points with specified
@@ -163,7 +172,7 @@ gradient_CI_plot <- function(df,
                 xlab='site',
                 col=pal[[1]],
                 ylim=ylim,
-                xlim=c(1 + min(x_offset), n_sites * 1.5),
+                xlim=c(1 + min(x_offset), n_sites * 1.6),
                 pch=marker_sequence[[1]]))
     axis(1, at=1:n_sites, labels=site_names)
 
@@ -179,7 +188,8 @@ gradient_CI_plot <- function(df,
                     col=pal[[i]],
                     pch=marker_sequence[[i]]))
     }
-    legend(x='right', legend=models, pch=marker_sequence, col=pal, cex=0.8)
+    mod_strs <- unlist(human_readable_model_names()[models])
+    legend(x='right', legend=mod_strs, pch=marker_sequence, col=pal, cex=0.7)
 }
 
 myboot <- function(x) {
@@ -219,12 +229,12 @@ for (this_set in names(boot_results)) {
 }
 
 pdf(file='gradients_bootstrapCIs.pdf')
-gradient_CI_plot(dfboot, t_str='E Coast vertical drawdown',
+gradient_CI_plot(dfboot, t_str='E Coast w/ bootstrapped 95% CI',
                  site_names=c('NHA', 'CMA', 'SCA'))
 
-gradient_CI_plot(dfboot, t_str='Dry - Wet vertical drawdown',
+gradient_CI_plot(dfboot, t_str='Dry - Wet w/ bootstrapped 95% CI',
                  site_names=c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'))
 
-gradient_CI_plot(dfboot, t_str='mid-continent vertical drawdown',
+gradient_CI_plot(dfboot, t_str='mid-continent w/ bootstrapped 95% CI',
                  site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC'))
 dev.off()
