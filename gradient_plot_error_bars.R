@@ -140,16 +140,38 @@ gradient_CI_plot <- function(df,
                              dd_col='dd',
                              ci_hi_col='ci_hi',
                              ci_lo_col='ci_lo',
-                             t_str='gradient plot') {
-    n_sites <- nrow(df)
-    site_names <- row.names(df)
-    with(df,
-         plotCI(1:length(dd), dd, uiw=(ci_hi - dd), liw=(dd - ci_lo),
+                             t_str='gradient plot',
+                             site_names=list()) {
+    n_sites <- length(site_names)
+    models <- unique(df[['Fplant']])
+    n_models <- length(models)
+    pal <- brewer.pal(n_models, 'Dark2')
+    marker_sequence <- seq(0, n_models - 1)
+    x_offset <- calculate_hoffset(n_models, 0.075)
+    ylim <- range(df[df[['site']] %in% site_names, c('ci_lo', 'ci_hi')])
+
+    with(subset(df, site %in% site_names & Fplant==models[[1]]),
+         plotCI(1:n_sites + x_offset[[1]],
+                dd, uiw=(ci_hi - dd), liw=(dd - ci_lo),
                 xaxt='n',
                 main=t_str,
                 ylab='Drawdown  (pptv)',
-                xlab='site'))
+                xlab='site',
+                col=pal[[1]],
+                ylim=ylim,
+                xlim=c(1 + min(x_offset), n_sites * 1.5),
+                pch=marker_sequence[[1]]))
     axis(1, at=1:n_sites, labels=site_names)
+
+    for (i in 2:n_models) {
+        with(subset(df, site %in% site_names & Fplant==models[[i]]),
+             plotCI(x=1:n_sites + x_offset[[i]],
+                    y=dd, uiw=ci_hi - dd, liw=dd - ci_lo,
+                    add=TRUE,
+                    col=pal[[i]],
+                    pch=marker_sequence[[i]]))
+    }
+    legend(x='right', legend=models, pch=marker_sequence, col=pal, cex=0.8)
 }
 
 myboot <- function(x) {
@@ -161,7 +183,6 @@ myboot <- function(x) {
 df <- read.csv('./model_components_25Feb.csv')
 df[['Fbounds']] <- 'CONST'
 df[['Fbounds']][grepl('climatological', df[['model']])] <- 'CLIM'
-df[['Fbounds']] <- as.factor(df[['clim_bounds']])
 components <- strsplit(x=as.character(df[['model']]), split='-')
 df[['Fplant']] <- unlist(lapply(components, function(x) x[[1]]))
 df[['Fsoil']] <- unlist(lapply(components, function(x) x[[2]]))
@@ -182,8 +203,6 @@ dfboot <- data.frame(row.names=names(boot_results),
                      Fplant=rep(NA, length(boot_results)),
                      site=rep(NA, length(boot_results)))
 for (this_set in names(boot_results)) {
-
-    browser()
     dfboot[[this_set, 'dd']] <- boot_results[[this_set]][['t0']]
     dfboot[[this_set, 'ci_lo']] <- boot_ci_results[[this_set]][['basic']][[4]]
     dfboot[[this_set, 'ci_hi']] <- boot_ci_results[[this_set]][['basic']][[5]]
@@ -191,10 +210,13 @@ for (this_set in names(boot_results)) {
     dfboot[[this_set, 'Fplant']] <- unlist(strsplit(this_set, '\\.'))[[2]]
 }
 
-gradient_CI_plot(dfboot[c('NHA', 'CMA', 'SCA'), ],
-                 t_str='E Coast vertical drawdown')
-dev.copy2pdf(file='gradient_ECoast_bootstrapCIs.pdf')
+pdf(file='gradients_bootstrapCIs.pdf')
+gradient_CI_plot(dfboot, t_str='E Coast vertical drawdown',
+                 site_names=c('NHA', 'CMA', 'SCA'))
 
-gradient_CI_plot(dfboot[c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'), ],
-                 t_str='dry to wet vertical drawdown')
-dev.copy2pdf(file='gradient_WetDry_bootstrapCIs.pdf')
+gradient_CI_plot(dfboot, t_str='Dry - Wet vertical drawdown',
+                 site_names=c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'))
+
+gradient_CI_plot(dfboot, t_str='mid-continent vertical drawdown',
+                 site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC'))
+dev.off()
