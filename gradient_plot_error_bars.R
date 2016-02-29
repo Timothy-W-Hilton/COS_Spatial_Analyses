@@ -51,9 +51,10 @@ calculate_hoffset <- function(npoints, gapwidth) {
 ##' @author Timothy W. Hilton
 ##' @export
 row_normalizer <- function(dd, norm_site='NHA') {
-    norm_data <- dd[norm_site, ]
+    num_idx = unlist(lapply(dd, is.numeric))
+    norm_data <- dd[norm_site, num_idx]
     for (i in seq(1, nrow(dd))) {
-        dd[i, ] <- dd[i, ] / norm_data
+        dd[i, num_idx] <- dd[i, num_idx] / norm_data
     }
     return(dd)
 }
@@ -127,8 +128,16 @@ dummy_data <- function() {
 ##' drawdowns (pptv) in columns
 ##' @param dd_col (string): name of the column in df containing
 ##' drawdown values
-##' @param se_col (string): name of the column in df containing
-##' standard errors
+##' @param ci_hi_col (string): name of the column in df containing
+##' upper confidence interval widths
+##' @param ci_lo_col (string): name of the column in df containing
+##' lower confidence interval widths
+##' @param t_str (string): Main title string for the plot
+##' @param site_names (vector of strings): Three letter site codes;
+##' the gradient will be plotted in this order from left to right.
+##' @param norm_site (string): row label of a site to normalize the
+##' data against.  If unspecified (default), no normalization is
+##' performed.
 ##' @return
 ##' @author Timothy W. Hilton
 ##' @export
@@ -146,12 +155,24 @@ gradient_CI_plot <- function(df,
     pal <- brewer.pal(n_models, 'Dark2')
     marker_sequence <- seq(0, n_models - 1)
     x_offset <- calculate_hoffset(n_models, 0.075)
+
+    if (length(norm_site) > 0) {
+        df_norm <- by(df, df[['Fplant']], function(x) {
+            orig_row_names <- row.names(x)
+            row.names(x) <- x[['site']]
+            x <- row_normalizer(x, 'NHA')
+            row.names(x) <- orig_row_names
+            return(x)})
+        df_norm <- do.call(rbind, df_norm)
+        df <- df_norm
+    }
     ylim <- range(df[df[['site']] %in% site_names, c('ci_lo', 'ci_hi')])
 
     idx = (df[['site']] %in% site_names) & (df[['Fplant']]==models[[1]])
     this_df <- df[idx, ]
     row.names(this_df) <- this_df[['site']]
     this_df <- this_df[site_names, ]
+
     with(this_df,
          plotCI(1:n_sites + x_offset[[1]],
                 dd, uiw=(ci_hi - dd), liw=(dd - ci_lo),
@@ -179,6 +200,9 @@ gradient_CI_plot <- function(df,
     }
     mod_strs <- unlist(human_readable_model_names()[models])
     legend(x='right', legend=mod_strs, pch=marker_sequence, col=pal, cex=0.7)
+
+
+
 }
 
 myboot <- function(x) {
@@ -217,9 +241,10 @@ for (this_set in names(boot_results)) {
     dfboot[[this_set, 'Fplant']] <- unlist(strsplit(this_set, '\\.'))[[2]]
 }
 
-pdf(file='gradients_bootstrapCIs.pdf')
+pdf(file='gradients_bootstrapCIs_norm.pdf')
 gradient_CI_plot(dfboot, t_str='E Coast w/ bootstrapped 95% CI',
-                 site_names=c('NHA', 'CMA', 'SCA'))
+                 site_names=c('NHA', 'CMA', 'SCA'),
+                 norm_site='NHA')
 
 gradient_CI_plot(dfboot, t_str='Dry - Wet w/ bootstrapped 95% CI',
                  site_names=c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'))
