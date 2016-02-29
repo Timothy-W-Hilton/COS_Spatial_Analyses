@@ -3,6 +3,14 @@ library(RColorBrewer)
 library(tidyr)  # could also use reshape2
 library(boot)
 
+##' human-readable names for COS Fplant models
+##'
+##' The data frame column names are more machine-oriented: no spaces, caps, etc.  These are nicer-looking strings for e.g. plot labels.
+##' @title
+##' @return list of strings. The data frame column labels are the list
+##' names and the human-readble strings are the list elements.
+##' @author Timothy W. Hilton
+##' @export
 human_readable_model_names <- function() {
     return(list(canibis_161='Can-IBIS, LRU=1.61',
                 canibis_C4pctLRU= 'Can-IBIS, LRU=C3/C4',
@@ -28,6 +36,7 @@ calculate_hoffset <- function(npoints, gapwidth) {
                    length.out=npoints)
     return(offsets)
 }
+
 ##' Normalize all rows in a data frame to the row with label
 ##' norm_site.  Helper function for ci_normalizer -- should not be
 ##' called by user.
@@ -109,28 +118,6 @@ dummy_data <- function() {
     return(list(dd=dd, ci=ci))
 }
 
-##' .. Helper function for gradient_CI_plot
-##'
-##' adds points with error bars to an existing gradient model
-##' component plot.
-##' @title
-##' @param dd (data frame): NOAA sites in rows, model component
-##' drawdowns (pptv) in columns
-##' @param ci (data frame): NOAA sites in rows, model component
-##' drawdowns standard errors (pptv) in columns
-##' @param col color sequence for plotting; one color per model
-##' component
-##' @param x_offset (float): horizontal offset for the points/error
-##' bars.
-##' @return
-##' @author Timothy W. Hilton
-##' @export
-CI_plotter <- function(dd, ci_hi, ci_lo, col, x_offset, marker) {
-    n_sites <- length(dd)
-    plotCI(1:n_sites + x_offset, dd, uiw=ci_hi, liw=ci_lo,
-           col=col, pch=marker, add=TRUE)
-}
-
 ##' .. produce a scatter plot with error bars of STEM model component
 ##' drawdowns at NOAA sites.
 ##'
@@ -150,7 +137,9 @@ gradient_CI_plot <- function(df,
                              ci_hi_col='ci_hi',
                              ci_lo_col='ci_lo',
                              t_str='gradient plot',
-                             site_names=list()) {
+                             site_names=list(),
+                             norm_site='') {
+
     n_sites <- length(site_names)
     models <- unique(df[['Fplant']])
     n_models <- length(models)
@@ -238,3 +227,7 @@ gradient_CI_plot(dfboot, t_str='Dry - Wet w/ bootstrapped 95% CI',
 gradient_CI_plot(dfboot, t_str='mid-continent w/ bootstrapped 95% CI',
                  site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC'))
 dev.off()
+
+## write.csv(df[, c("site_code", "longitude",  "latitude",
+##                  "dd", "Fbounds", "Fplant", "Fsoil", "Fanthro")],
+##           file='model_components_26Feb.csv')
