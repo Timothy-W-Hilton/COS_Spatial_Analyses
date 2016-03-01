@@ -152,11 +152,13 @@ gradient_CI_plot <- function(df,
     n_sites <- length(site_names)
     models <- unique(df[['Fplant']])
     n_models <- length(models)
-    pal <- brewer.pal(n_models, 'Dark2')
+    pal <- brewer.pal(n_models, 'Paired')
     marker_sequence <- seq(0, n_models - 1)
     x_offset <- calculate_hoffset(n_models, 0.075)
+    ylab_str <- 'Drawdown  (pptv)'
 
-    if (length(norm_site) > 0) {
+    if (nchar(norm_site) > 0) {
+        ylab_str <- paste("Drawdown normalized to", norm_site)
         df_norm <- by(df, df[['Fplant']], function(x) {
             orig_row_names <- row.names(x)
             row.names(x) <- x[['site']]
@@ -178,7 +180,7 @@ gradient_CI_plot <- function(df,
                 dd, uiw=(ci_hi - dd), liw=(dd - ci_lo),
                 xaxt='n',
                 main=t_str,
-                ylab='Drawdown  (pptv)',
+                ylab=ylab_str,
                 xlab='site',
                 col=pal[[1]],
                 ylim=ylim,
@@ -200,9 +202,6 @@ gradient_CI_plot <- function(df,
     }
     mod_strs <- unlist(human_readable_model_names()[models])
     legend(x='right', legend=mod_strs, pch=marker_sequence, col=pal, cex=0.7)
-
-
-
 }
 
 myboot <- function(x) {
@@ -241,16 +240,23 @@ for (this_set in names(boot_results)) {
     dfboot[[this_set, 'Fplant']] <- unlist(strsplit(this_set, '\\.'))[[2]]
 }
 
-pdf(file='gradients_bootstrapCIs_norm.pdf')
+norm_site <- ''
+if (nchar(norm_site) == 0){
+    pdf(file='gradients_bootstrapCIs.pdf')
+} else {
+    pdf(file='gradients_bootstrapCIs_norm.pdf')
+}
 gradient_CI_plot(dfboot, t_str='E Coast w/ bootstrapped 95% CI',
                  site_names=c('NHA', 'CMA', 'SCA'),
-                 norm_site='NHA')
+                 norm_site=norm_site)
 
 gradient_CI_plot(dfboot, t_str='Dry - Wet w/ bootstrapped 95% CI',
-                 site_names=c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'))
+                 site_names=c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'),
+                 norm_site=norm_site)
 
 gradient_CI_plot(dfboot, t_str='mid-continent w/ bootstrapped 95% CI',
-                 site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC'))
+                 site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC'),
+                 norm_site=norm_site)
 dev.off()
 
 ## write.csv(df[, c("site_code", "longitude",  "latitude",
