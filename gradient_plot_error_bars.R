@@ -3,6 +3,15 @@ library(RColorBrewer)
 library(tidyr)  # could also use reshape2
 library(boot)
 
+merge_obs <- function(dfboot) {
+    obs <- read.csv('./ocs_dd_renamed.csv')
+    obs <- obs[, c('sample_site_code', 'NOAA.obs')]
+    names(obs) <- c('site', 'obs')
+    result <- merge(dfboot, obs)
+    return(result)
+}
+
+
 ##' human-readable names for COS Fplant models
 ##'
 ##' The data frame column names are more machine-oriented: no spaces, caps, etc.  These are nicer-looking strings for e.g. plot labels.
@@ -168,7 +177,7 @@ gradient_CI_plot <- function(df,
         df_norm <- do.call(rbind, df_norm)
         df <- df_norm
     }
-    ylim <- range(df[df[['site']] %in% site_names, c('ci_lo', 'ci_hi')])
+    ylim <- range(df[df[['site']] %in% site_names, c('ci_lo', 'ci_hi', 'obs')])
 
     idx = (df[['site']] %in% site_names) & (df[['Fplant']]==models[[1]])
     this_df <- df[idx, ]
@@ -181,12 +190,13 @@ gradient_CI_plot <- function(df,
                 xaxt='n',
                 main=t_str,
                 ylab=ylab_str,
-                xlab='site',
+                xlab=NA,
                 col=pal[[1]],
                 ylim=ylim,
                 xlim=c(1 + min(x_offset), n_sites * 1.6),
                 pch=marker_sequence[[1]]))
     axis(1, at=1:n_sites, labels=site_names)
+    points(1:n_sites, this_df[['obs']], pch='*', cex=2.5)
 
     for (i in 2:n_models) {
         idx = (df[['site']] %in% site_names) & (df[['Fplant']]==models[[i]])
@@ -240,25 +250,41 @@ for (this_set in names(boot_results)) {
     dfboot[[this_set, 'Fplant']] <- unlist(strsplit(this_set, '\\.'))[[2]]
 }
 
-norm_site <- ''
-if (nchar(norm_site) == 0){
-    pdf(file='gradients_bootstrapCIs.pdf')
-} else {
-    pdf(file='gradients_bootstrapCIs_norm.pdf')
+dfboot_orig <- dfboot
+dfboot <- merge_obs(dfboot)
+
+if (TRUE) {
+
+    norm_site <- ''
+    if (nchar(norm_site) == 0){
+        plot_width <- 6 # inches
+        plot_height <- 10 # inches
+        pdf(file='gradients_bootstrapCIs.pdf',
+            width=plot_width, height=plot_height)
+        cat('writing gradients_bootstrapCIs.pdf\n')
+    } else {
+        pdf(file='gradients_bootstrapCIs_norm.pdf',
+            width=plot_width, height=plot_height)
+        cat('writing gradients_bootstrapCIs_norm.pdf\n')
+    }
+    oldpar<-panes(matrix(1:3,nrow=3,byrow=TRUE))
+    # par(mar=c(bottom, left, top, right)’)
+    par(mar=c(2,5,1.6,1))
+    gradient_CI_plot(dfboot, t_str='East Coast',
+                     site_names=c('NHA', 'CMA', 'SCA'),
+                     norm_site=norm_site)
+
+    gradient_CI_plot(dfboot, t_str='mid-continent West to East (Dry to Wet)',
+                     site_names=c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'),
+                     norm_site=norm_site)
+
+    gradient_CI_plot(dfboot, t_str='mid-continent North to South',
+                     site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC'),
+                     norm_site=norm_site)
+    dev.off()
+    par(oldpar)
+
+    ## write.csv(df[, c("site_code", "longitude",  "latitude",
+    ##                  "dd", "Fbounds", "Fplant", "Fsoil", "Fanthro")],
+    ##           file='model_components_26Feb.csv')
 }
-gradient_CI_plot(dfboot, t_str='E Coast w/ bootstrapped 95% CI',
-                 site_names=c('NHA', 'CMA', 'SCA'),
-                 norm_site=norm_site)
-
-gradient_CI_plot(dfboot, t_str='Dry - Wet w/ bootstrapped 95% CI',
-                 site_names=c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'),
-                 norm_site=norm_site)
-
-gradient_CI_plot(dfboot, t_str='mid-continent w/ bootstrapped 95% CI',
-                 site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC'),
-                 norm_site=norm_site)
-dev.off()
-
-## write.csv(df[, c("site_code", "longitude",  "latitude",
-##                  "dd", "Fbounds", "Fplant", "Fsoil", "Fanthro")],
-##           file='model_components_26Feb.csv')
