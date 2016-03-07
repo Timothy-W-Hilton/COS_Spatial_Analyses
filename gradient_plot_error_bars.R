@@ -26,7 +26,7 @@ human_readable_model_names <- function() {
                 casa_gfed_161='CASA=GFED3, LRU=1.61',
                 casa_gfed_C4pctLRU='CASA=GFED3, LRU=C3/C4',
                 SiB_calc='SiB, LRU=1.61',
-                SiB_mech='SiB, mechanistic LRU'))
+                SiB_mech='SiB, mechanistic'))
 }
 
 ##' offsets are calculated from an arbitrary center
@@ -159,7 +159,7 @@ gradient_CI_plot <- function(df,
                              norm_site='') {
 
     n_sites <- length(site_names)
-    models <- unique(df[['Fplant']])
+    models <- rev(sort(unique(df[['Fplant']])))
     n_models <- length(models)
     pal <- brewer.pal(n_models, 'Paired')
     marker_sequence <- seq(0, n_models - 1)
@@ -196,9 +196,10 @@ gradient_CI_plot <- function(df,
                 xlim=c(1 + min(x_offset), n_sites * 1.6),
                 pch=marker_sequence[[1]]))
     axis(1, at=1:n_sites, labels=site_names)
-    points(1:n_sites, this_df[['obs']], pch='*', cex=2.5)
+    points(1:n_sites, this_df[['obs']], pch=8)
 
     for (i in 2:n_models) {
+        cat(paste('plotting models[', models[[i]], ']\n'))
         idx = (df[['site']] %in% site_names) & (df[['Fplant']]==models[[i]])
         this_df <- df[idx, ]
         row.names(this_df) <- this_df[['site']]
@@ -211,6 +212,9 @@ gradient_CI_plot <- function(df,
                     pch=marker_sequence[[i]]))
     }
     mod_strs <- unlist(human_readable_model_names()[models])
+    mod_strs <- c('observed', mod_strs)
+    marker_sequence <- c(8, marker_sequence)
+    pal <- c('#000000', pal)
     legend(x='right', legend=mod_strs, pch=marker_sequence, col=pal, cex=0.7)
 }
 
@@ -256,9 +260,9 @@ dfboot <- merge_obs(dfboot)
 if (TRUE) {
 
     norm_site <- ''
+    plot_width <- 6 # inches
+    plot_height <- 10 # inches
     if (nchar(norm_site) == 0){
-        plot_width <- 6 # inches
-        plot_height <- 10 # inches
         pdf(file='gradients_bootstrapCIs.pdf',
             width=plot_width, height=plot_height)
         cat('writing gradients_bootstrapCIs.pdf\n')
