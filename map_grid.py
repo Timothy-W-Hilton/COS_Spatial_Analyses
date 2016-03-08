@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('AGG')
+
 import os
 import os.path
 import matplotlib.pyplot as plt
@@ -7,7 +10,7 @@ import socket
 import numpy as np
 import warnings
 
-import stem_pytools.ecampbell300_data_paths as edp
+import stem_pytools.NERSC_data_paths as ndp
 from stem_pytools import STEM_parsers as sp
 from stem_pytools import aqout_postprocess as aq
 from stem_pytools.na_map import NAMapFigure
@@ -55,7 +58,7 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
     Jul1 = datetime(2008, 7, 1)
     Aug31 = datetime(2008, 8, 31, 23, 59, 59)
 
-    runs = edp.get_runs()
+    runs = ndp.get_runs()
 
     if models is None:
         models = runs.keys()
@@ -250,7 +253,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
         extend='max')
     print('nlevs: {}'.format(5))
 
-    mod_objs = edp.get_runs()
+    mod_objs = ndp.get_runs()
     for i, this_mod in enumerate(models):
         # plot GPP drawdown maps
         print("plotting {model}({k}) GPP".format(model=models_str[i],
@@ -343,8 +346,9 @@ def map_grid_main(models=None, models_str=None, aqout_data=None):
             aqout_data = (os.path.join(os.getenv('HOME'), 'work', 'Data',
                                        'STEM', 'aq_out_data.cpickle'))
         else:
-            aqout_data = os.path.join(os.getenv('HOME'), 'thilton', 'Data',
-                                      'STEM', 'aq_out_data.cpickle')
+            aqout_data = os.path.join(os.getenv('HOME'),
+                                      'STEM_all_runs.cpickle')
+
     cos_dd, gpp, fCOS = assemble_data(aqout_data, models=models)
 
     fig, map_objs, cos_cmap, cos_norm = draw_all_panels(cos_dd, gpp, fCOS,
@@ -352,16 +356,16 @@ def map_grid_main(models=None, models_str=None, aqout_data=None):
     return(fig, map_objs, cos_cmap, cos_norm)
 
 if __name__ == "__main__":
-    runs = edp.get_runs()
+    runs = ndp.get_runs()
     models = [k for k in runs.keys()]
     models_str = [v.model for v in runs.values()]
     # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(models, models_str)
     [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
-        models=['canibis_161', 'kettle_161', 'casa_m15_161',
-                'casa_gfed_161', 'casa_gfed_135', 'casa_gfed_187'],
-        models_str=['Can-IBIS', 'Kettle', 'CASA-m15',
-                    'CASA-GFED3', 'CASA-GFED3', 'CASA-GFED3'])
-    fig.savefig('/tmp/BASC_fig.pdf')
+        models=['SiB_mech', 'SiB_calc', 'canibis_161', 'casa_gfed_161'],
+        models_str=['SiB - mechanistic', 'SiB - LRU = 1.61',
+                    'Can-IBIS', 'CASA-GFED3'])
+    fig.savefig(os.path.join(os.getenv('SCRATCH'),
+                             'GPP_Fplant_maps_fig.pdf'))
     # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
     #     models=['kettle_C4pctLRU', 'casa_gfed_C4pctLRU', 'MPI_C4pctLRU',
     #             'casa_m15_C4pctLRU', 'canibis_C4pctLRU'],
