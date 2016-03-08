@@ -371,9 +371,12 @@ if __name__ == "__main__":
     models_str = [v.model for v in runs.values()]
     # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(models, models_str)
     [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
-        models=['SiB_mech', 'SiB_calc', 'canibis_161', 'casa_gfed_161'],
-        models_str=['SiB - mechanistic', 'SiB - LRU = 1.61',
-                    'Can-IBIS', 'CASA-GFED3'])
+        models=['SiB_mech', 'SiB_calc',
+                'canibis_161', 'canibis_C4pctLRU',
+                'casa_gfed_161', 'casa_gfed_C4pctLRU'],
+        models_str=['SiB - mechanistic', 'SiB',
+                    'Can-IBIS', 'Can-IBIS',
+                    'CASA-GFED3', 'CASA-GFED3'])
     fig.savefig(os.path.join(os.getenv('SCRATCH'),
                              'GPP_Fplant_maps_fig.pdf'))
     # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
