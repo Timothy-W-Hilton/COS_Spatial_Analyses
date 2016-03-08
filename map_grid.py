@@ -9,6 +9,7 @@ from datetime import datetime
 import socket
 import numpy as np
 import warnings
+from mpl_toolkits.basemap import maskoceans
 
 import stem_pytools.NERSC_data_paths as ndp
 from stem_pytools import STEM_parsers as sp
@@ -110,15 +111,24 @@ def draw_map(t_str,
              vmin,
              vmax,
              cmap=plt.get_cmap('Blues'),
-             norm=plt.normalize):
+             norm=plt.normalize,
+             maskoceans_switch=True):
 
     map = NAMapFigure(t_str=t_str,
                       cb_axis=None,
                       map_axis=ax,
-                      fast_or_pretty='fast')
+                      fast_or_pretty='pretty',
+                      lat_0=49,
+                      lon_0=-97,
+                      mapwidth=5.8e6,
+                      mapheight=5.2e6)
 
     lon, lat, topo = sp.parse_STEM_coordinates(
         os.path.join(os.getenv('SARIKA_INPUT'), 'TOPO-124x124.nc'))
+
+    if maskoceans_switch:
+        data = maskoceans(lon, lat, data, inlands=False, resolution='f')
+
     cm = map.map.contourf(lon, lat,
                           data,
                           cmap=cmap,
