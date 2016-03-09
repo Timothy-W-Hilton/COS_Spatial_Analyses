@@ -23,6 +23,7 @@ from stem_pytools import NERSC_data_paths as ndp
 from stem_pytools import na_map
 from map_grid import map_grid_main
 from stem_pytools import aqout_postprocess as aqpp
+from stem_pytools import domain
 
 
 def pickle_stem_runs(fname_cpickle=os.path.join(
@@ -237,10 +238,10 @@ def plot_site_drawdown_timeseries(dd_df):
 if __name__ == "__main__":
 
     # configuration stuff
-    draw_site_locations_map = False
+    draw_site_locations_map = True
     draw_observation_altitude_histograms = False
     draw_site_drawdown_timeseries = False
-    plot_site_mean_drawdown_switch = True
+    plot_site_mean_drawdown_switch = False
 
     if plot_site_mean_drawdown_switch:
         ocs_dd, ocs_daily = get_JA_site_mean_drawdown(get_noaa_COS_data_path())
@@ -272,9 +273,14 @@ if __name__ == "__main__":
         # draw observation sites map
         data = noaa_ocs.get_all_NOAA_airborne_data(get_noaa_COS_data_path())
         location_map = data.plot_obs_site_locations()
-        location_map.fig.savefig(os.path.join(os.getenv('PLOTS'),
-                                              'SpatialAnalysisPaper',
-                                              'noaa_obs_sites.pdf'))
+        n_amer_domain = domain.STEM_Domain()
+        n_amer_domain.get_STEM_perimeter_latlon()
+        location_map.map.plot(n_amer_domain.bnd_lon,
+                              n_amer_domain.bnd_lat,
+                              latlon=True)
+        location_map.fig.savefig(os.path.join(os.getenv('HOME'),
+                                              'plots',
+                                              'noaa_obs_sites_STEMdomain.pdf'))
         plt.close(location_map.fig)
 
     if draw_observation_altitude_histograms:
