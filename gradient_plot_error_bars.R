@@ -23,8 +23,8 @@ merge_obs <- function(dfboot) {
 human_readable_model_names <- function() {
     return(list(canibis_161='Can-IBIS, LRU=1.61',
                 canibis_C4pctLRU= 'Can-IBIS, LRU=C3/C4',
-                casa_gfed_161='CASA=GFED3, LRU=1.61',
-                casa_gfed_C4pctLRU='CASA=GFED3, LRU=C3/C4',
+                casa_gfed_161='CASA-GFED3, LRU=1.61',
+                casa_gfed_C4pctLRU='CASA-GFED3, LRU=C3/C4',
                 SiB_calc='SiB, LRU=1.61',
                 SiB_mech='SiB, mechanistic'))
 }
@@ -194,8 +194,12 @@ gradient_CI_plot <- function(df,
                 col=pal[[1]],
                 ylim=ylim,
                 xlim=c(1 + min(x_offset), n_sites * 1.6),
-                pch=marker_sequence[[1]]))
-    axis(1, at=1:n_sites, labels=site_names)
+                pch=marker_sequence[[1]],
+                cex=1.0,
+                cex.axis=1.2,
+                cex.main=1.2,
+                cex.lab=1.2))
+    axis(1, at=1:n_sites, labels=site_names, cex.axis=1.2)
     points(1:n_sites, this_df[['obs']], pch=8)
 
     for (i in 2:n_models) {
@@ -215,7 +219,7 @@ gradient_CI_plot <- function(df,
     mod_strs <- c('observed', mod_strs)
     marker_sequence <- c(8, marker_sequence)
     pal <- c('#000000', pal)
-    legend(x='right', legend=mod_strs, pch=marker_sequence, col=pal, cex=0.7)
+    legend(x='right', legend=mod_strs, pch=marker_sequence, col=pal, cex=1.2)
 }
 
 myboot <- function(x) {
