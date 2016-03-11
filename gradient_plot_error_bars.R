@@ -3,6 +3,24 @@ library(RColorBrewer)
 library(tidyr)  # could also use reshape2
 library(boot)
 
+get_obs_CI <- function(fname='./site_daily_dd.csv') {
+    data <- read.csv(fname)
+
+    sites <- split(data[['ocs_dd']],
+                   f=data[, 'sample_site_code'])
+
+    site_means <- lapply(sites, mean, na.rm=TRUE)
+    site_stderr <- lapply(sites, std.error, na.rm=TRUE)
+    obs <- data.frame(Fplant='NOAA obs',
+                      site=names(site_means),
+                      dd=unlist(site_means))
+    obs[['ci_lo']] <- obs[['dd']] - unlist(site_stderr) * 1.96
+    obs[['ci_hi']] <- obs[['dd']] + unlist(site_stderr) * 1.96
+    row.names(obs) <- paste(row.names(obs), '.obs', sep='')
+    return(obs)
+}
+
+
 merge_obs <- function(dfboot) {
     obs <- read.csv('./ocs_dd_renamed.csv')
     obs <- obs[, c('sample_site_code', 'NOAA.obs')]
