@@ -22,11 +22,8 @@ get_obs_CI <- function(fname='./site_daily_dd.csv') {
 
 
 merge_obs <- function(dfboot) {
-    obs <- read.csv('./ocs_dd_renamed.csv')
-    obs <- obs[, c('sample_site_code', 'NOAA.obs')]
-    names(obs) <- c('site', 'obs')
-    result <- merge(dfboot, obs)
-    return(result)
+    obs <- get_obs_CI()
+    return(rbind(dfboot, obs))
 }
 
 
@@ -44,7 +41,8 @@ human_readable_model_names <- function() {
                 casa_gfed_161='CASA-GFED3, LRU=1.61',
                 casa_gfed_C4pctLRU='CASA-GFED3, LRU=C3/C4',
                 SiB_calc='SiB, LRU=1.61',
-                SiB_mech='SiB, mechanistic'))
+                SiB_mech='SiB, mechanistic',
+                'NOAA obs'='observed'))
 }
 
 ##' offsets are calculated from an arbitrary center
@@ -174,13 +172,16 @@ gradient_CI_plot <- function(df,
                              ci_lo_col='ci_lo',
                              t_str='gradient plot',
                              site_names=list(),
-                             norm_site='') {
+                             norm_site='',
+                             legend_loc='right') {
 
     n_sites <- length(site_names)
     models <- rev(sort(unique(df[['Fplant']])))
+    idx <- which(models=='NOAA obs')
+    models <- c(models[idx], models[-idx])
     n_models <- length(models)
-    pal <- brewer.pal(n_models, 'Paired')
-    marker_sequence <- seq(0, n_models - 1)
+    pal <- c("#000000", brewer.pal(n_models-1, 'Paired'))
+    marker_sequence <- c(8, seq(0, n_models-1))
     x_offset <- calculate_hoffset(n_models, 0.075)
     ylab_str <- 'Drawdown  (pptv)'
 
@@ -195,8 +196,7 @@ gradient_CI_plot <- function(df,
         df_norm <- do.call(rbind, df_norm)
         df <- df_norm
     }
-    ylim <- range(df[df[['site']] %in% site_names, c('ci_lo', 'ci_hi', 'obs')])
-
+    ylim <- range(df[df[['site']] %in% site_names, c('ci_lo', 'ci_hi')])
     idx = (df[['site']] %in% site_names) & (df[['Fplant']]==models[[1]])
     this_df <- df[idx, ]
     row.names(this_df) <- this_df[['site']]
@@ -218,7 +218,6 @@ gradient_CI_plot <- function(df,
                 cex.main=1.2,
                 cex.lab=1.2))
     axis(1, at=1:n_sites, labels=site_names, cex.axis=1.2)
-    points(1:n_sites, this_df[['obs']], pch=8)
 
     for (i in 2:n_models) {
         cat(paste('plotting models[', models[[i]], ']\n'))
@@ -234,10 +233,7 @@ gradient_CI_plot <- function(df,
                     pch=marker_sequence[[i]]))
     }
     mod_strs <- unlist(human_readable_model_names()[models])
-    mod_strs <- c('observed', mod_strs)
-    marker_sequence <- c(8, marker_sequence)
-    pal <- c('#000000', pal)
-    legend(x='right', legend=mod_strs, pch=marker_sequence, col=pal, cex=1.2)
+    legend(x=legend_loc, legend=mod_strs, pch=marker_sequence, col=pal, cex=1.2)
 }
 
 myboot <- function(x) {
@@ -298,15 +294,18 @@ if (TRUE) {
     par(mar=c(2,5,1.6,1))
     gradient_CI_plot(dfboot, t_str='East Coast',
                      site_names=c('NHA', 'CMA', 'SCA'),
-                     norm_site=norm_site)
+                     norm_site=norm_site,
+                     legend_loc='bottomright')
 
     gradient_CI_plot(dfboot, t_str='mid-continent West to East (Dry to Wet)',
                      site_names=c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'),
-                     norm_site=norm_site)
+                     norm_site=norm_site,
+                     legend_loc='bottomright')
 
     gradient_CI_plot(dfboot, t_str='mid-continent North to South',
                      site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC'),
-                     norm_site=norm_site)
+                     norm_site=norm_site,
+                     legend_loc='topright')
     dev.off()
     par(oldpar)
 
