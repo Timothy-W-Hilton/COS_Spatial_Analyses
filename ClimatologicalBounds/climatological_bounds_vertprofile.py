@@ -357,6 +357,15 @@ class ClimatologicalTopBound(object):
         levs = vals[0:-1] + (np.diff(vals) / 2.0)
         m.map.map.contour(stem_lon, stem_lat, self.top_bnd,
                           levels=levs, latlon=True, colors=sites_col)
+
+
+        lat = domain.get_2d_perimeter(d.get_lat())
+        lon = domain.get_2d_perimeter(d.get_lon())
+        x, y = m.map.map(lon, lat)
+        for i in range(0, lon.size, 50):
+            m.map.ax_map.text(x[i], y[i],  str(i), color='red',
+                              size='large', weight='bold')
+
         # label the color bar
         m.map.ax_cmap.set_title('[COS] (pptv)')
         m.map.ax_cmap.tick_params(labelsize=fontsz)
