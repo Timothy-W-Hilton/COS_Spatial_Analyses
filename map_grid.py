@@ -189,6 +189,7 @@ def daily_to_JulAug(arr):
 
 def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True,
                   models=None):
+
     if get_dd:
 
         cos_conc_daily = aq.load_aqout_data(aqout_path)
@@ -214,8 +215,8 @@ def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True,
             fCOS = None
     except:
         print('Unable to read GPP or FCOS, returning placeholder')
-        gpp = cos_conc
-        fCOS = cos_conc
+        gpp = None
+        fCOS = None
 
     return(cos_conc, gpp, fCOS)
 
