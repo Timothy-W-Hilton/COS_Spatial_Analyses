@@ -326,7 +326,7 @@ class ClimatologicalTopBound(object):
         top_cmap, top_norm = colormap_nlevs.setup_colormap(
             np.floor(self.top_bnd.min()),
             np.ceil(self.top_bnd.max()),
-            nlevs=15,
+            nlevs=6,
             cmap=plt.get_cmap('Oranges'),
             extend='neither')
 
@@ -334,7 +334,7 @@ class ClimatologicalTopBound(object):
             fast_or_pretty='pretty',
             cmap=top_cmap,
             norm=top_norm,
-            t_str='NOAA sites Jul-Aug climatological mean [COS] top bounds',
+            t_str='climatological top bounds',
             cbar_fmt_str='%d')
         m.map.fig.set_figheight(8)
         m.map.fig.set_figwidth(8)
@@ -345,7 +345,17 @@ class ClimatologicalTopBound(object):
                                   y[i, j],
                                   self.sites_summary.site_code[
                                       self.idx[0][i, j]],
-                                  fontsize=12)
+                                  fontsize=24,
+                                  color="#1b9e77", #http://colorbrewer2.org dark2[1]
+                                  horizontalalignment='center',
+                                  verticalalignment='center')
+        # draw bounds between NOAA sites' regions of top bound
+        vals = np.unique(self.top_bnd)
+        levs = vals[0:-1] + (np.diff(vals) / 2.0)
+        m.map.map.contour(stem_lon, stem_lat, self.top_bnd,
+                          levels=levs, latlon=True, colors='blue')
+        #label the color bar
+        m.map.ax_cmap.set_title('[COS] (pptv)')
         m.map.fig.savefig('top_bnd.pdf', fontsize=1)
 
 
