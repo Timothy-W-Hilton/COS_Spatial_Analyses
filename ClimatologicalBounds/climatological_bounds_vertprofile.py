@@ -18,6 +18,7 @@ from stem_pytools import noaa_ocs
 from stem_pytools import domain
 from stem_pytools import STEM_mapper
 from stem_pytools.STEM_parsers import parse_STEM_var
+from timutils import colormap_nlevs
 
 
 def rm_nan(arr):
@@ -322,19 +323,29 @@ class ClimatologicalTopBound(object):
         stem_lon = self.d.get_lon()
         stem_lat = self.d.get_lat()
 
+        top_cmap, top_norm = colormap_nlevs.setup_colormap(
+            np.floor(self.top_bnd.min()),
+            np.ceil(self.top_bnd.max()),
+            nlevs=15,
+            cmap=plt.get_cmap('Oranges'),
+            extend='neither')
+
         m = STEM_mapper.Mapper124x124(self.top_bnd).draw_map(
             fast_or_pretty='pretty',
-            cmap=plt.get_cmap('Blues'),
-            t_str='NOAA sites Jul-Aug climatological mean [COS] top bounds')
-        m.map.fig.set_figheight(30)
-        m.map.fig.set_figwidth(30)
+            cmap=top_cmap,
+            norm=top_norm,
+            t_str='NOAA sites Jul-Aug climatological mean [COS] top bounds',
+            cbar_fmt_str='%d')
+        m.map.fig.set_figheight(8)
+        m.map.fig.set_figwidth(8)
         x, y = m.map.map(stem_lon, stem_lat)
-        for i in range(0, stem_lon.shape[0], 5):
-            for j in range(0, stem_lon.shape[1], 5):
+        for i in range(0, stem_lon.shape[0], 20):
+            for j in range(0, stem_lon.shape[1], 20):
                 m.map.ax_map.text(x[i, j],
                                   y[i, j],
                                   self.sites_summary.site_code[
-                                      self.idx[0][i, j]])
+                                      self.idx[0][i, j]],
+                                  fontsize=12)
         m.map.fig.savefig('top_bnd.pdf', fontsize=1)
 
 
@@ -505,7 +516,7 @@ if __name__ == "__main__":
     top_bnd = ClimatologicalTopBound(d, sites_list, sites_dict)
     top_bnd.write_ioapi(fname_bdy='upbound_124x124-climatological_124x124.nc')
     top_bnd.map_nearest_noaa_site()
-    top_bounds_QC('upbound_124x124-climatological_124x124.nc')
+    # top_bounds_QC('upbound_124x124-climatological_124x124.nc')
 
     # plot_vertical_profiles([sites_dict[k] for k in lateral_bounds_sites_list],
     #                        'lateral bounds sites')
