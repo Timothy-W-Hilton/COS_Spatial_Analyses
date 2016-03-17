@@ -338,25 +338,29 @@ class ClimatologicalTopBound(object):
             cbar_fmt_str='%d')
         m.map.fig.set_figheight(8)
         m.map.fig.set_figwidth(8)
-        x, y = m.map.map(stem_lon, stem_lat)
-        for i in range(0, stem_lon.shape[0], 20):
-            for j in range(0, stem_lon.shape[1], 20):
-                m.map.ax_map.text(x[i, j],
-                                  y[i, j],
-                                  self.sites_summary.site_code[
-                                      self.idx[0][i, j]],
-                                  fontsize=24,
-                                  color="#1b9e77", #http://colorbrewer2.org dark2[1]
-                                  horizontalalignment='center',
-                                  verticalalignment='center')
+
+        sites_col = "#1b9e77"  # http://colorbrewer2.org dark2[1]
+        fontsz = 24
+        for this_site in np.unique(self.nearest_site_array):
+            idx = np.where(self.sites_summary.site_code == this_site)[0][0]
+            this_x, this_y = m.map.map(self.sites_summary.longitude[idx],
+                                       self.sites_summary.latitude[idx])
+            m.map.ax_map.text(this_x,
+                              this_y,
+                              this_site,
+                              fontsize=fontsz,
+                              color=sites_col,
+                              horizontalalignment='center',
+                              verticalalignment='center')
         # draw bounds between NOAA sites' regions of top bound
         vals = np.unique(self.top_bnd)
         levs = vals[0:-1] + (np.diff(vals) / 2.0)
         m.map.map.contour(stem_lon, stem_lat, self.top_bnd,
-                          levels=levs, latlon=True, colors='blue')
-        #label the color bar
+                          levels=levs, latlon=True, colors=sites_col)
+        # label the color bar
         m.map.ax_cmap.set_title('[COS] (pptv)')
-        m.map.fig.savefig('top_bnd.pdf', fontsize=1)
+        m.map.ax_cmap.tick_params(labelsize=fontsz)
+        m.map.fig.savefig('top_bnd.pdf')
 
 
 class ClimatologicalLateralBoundNAmerica(object):
