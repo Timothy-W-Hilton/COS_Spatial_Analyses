@@ -30,31 +30,23 @@ if __name__ == "__main__":
                                                nlevs=20,
                                                cmap=plt.get_cmap('Blues'),
                                                extend='neither')
+    fontsz = 14
+    matplotlib.rcParams.update({'font.size': fontsz})
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
+    cm = ax.pcolormesh(cos, cmap=cmap, norm=norm,
+                       linewidth=0, rasterized=True)
+    ax.set_xlim([0, 500])
+    ax.set_ylim([0, 22])
+    ax.set_ylabel('STEM Z level', fontdict={'fontsize': fontsz})
+    ax.set_xlabel('lateral boundary index',
+                  fontdict={'fontsize': fontsz})
+    # ax.set_title('climatological N American boundary',
+    #              fontdict={'fontsize': fontsz})
+    cb = plt.colorbar(cm, cmap=cmap, norm=norm, ax=ax, format='%d')
+    cb.set_label('[COS] (pptv)', fontdict={'fontsize': fontsz})
+    cb.ax.tick_params(labelsize=fontsz)
+    cb.solids.set_rasterized(True)
 
-    fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(15, 5))
-    cm = ax[0].pcolormesh(cos, cmap=cmap, norm=norm,
-                          linewidth=0, rasterized=True)
-    ax[0].set_xlim([0, 500])
-    ax[0].set_ylim([0, 22])
-    ax[0].set_ylabel('STEM Z level')
-    ax[0].set_xlabel('boundary cell (0 is southernmost corner, proceeds CCW)')
-    ax[0].set_title('climatological N American boundary')
-    ax_cb = plt.colorbar(cm, cmap=cmap, norm=norm, ax=ax[0])
-    ax_cb.set_label('[COS] (pptv)')
-    ax_cb.solids.set_rasterized(True)
-
-    # plot boundary ring cell numbers on a map to illustrate their
-    # physical locations
-    m = NAMapFigure(t_str='boundary cell locations',
-                    map_axis=ax[1],
-                    mapwidth=9.5e6)
-    d = domain.STEM_Domain()
-    lat = domain.get_2d_perimeter(d.get_lat())
-    lon = domain.get_2d_perimeter(d.get_lon())
-    x, y = m.map(lon, lat)
-    for i in range(0, lon.size, 50):
-        m.ax_map.text(x[i], y[i],  str(i), color='red',
-                      size='large', weight='bold')
     fig.savefig(os.path.join(os.getenv('HOME'),
                              'plots',
                              'climatological_bounds.pdf'))
