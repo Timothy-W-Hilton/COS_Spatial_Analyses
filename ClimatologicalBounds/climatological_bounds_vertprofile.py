@@ -334,13 +334,13 @@ class ClimatologicalTopBound(object):
             fast_or_pretty='pretty',
             cmap=top_cmap,
             norm=top_norm,
-            t_str='climatological top bounds',
+            t_str='',
             cbar_fmt_str='%d')
         m.map.fig.set_figheight(8)
         m.map.fig.set_figwidth(8)
 
         sites_col = "#1b9e77"  # http://colorbrewer2.org dark2[1]
-        fontsz = 24
+        fontsz = 14
         for this_site in np.unique(self.nearest_site_array):
             idx = np.where(self.sites_summary.site_code == this_site)[0][0]
             this_x, this_y = m.map.map(self.sites_summary.longitude[idx],
@@ -358,16 +358,20 @@ class ClimatologicalTopBound(object):
         m.map.map.contour(stem_lon, stem_lat, self.top_bnd,
                           levels=levs, latlon=True, colors=sites_col)
 
-
+        # plot lateral bounds cell indices on map
+        lat_bounds_col = "#7570b3"  # http://colorbrewer2.org dark2[2]
         lat = domain.get_2d_perimeter(d.get_lat())
         lon = domain.get_2d_perimeter(d.get_lon())
         x, y = m.map.map(lon, lat)
-        for i in range(0, lon.size, 50):
-            m.map.ax_map.text(x[i], y[i],  str(i), color='red',
-                              size='large', weight='bold')
+        for i in (0, 62, 186, 330, 434):
+            m.map.ax_map.text(x[i], y[i],  str(i),
+                              color="black",
+                              size=fontsz,
+                              bbox={"color": "black", "facecolor": "white"})
 
         # label the color bar
-        m.map.ax_cmap.set_title('[COS] (pptv)')
+        m.map.ax_cmap.set_title('[COS] (pptv)\n',
+                                fontdict={'fontsize': fontsz})
         m.map.ax_cmap.tick_params(labelsize=fontsz)
         m.map.fig.savefig('top_bnd.pdf')
 
