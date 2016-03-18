@@ -3,17 +3,25 @@ number along with a map of the physical location of each boundary ring
 cell
 """
 
+import matplotlib
+matplotlib.use('AGG')
+
+import os
+import os.path
+
 import matplotlib.pyplot as plt
 import netCDF4
 from timutils import colormap_nlevs
-from stem_pytools import calc_drawdown
 from stem_pytools.na_map import NAMapFigure
 from stem_pytools import domain
 
 if __name__ == "__main__":
 
     # plot the boundary ring cell number vs. vertical cell number
-    nc = netCDF4.Dataset('/Users/tim/work/Data/STEM/input/climatological_COS_bdy_22levs_124x124.nc')
+    nc = netCDF4.Dataset(
+        os.path.join(os.getcwd(),
+                     'ClimatologicalBounds',
+                     'climatological_COS_bdy_22levs_124x124.nc'))
     ppbv_2_pptv = 1e3
     cos = nc.variables['CO2_TRACER1'][:].squeeze() * ppbv_2_pptv
 
@@ -47,5 +55,7 @@ if __name__ == "__main__":
     for i in range(0, lon.size, 50):
         m.ax_map.text(x[i], y[i],  str(i), color='red',
                       size='large', weight='bold')
-    fig.savefig('/Users/tim/Desktop/climatological_bounds.pdf')
+    fig.savefig(os.path.join(os.getenv('HOME'),
+                             'plots',
+                             'climatological_bounds.pdf'))
     plt.close(fig)
