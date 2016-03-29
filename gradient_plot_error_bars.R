@@ -42,7 +42,7 @@ human_readable_model_names <- function() {
                 casa_gfed_C4pctLRU='CASA-GFED3, LRU=C3/C4',
                 SiB_calc='SiB, LRU=1.61',
                 SiB_mech='SiB, mechanistic',
-                'NOAA obs'='observed'))
+                'NOAA obs'='Observed'))
 }
 
 ##' offsets are calculated from an arbitrary center
@@ -183,10 +183,10 @@ gradient_CI_plot <- function(df,
     pal <- c("#000000", brewer.pal(n_models-1, 'Paired'))
     marker_sequence <- c(8, seq(0, n_models-1))
     x_offset <- calculate_hoffset(n_models, 0.075)
-    ylab_str <- 'Drawdown  (pptv)'
+    ylab_str <- 'COS Drawdown (pptv)'
 
     if (nchar(norm_site) > 0) {
-        ylab_str <- paste("Drawdown normalized to", norm_site)
+        ylab_str <- paste("COS Drawdown normalized to", norm_site)
         df_norm <- by(df, df[['Fplant']], function(x) {
             orig_row_names <- row.names(x)
             row.names(x) <- x[['site']]
@@ -202,6 +202,11 @@ gradient_CI_plot <- function(df,
     row.names(this_df) <- this_df[['site']]
     this_df <- this_df[site_names, ]
 
+    xlim_max <- n_sites * 1.8
+    if (legend_loc == 'none') {
+        xlim_max = n_sites + max(x_offset)
+    }
+
     with(this_df,
          plotCI(1:n_sites + x_offset[[1]],
                 dd, uiw=(ci_hi - dd), liw=(dd - ci_lo),
@@ -211,7 +216,7 @@ gradient_CI_plot <- function(df,
                 xlab=NA,
                 col=pal[[1]],
                 ylim=ylim,
-                xlim=c(1 + min(x_offset), n_sites * 1.6),
+                xlim=c(1 + min(x_offset), xlim_max),
                 pch=marker_sequence[[1]],
                 cex=1.0,
                 cex.axis=1.2,
@@ -233,7 +238,10 @@ gradient_CI_plot <- function(df,
                     pch=marker_sequence[[i]]))
     }
     mod_strs <- unlist(human_readable_model_names()[models])
-    legend(x=legend_loc, legend=mod_strs, pch=marker_sequence, col=pal, cex=1.2)
+    if (legend_loc != 'none') {
+        legend(x=legend_loc, legend=mod_strs,
+               pch=marker_sequence, col=pal, cex=1.2)
+    }
 }
 
 myboot <- function(x) {
@@ -278,8 +286,8 @@ dfboot <- merge_obs(dfboot)
 if (TRUE) {
 
     norm_site <- ''
-    plot_width <- 6 # inches
-    plot_height <- 10 # inches
+    plot_width <- 6
+    plot_height <- 10
     if (nchar(norm_site) == 0){
         pdf(file='gradients_bootstrapCIs.pdf',
             width=plot_width, height=plot_height)
@@ -292,20 +300,20 @@ if (TRUE) {
     oldpar<-panes(matrix(1:3,nrow=3,byrow=TRUE))
     # par(mar=c(bottom, left, top, right)’)
     par(mar=c(2,5,1.6,1))
-    gradient_CI_plot(dfboot, t_str='East Coast',
+    gradient_CI_plot(dfboot, t_str='East Coast North-South',
                      site_names=c('NHA', 'CMA', 'SCA'),
                      norm_site=norm_site,
                      legend_loc='bottomright')
 
-    gradient_CI_plot(dfboot, t_str='mid-continent West to East (Dry to Wet)',
+    gradient_CI_plot(dfboot, t_str='Mid-Continent East-West',
                      site_names=c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'),
                      norm_site=norm_site,
-                     legend_loc='bottomright')
+                     legend_loc='none')
 
-    gradient_CI_plot(dfboot, t_str='mid-continent North to South',
-                     site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC'),
+    gradient_CI_plot(dfboot, t_str='Mid-Continent North-South',
+                     site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP'),
                      norm_site=norm_site,
-                     legend_loc='topright')
+                     legend_loc='none')
     dev.off()
     par(oldpar)
 
