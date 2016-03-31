@@ -77,12 +77,24 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
                                      varname=gross_flux_varname,
                                      t0=t0,
                                      t1=t1)
-            # convert GPP from Kg C m-2 s-1 to umol m-2 s-1
             C_mol_per_g = (1.0 / 12.0107)
             umol_per_mol = 1e6
             g_per_kg = 1e3
             C_umol_per_kg = g_per_kg * C_mol_per_g * umol_per_mol
-            flux['data'] = flux['data'] * C_umol_per_kg
+
+            gpp_mean = flux['data'].mean(axis=0).squeeze()
+            print 'mean GPP before units convert {} min: {}, max {}'.format(
+                k, gpp_mean.min(), gpp_mean.max())
+
+            if 'SiB' in k:
+                # SiB units are mol m-2 s-1; convert mol to umol now
+                flux['data'] = flux['data'] * umol_per_mol
+            else:
+                # convert GPP from Kg C m-2 s-1 to umol m-2 s-1
+                flux['data'] = flux['data'] * C_umol_per_kg
+            gpp_mean = flux['data'].mean(axis=0).squeeze()
+            print 'mean GPP after units convert {} min: {}, max {}'.format(
+                k, gpp_mean.min(), gpp_mean.max())
 
         elif which_flux is 'fCOS':
             gross_flux_varname = 'cos'
@@ -259,7 +271,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
 
     gpp_cmap, gpp_norm = colormap_nlevs.setup_colormap(
         gpp_vmin, gpp_vmax,
-        nlevs=6,
+        nlevs=20,
         cmap=plt.get_cmap('Greens'),
         extend='max')
     print('nlevs: {}'.format(5))
@@ -292,7 +304,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
 
     fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap(
         fcos_vmin, fcos_vmax,
-        nlevs=6,
+        nlevs=20,
         cmap=plt.get_cmap('Blues'),
         extend='neither')
     for i, this_mod in enumerate(models):
@@ -319,7 +331,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     cos_cmap, cos_norm = colormap_nlevs.setup_colormap(
         cos_vmin,
         cos_vmax,
-        nlevs=6,
+        nlevs=20,
         cmap=plt.get_cmap('Oranges'),
         extend='max')
     for i, this_mod in enumerate(models):
@@ -361,7 +373,6 @@ def map_grid_main(models=None, models_str=None, aqout_data=None):
                                       'STEM_all_runs.cpickle')
 
     cos_dd, gpp, fCOS = assemble_data(aqout_data, models=models)
-
     fig, map_objs, cos_cmap, cos_norm = draw_all_panels(cos_dd, gpp, fCOS,
                                                         models, models_str)
     return(fig, map_objs, cos_cmap, cos_norm)
