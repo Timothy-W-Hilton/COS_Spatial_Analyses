@@ -35,37 +35,9 @@ def setup_panel_array(nrows=3, ncols=6, figsize=(6, 3)):
     cbar_ax: nrows by ncols numpy array of
         matplotlib.axes._subplots.AxesSubplot objects (for colorbars)
     """
-    fig = plt.figure(figsize=figsize)
-    # two gridspecs - one for maps, one for colorbasr
+    fig, ax = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
 
-    gs = gridspec.GridSpec(
-        nrows,
-        ncols * 2,
-        width_ratios=[110, 10] * ncols)
-    # gs_maps = gs[range(0, ncols * 2, 2), range(nrows)]
-    # gs_maps = gs[range(1, ncols * 2, 2), range(nrows)]
-    # gs_maps.update(hspace=0.01, wspace=0.0, left=0.0, right=0.87)
-    # gs_cb.update(hspace=0.5, wspace=0.0, left=0.93, right=0.96)
-
-    # arrays to hold axis handles
-    ax = np.empty((nrows, ncols), dtype='object')
-    cbar_ax = np.empty((nrows, ncols), dtype='object')
-    for this_row in range(nrows):
-        for this_col in range(ncols):
-            this_map_gs = gs[this_row, this_col * 2]
-            # leave some space on the right for colorbar labels
-            plt.subplots_adjust(hspace=0.01, wspace=0.01,
-                                left=0.10, right=0.99)
-            ax[this_row, this_col] = plt.subplot(this_map_gs)
-            plt.subplots_adjust(hspace=0.01, wspace=0.15,
-                                left=0.07, right=0.99)
-            cbar_ax[this_row, this_col] = plt.subplot(
-                gs[this_row, (this_col * 2) + 1])
-
-    # make sure we got a unique axis for all maps, colorbars
-    assert np.unique(np.concatenate((ax, cbar_ax))).size == (nrows * ncols * 2)
-    fig.savefig(timutils.io.get_temp_filename(prefix='image01_'))
-    return(fig, ax, cbar_ax)
+    return(fig, ax)
 
 
 def draw_c3c4_pct_map(map_axis=None, cb_axis=None,
@@ -85,7 +57,7 @@ def draw_c3c4_pct_map(map_axis=None, cb_axis=None,
     pct_cmap, pct_norm = midpt_norm.get_discrete_midpt_cmap_norm(
         vmin=0.0,
         vmax=100.0,
-        midpoint=0.5,
+        midpoint=50.0,
         this_cmap=plt.get_cmap('Blues'))
 
     pct_map = na_map.NAMapFigure(map_axis=map_axis,
@@ -99,7 +71,7 @@ def draw_c3c4_pct_map(map_axis=None, cb_axis=None,
                             cmap=pct_cmap,
                             latlon=True,
                             norm=pct_norm)
-    cbar = map_axis.figure.colorbar(cm, cax=cb_axis, format='%0.1f')
+    cbar = map_axis.figure.colorbar(cm, ax=map_axis, format='%0.1f')
     return pct_map
 
 def draw_map(map_axis=None, cb_axis=None, label_lat=False, label_lon=False):
@@ -136,7 +108,7 @@ def draw_map(map_axis=None, cb_axis=None, label_lat=False, label_lon=False):
                             cmap=fcos_cmap,
                             latlon=True,
                             norm=fcos_norm)
-    cbar = map_axis.figure.colorbar(cm, cax=cb_axis, format='%0.2f')
+    cbar = map_axis.figure.colorbar(cm, ax=map_axis, format='%0.2f')
     # ticks = np.concatenate([np.linspace(1.12, 1.84, 5), np.array([1.61])])
     # cbar = lru_map.fig.colorbar(cm, cax=lru_map.ax_cmap, ticks=ticks)
     # get rid of white lines in colorbar?
@@ -148,9 +120,9 @@ def draw_map(map_axis=None, cb_axis=None, label_lat=False, label_lon=False):
 
 if __name__ == "__main__":
     plt.close('all')
-    fig, ax, cb_ax = setup_panel_array(nrows=1, ncols=2)
-    c3c4_LRU_map = draw_map(ax[0, 0], cb_ax[0, 0],
+    fig, ax = setup_panel_array(nrows=1, ncols=2)
+    c3c4_LRU_map = draw_map(ax[0],
                             label_lon=True, label_lat=True)
-    c3c4_pct_map = draw_c3c4_pct_map(ax[0, 1], cb_ax[0, 1],
+    c3c4_pct_map = draw_c3c4_pct_map(ax[1],
                                      label_lon=True, label_lat=False)
     fig.savefig('c3c4_map.png')
