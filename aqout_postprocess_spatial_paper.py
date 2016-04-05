@@ -43,8 +43,6 @@ class AqoutContainerSpatialPaper(aqpp.aqout_container):
         # call the parent class parse method
         super(AqoutContainerSpatialPaper, self).parse(*args, **kwargs)
 
-
-        import pdb; pdb.set_trace()
         clim_idx = None
         for i, this_key in enumerate(self.aq_keys):
             if 'climatological_bnd' in this_key:
