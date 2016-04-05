@@ -41,7 +41,7 @@ def setup_panel_array(nrows=3, ncols=6, figsize=(6, 3)):
     gs = gridspec.GridSpec(
         nrows,
         ncols * 2,
-        width_ratios=[9, 1] * ncols)
+        width_ratios=[110, 10] * ncols)
     # gs_maps = gs[range(0, ncols * 2, 2), range(nrows)]
     # gs_maps = gs[range(1, ncols * 2, 2), range(nrows)]
     # gs_maps.update(hspace=0.01, wspace=0.0, left=0.0, right=0.87)
@@ -52,8 +52,13 @@ def setup_panel_array(nrows=3, ncols=6, figsize=(6, 3)):
     cbar_ax = np.empty((nrows, ncols), dtype='object')
     for this_row in range(nrows):
         for this_col in range(ncols):
-            ax[this_row, this_col] = plt.subplot(
-                gs[this_row, this_col * 2])
+            this_map_gs = gs[this_row, this_col * 2]
+            # leave some space on the right for colorbar labels
+            plt.subplots_adjust(hspace=0.01, wspace=0.01,
+                                left=0.10, right=0.99)
+            ax[this_row, this_col] = plt.subplot(this_map_gs)
+            plt.subplots_adjust(hspace=0.01, wspace=0.15,
+                                left=0.07, right=0.99)
             cbar_ax[this_row, this_col] = plt.subplot(
                 gs[this_row, (this_col * 2) + 1])
 
@@ -63,7 +68,41 @@ def setup_panel_array(nrows=3, ncols=6, figsize=(6, 3)):
     return(fig, ax, cbar_ax)
 
 
-def draw_map(map_axis=None, cb_axis=None):
+def draw_c3c4_pct_map(map_axis=None, cb_axis=None,
+                      label_lat=False, label_lon=False):
+    nc = netCDF4.Dataset(os.path.join(os.environ['PROJ'],
+                                      'Data',
+                                      'C4_percentage',
+                                      'ISLSCP_C4_1DEG_932_regridded',
+                                      'C4_pct_124x124.nc'))
+    pct = nc.variables['C4pct'][...].squeeze()
+    nc.close()
+
+    d = STEM_Domain()
+    stem_lon = d.get_lon()
+    stem_lat = d.get_lat()
+
+    pct_cmap, pct_norm = midpt_norm.get_discrete_midpt_cmap_norm(
+        vmin=0.0,
+        vmax=100.0,
+        midpoint=0.5,
+        this_cmap=plt.get_cmap('Blues'))
+
+    pct_map = na_map.NAMapFigure(map_axis=map_axis,
+                                 label_latlon=(label_lat, label_lon),
+                                 lon_label_interval=30,
+                                 cb_axis=cb_axis,
+                                 t_str=None)
+
+    cm = pct_map.map.pcolor(stem_lon, stem_lat,
+                            maskoceans(stem_lon, stem_lat, pct),
+                            cmap=pct_cmap,
+                            latlon=True,
+                            norm=pct_norm)
+    cbar = map_axis.figure.colorbar(cm, cax=cb_axis, format='%0.1f')
+    return pct_map
+
+def draw_map(map_axis=None, cb_axis=None, label_lat=False, label_lon=False):
     """parse the C3/C4 weighted average LRU and plot it over a map of
     North America.
 
@@ -87,32 +126,31 @@ def draw_map(map_axis=None, cb_axis=None):
         midpoint=1.61)
 
     lru_map = na_map.NAMapFigure(map_axis=map_axis,
-                                 label_latlon=True,
+                                 label_latlon=(label_lat, label_lon),
+                                 lon_label_interval=30,
                                  cb_axis=cb_axis,
                                  t_str=None)
-    map_axis.figure.savefig(timutils.io.get_temp_filename(prefix='image02_'))
 
     cm = lru_map.map.pcolor(stem_lon, stem_lat,
                             maskoceans(stem_lon, stem_lat, LRU),
                             cmap=fcos_cmap,
                             latlon=True,
                             norm=fcos_norm)
-    map_axis.figure.savefig(timutils.io.get_temp_filename(prefix='image03_'))
     cbar = map_axis.figure.colorbar(cm, cax=cb_axis, format='%0.2f')
-    map_axis.figure.savefig(timutils.io.get_temp_filename(prefix='image04_'))
     # ticks = np.concatenate([np.linspace(1.12, 1.84, 5), np.array([1.61])])
     # cbar = lru_map.fig.colorbar(cm, cax=lru_map.ax_cmap, ticks=ticks)
     # get rid of white lines in colorbar?
     # http://stackoverflow.com/questions/15003353/why-does-my-colorbar-have-lines-in-it
     cbar.solids.set_edgecolor("face")
     cbar.ax.set_title('LRU')
-    return(lru_map)
+    return lru_map
 
 
 if __name__ == "__main__":
     plt.close('all')
     fig, ax, cb_ax = setup_panel_array(nrows=1, ncols=2)
-    c3c4_map = draw_map(ax[0, 0], cb_ax[0, 0])
-
-    c3c4_map = draw_map(ax[0, 1], cb_ax[0, 1])
+    c3c4_LRU_map = draw_map(ax[0, 0], cb_ax[0, 0],
+                            label_lon=True, label_lat=True)
+    c3c4_pct_map = draw_c3c4_pct_map(ax[0, 1], cb_ax[0, 1],
+                                     label_lon=True, label_lat=False)
     fig.savefig('c3c4_map.png')
