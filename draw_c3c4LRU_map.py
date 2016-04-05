@@ -58,7 +58,8 @@ def draw_c3c4_pct_map(map_axis=None, cb_axis=None,
         vmin=0.0,
         vmax=100.0,
         midpoint=50.0,
-        this_cmap=plt.get_cmap('Blues'))
+        this_cmap=plt.get_cmap('Blues'),
+        extend='neither')
 
     pct_map = na_map.NAMapFigure(map_axis=map_axis,
                                  label_latlon=(label_lat, label_lon),
@@ -71,8 +72,17 @@ def draw_c3c4_pct_map(map_axis=None, cb_axis=None,
                             cmap=pct_cmap,
                             latlon=True,
                             norm=pct_norm)
-    cbar = map_axis.figure.colorbar(cm, ax=map_axis, format='%0.1f')
+    cbar = map_axis.figure.colorbar(cm,
+                                    ax=map_axis,
+                                    format='%0.1f',
+                                    orientation='horizontal')
+    ticklabs = cbar.ax.get_xticklabels()
+    tickvals = np.array([float(x.get_text()) for x in ticklabs])
+    cbar.ax.set_xticklabels(tickvals, rotation=-45)
+    # place 'b' label in upper left
+    map_axis.text(-0.1, 1.0, 'b', transform=map_axis.transAxes)
     return pct_map
+
 
 def draw_map(map_axis=None, cb_axis=None, label_lat=False, label_lon=False):
     """parse the C3/C4 weighted average LRU and plot it over a map of
@@ -95,7 +105,8 @@ def draw_map(map_axis=None, cb_axis=None, label_lat=False, label_lon=False):
     fcos_cmap, fcos_norm = midpt_norm.get_discrete_midpt_cmap_norm(
         vmin=1.12,
         vmax=1.84,
-        midpoint=1.61)
+        midpoint=1.61,
+        extend='neither')
 
     lru_map = na_map.NAMapFigure(map_axis=map_axis,
                                  label_latlon=(label_lat, label_lon),
@@ -108,13 +119,15 @@ def draw_map(map_axis=None, cb_axis=None, label_lat=False, label_lon=False):
                             cmap=fcos_cmap,
                             latlon=True,
                             norm=fcos_norm)
-    cbar = map_axis.figure.colorbar(cm, ax=map_axis, format='%0.2f')
-    # ticks = np.concatenate([np.linspace(1.12, 1.84, 5), np.array([1.61])])
-    # cbar = lru_map.fig.colorbar(cm, cax=lru_map.ax_cmap, ticks=ticks)
-    # get rid of white lines in colorbar?
-    # http://stackoverflow.com/questions/15003353/why-does-my-colorbar-have-lines-in-it
-    cbar.solids.set_edgecolor("face")
-    cbar.ax.set_title('LRU')
+    cbar = map_axis.figure.colorbar(cm,
+                                    ax=map_axis,
+                                    format='%0.2f',
+                                    orientation='horizontal')
+    ticklabs = cbar.ax.get_xticklabels()
+    tickvals = np.array([float(x.get_text()) for x in ticklabs])
+    cbar.ax.set_xticklabels(tickvals, rotation=-45)
+    # place 'b' label in upper left
+    map_axis.text(-0.2, 1.0, 'a', transform=map_axis.transAxes)
     return lru_map
 
 
@@ -125,4 +138,5 @@ if __name__ == "__main__":
                             label_lon=True, label_lat=True)
     c3c4_pct_map = draw_c3c4_pct_map(ax[1],
                                      label_lon=True, label_lat=False)
-    fig.savefig('c3c4_map.png')
+    fig.tight_layout()
+    fig.savefig('c3c4_map.pdf')
