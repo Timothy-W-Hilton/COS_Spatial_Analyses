@@ -45,9 +45,14 @@ class MapPanel(object):
     def draw_map(self,
                  data,
                  map_axis_idx=None,
-                 cb_axis=None, cb_format='%0.2f',
-                 label_lat=False, label_lon=False,
-                 vmin=None, vmax=None, midpoint=None,
+                 cb_axis=None,
+                 cb_format='%0.2f',
+                 cbar_t_str=None,
+                 label_lat=False,
+                 label_lon=False,
+                 vmin=None,
+                 vmax=None,
+                 midpoint=None,
                  bands_above_mdpt=5,
                  bands_below_mdpt=5,
                  cmap=plt.get_cmap('Blues'),
@@ -87,6 +92,8 @@ class MapPanel(object):
                                        ax=this_ax,
                                        format=cb_format,
                                        orientation='horizontal')
+        if cbar_t_str is not None:
+            cbar.ax.set_title(cbar_t_str)
         ticklabs = cbar.ax.get_xticklabels()
         tickvals = np.array([float(x.get_text()) for x in ticklabs])
         cbar.ax.set_xticklabels(tickvals, rotation=-45)
@@ -144,10 +151,86 @@ def get_COS_concentration(run_key):
         aqc.data[0]).mean(axis=0).squeeze()
     return(aqc, dd, raw_data)
 
+def draw_anthro_maps():
+    """make four-panel map of anthropogenic COS fluxes and resulting drawdown
+
+    The four panels show anthropogenic surface fluxes (top row) and
+    the resulting STEM-simulated drawdowns (bottom row) for both
+    Andrew Aumkehr's anthro fluxes (left panels) as well as Kettle et al (2002)
+    fluxes (right panels).
+    """
+    maps_anthro = MapPanel(nrows=2, ncols=2)
+
+    #--------------------------------------------------
+    # parse and map anthropogenic surface fluxes
+    fcos_andrew = get_anthro_fCOS('Anthro_Andrew')
+    fcos_kettle = get_anthro_fCOS('Anthro_Kettle')
+
+    vmin = np.dstack((fcos_andrew, fcos_kettle)).flatten().min()
+    vmax = np.dstack((fcos_andrew, fcos_kettle)).flatten().max()
+    vmin = 0.0
+    vmax = 1.0
+    maps_anthro.draw_map(fcos_andrew,
+                         map_axis_idx=(0, 0),
+                         vmin=vmin, vmax=vmax,
+                         label_lat=True,
+                         midpoint=0.5,
+                         bands_above_mdpt=10,
+                         bands_below_mdpt=10,
+                         cmap=plt.get_cmap('PuOr'),
+                         cbar_t_str='COS [pmol m$^{-2}$ s$^{-1}$]',
+                         extend='both',
+                         panel_lab='a')
+    maps_anthro.draw_map(fcos_kettle,
+                         map_axis_idx=(0, 1),
+                         vmin=vmin, vmax=vmax,
+                         midpoint=0.5,
+                         bands_above_mdpt=10,
+                         bands_below_mdpt=10,
+                         cmap=plt.get_cmap('PuOr'),
+                         cbar_t_str='COS [pmol m$^{-2}$ s$^{-1}$]',
+                         extend='both',
+                         panel_lab='b')
+
+    #--------------------------------------------------
+    # parse and map STEM-simulated anthropogenic COS drawdown
+    aqc, dd_anthro_zumkehr, raw_data = get_COS_concentration('Anthro_Andrew')
+    aqc, dd_anthro_kettle, raw_data = get_COS_concentration('Anthro_Kettle')
+
+    vmin = np.array([dd_anthro_zumkehr.min(),
+                     dd_anthro_kettle.min()]).min()
+    vmin = -20
+    vmax = np.array([dd_anthro_zumkehr.max(),
+                     dd_anthro_kettle.max()]).max()
+    cb_midpt = np.mean((vmin, vmax))
+    maps_anthro.draw_map(dd_anthro_zumkehr,
+                         map_axis_idx=(1, 0),
+                         label_lat=True,
+                         label_lon=True,
+                         vmin=vmin, vmax=vmax,
+                         midpoint=cb_midpt,
+                         cbar_t_str='COS [pptv]',
+                         extend='min',
+                         panel_lab='c')
+    maps_anthro.draw_map(dd_anthro_kettle,
+                         map_axis_idx=(1, 1),
+                         label_lon=True,
+                         vmin=vmin, vmax=vmax,
+                         midpoint=cb_midpt,
+                         cbar_t_str='COS [pptv]',
+                         extend='min',
+                         panel_lab='d')
+
+    maps_anthro.fig.tight_layout()
+    maps_anthro.save(fname=os.path.join(os.getenv('HOME'),
+                                        'plots', 'map_anthro.pdf'))
+
+
+
 if __name__ == "__main__":
 
     plt.close('all')
-
+    draw_anthro_maps()
 #     aqc, dd, raw_data = get_COS_concentration('Fsoil_Hybrid5Feb')
 
 #     print('drawing map')
@@ -192,57 +275,5 @@ if __name__ == "__main__":
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    maps_anthro = MapPanel(nrows=2, ncols=2)
-
-    aqc, dd_anthro_zumkehr, raw_data = get_COS_concentration('Anthro_Andrew')
-    aqc, dd_anthro_kettle, raw_data = get_COS_concentration('Anthro_Kettle')
-
-    vmin = np.array([dd_anthro_zumkehr.min(),
-                     dd_anthro_kettle.min()]).min()
-    vmin = -20
-    vmax = np.array([dd_anthro_zumkehr.max(),
-                     dd_anthro_kettle.max()]).max()
-    cb_midpt = np.mean((vmin, vmax))
-    maps_anthro.draw_map(dd_anthro_zumkehr,
-                         map_axis_idx=(0, 0),
-                         label_lat=True,
-                         vmin=vmin, vmax=vmax,
-                         midpoint=cb_midpt,
-                         extend='min')
-    maps_anthro.draw_map(dd_anthro_kettle,
-                         map_axis_idx=(0, 1),
-                         vmin=vmin, vmax=vmax,
-                         midpoint=cb_midpt,
-                         extend='min',
-                         panel_lab='b')
-
-    fcos_andrew = get_anthro_fCOS('Anthro_Andrew')
-    fcos_kettle = get_anthro_fCOS('Anthro_Kettle')
-
-    vmin = np.dstack((fcos_andrew, fcos_kettle)).flatten().min()
-    vmax = np.dstack((fcos_andrew, fcos_kettle)).flatten().max()
-    vmin = 0.0
-    vmax = 1.0
-    maps_anthro.draw_map(fcos_andrew,
-                         map_axis_idx=(1, 0),
-                         vmin=vmin, vmax=vmax,
-                         midpoint=0.5,
-                         bands_above_mdpt=10,
-                         bands_below_mdpt=10,
-                         cmap=plt.get_cmap('PuOr'),
-                         extend='both',
-                         panel_lab='c')
-    maps_anthro.draw_map(fcos_kettle,
-                         map_axis_idx=(1, 1),
-                         vmin=vmin, vmax=vmax,
-                         midpoint=0.5,
-                         bands_above_mdpt=10,
-                         bands_below_mdpt=10,
-                         cmap=plt.get_cmap('PuOr'),
-                         extend='both',
-                         panel_lab='d')
-
-    maps_anthro.save(fname=os.path.join(os.getenv('HOME'),
-                                        'plots', 'map_anthro.pdf'))
 
     plt.close('all')
