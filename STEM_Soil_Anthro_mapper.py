@@ -15,6 +15,8 @@ from stem_pytools import aqout_postprocess as aqp
 from stem_pytools import na_map
 from stem_pytools.domain import STEM_Domain
 
+import map_grid
+
 # I put the Whelan-Kettle hybrid soil fluxes through STEM in pmol m-2
 # s-1 when it was expecting mol m-2 s-1.  So the AQOUT concentrations
 # are too high be a factor of 1e12.
@@ -151,6 +153,7 @@ def get_COS_concentration(run_key):
         aqc.data[0]).mean(axis=0).squeeze()
     return(aqc, dd, raw_data)
 
+
 def draw_anthro_maps():
     """make four-panel map of anthropogenic COS fluxes and resulting drawdown
 
@@ -226,11 +229,51 @@ def draw_anthro_maps():
                                         'plots', 'map_anthro.pdf'))
 
 
+def draw_soil_maps():
+    pass
+    maps_soil = MapPanel(nrows=2, ncols=2)
+    fcos = map_grid.get_JulAug_total_flux('fCOS', ('Fsoil_Kettle',
+                                                   'Fsoil_Hybrid5Feb'))
+    aqc, dd_whelan, raw_data = get_COS_concentration('Fsoil_Hybrid5Feb')
+    aqc, dd_kettle, raw_data = get_COS_concentration('Fsoil_Kettle')
 
 if __name__ == "__main__":
 
     plt.close('all')
-    draw_anthro_maps()
+    # draw_anthro_maps()
+
+    maps_soil = MapPanel(nrows=2, ncols=2)
+    fcos = map_grid.get_JulAug_total_flux('fCOS', ('Fsoil_Kettle',
+                                                   'Fsoil_Hybrid5Feb'))
+    aqc, dd_soil_whelan, raw_data = get_COS_concentration('Fsoil_Hybrid5Feb')
+    aqc, dd_soil_kettle, raw_data = get_COS_concentration('Fsoil_Kettle')
+
+    vmin = np.array([dd_soil_whelan.min(),
+                     dd_soil_kettle.min()]).min()
+    vmax = np.array([dd_soil_whelan.max(),
+                     dd_soil_kettle.max()]).max()
+    cb_midpt = np.mean((vmin, vmax))
+    maps_soil.draw_map(dd_soil_whelan,
+                         map_axis_idx=(1, 0),
+                         label_lat=True,
+                         label_lon=True,
+                         vmin=vmin,
+                         vmax=vmax,
+                         midpoint=cb_midpt,
+                         cbar_t_str='COS [pptv]',
+                         extend='neither',
+                         panel_lab='c')
+    maps_soil.draw_map(dd_soil_kettle,
+                         map_axis_idx=(1, 1),
+                         label_lon=True,
+                         vmin=vmin, vmax=vmax,
+                         midpoint=cb_midpt,
+                         cbar_t_str='COS [pptv]',
+                         extend='neither',
+                         panel_lab='d')
+    maps_soil.save(fname=os.path.join(os.getenv('HOME'),
+                                        'plots', 'map_soil.pdf'))
+
 #     aqc, dd, raw_data = get_COS_concentration('Fsoil_Hybrid5Feb')
 
 #     print('drawing map')
