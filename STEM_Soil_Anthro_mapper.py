@@ -232,20 +232,14 @@ def draw_anthro_maps():
 
 
 def draw_soil_maps():
-    pass
+    """make four-panel map of soil COS fluxes and resulting drawdown
+
+    The four panels show soil COS surface fluxes (top row) and the
+    resulting STEM-simulated drawdowns (bottom row) for both the
+    Whelan-Kettle "hybrid" fluxes (left panels) as well as Kettle et
+    al (2002) fluxes (right panels).
+    """
     maps_soil = MapPanel(nrows=2, ncols=2)
-    fcos = map_grid.get_JulAug_total_flux('fCOS', ('Fsoil_Kettle',
-                                                   'Fsoil_Hybrid5Feb'))
-    aqc, dd_whelan, raw_data = get_COS_concentration('Fsoil_Hybrid5Feb')
-    aqc, dd_kettle, raw_data = get_COS_concentration('Fsoil_Kettle')
-
-if __name__ == "__main__":
-
-    plt.close('all')
-    # draw_anthro_maps()
-
-    maps_soil = MapPanel(nrows=2, ncols=2)
-
 
     fcos_mean, fcos_total = map_grid.get_JulAug_total_flux(
         'fCOS', ('Fsoil_Kettle', 'Fsoil_Hybrid5Feb'))
@@ -310,6 +304,14 @@ if __name__ == "__main__":
 
     maps_soil.save(fname=os.path.join(os.getenv('HOME'),
                                       'plots', 'map_soil.pdf'))
+
+
+
+if __name__ == "__main__":
+
+    plt.close('all')
+    draw_anthro_maps()
+    # draw_soil_maps()
 
 #     aqc, dd, raw_data = get_COS_concentration('Fsoil_Hybrid5Feb')
 
