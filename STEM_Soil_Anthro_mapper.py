@@ -102,7 +102,7 @@ class MapPanel(object):
         # place panel label in upper left
         this_ax.text(-0.2, 1.0, panel_lab, transform=this_ax.transAxes)
 
-    def save(self, fname):
+    def save(self, fname, tight_layout=True):
         """save the figure to a file
 
         ARGS:
@@ -110,6 +110,8 @@ class MapPanel(object):
            type is determined by the extension of fname. Supported
            file types are png, pdf.
         """
+        if tight_layout:
+            self.fig.tight_layout()
         self.fig.savefig(fname)
 
 
@@ -243,36 +245,71 @@ if __name__ == "__main__":
     # draw_anthro_maps()
 
     maps_soil = MapPanel(nrows=2, ncols=2)
-    fcos = map_grid.get_JulAug_total_flux('fCOS', ('Fsoil_Kettle',
-                                                   'Fsoil_Hybrid5Feb'))
+
+
+    fcos_mean, fcos_total = map_grid.get_JulAug_total_flux(
+        'fCOS', ('Fsoil_Kettle', 'Fsoil_Hybrid5Feb'))
+    all_vals = np.vstack((fcos_mean['Fsoil_Kettle'],
+                          fcos_mean['Fsoil_Hybrid5Feb'])).flatten()
+    vmin, vmax = np.nanpercentile(all_vals, (1, 99))
+    cb_midpt = 0.0
+    maps_soil.draw_map(fcos_mean['Fsoil_Kettle'],
+                       map_axis_idx=(0, 0),
+                       label_lat=True,
+                       vmin=vmin,
+                       vmax=vmax,
+                       midpoint=cb_midpt,
+                       bands_above_mdpt=5,
+                       bands_below_mdpt=5,
+                       cmap=plt.get_cmap('BrBG_r'),
+                       cbar_t_str='COS [pmol m$^{-2}$ s$^{-1}$]',
+                       extend='both',
+                       panel_lab='a')
+    maps_soil.draw_map(fcos_mean['Fsoil_Hybrid5Feb'],
+                       map_axis_idx=(0, 1),
+                       vmin=vmin, vmax=vmax,
+                       midpoint=cb_midpt,
+                       bands_above_mdpt=5,
+                       bands_below_mdpt=5,
+                       cmap=plt.get_cmap('BrBG_r'),
+                       cbar_t_str='COS [pmol m$^{-2}$ s$^{-1}$]',
+                       extend='both',
+                       panel_lab='b')
+
     aqc, dd_soil_whelan, raw_data = get_COS_concentration('Fsoil_Hybrid5Feb')
     aqc, dd_soil_kettle, raw_data = get_COS_concentration('Fsoil_Kettle')
 
-    vmin = np.array([dd_soil_whelan.min(),
-                     dd_soil_kettle.min()]).min()
-    vmax = np.array([dd_soil_whelan.max(),
-                     dd_soil_kettle.max()]).max()
-    cb_midpt = np.mean((vmin, vmax))
-    maps_soil.draw_map(dd_soil_whelan,
-                         map_axis_idx=(1, 0),
-                         label_lat=True,
-                         label_lon=True,
-                         vmin=vmin,
-                         vmax=vmax,
-                         midpoint=cb_midpt,
-                         cbar_t_str='COS [pptv]',
-                         extend='neither',
-                         panel_lab='c')
+    all_vals = np.vstack((dd_soil_whelan,
+                          dd_soil_kettle)).flatten()
+    vmin, vmax = np.nanpercentile(all_vals, (1, 99))
+    cb_midpt = 0.0
     maps_soil.draw_map(dd_soil_kettle,
-                         map_axis_idx=(1, 1),
-                         label_lon=True,
-                         vmin=vmin, vmax=vmax,
-                         midpoint=cb_midpt,
-                         cbar_t_str='COS [pptv]',
-                         extend='neither',
-                         panel_lab='d')
+                       map_axis_idx=(1, 0),
+                       label_lon=True,
+                       vmin=vmin, vmax=vmax,
+                       midpoint=cb_midpt,
+                       bands_above_mdpt=5,
+                       bands_below_mdpt=5,
+                       cmap=plt.get_cmap('PuOr'),
+                       cbar_t_str='COS [pptv]',
+                       extend='both',
+                       panel_lab='c')
+    maps_soil.draw_map(dd_soil_whelan,
+                       map_axis_idx=(1, 1),
+                       label_lat=True,
+                       label_lon=True,
+                       vmin=vmin,
+                       vmax=vmax,
+                       midpoint=cb_midpt,
+                       bands_above_mdpt=5,
+                       bands_below_mdpt=5,
+                       cmap=plt.get_cmap('PuOr'),
+                       cbar_t_str='COS [pptv]',
+                       extend='both',
+                       panel_lab='d')
+
     maps_soil.save(fname=os.path.join(os.getenv('HOME'),
-                                        'plots', 'map_soil.pdf'))
+                                      'plots', 'map_soil.pdf'))
 
 #     aqc, dd, raw_data = get_COS_concentration('Fsoil_Hybrid5Feb')
 
