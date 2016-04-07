@@ -23,6 +23,14 @@ import map_grid
 mol_pmol_correction = 1e-12
 
 
+def mask_oceans_124x124(data):
+    d = STEM_Domain()
+    stem_lon = d.get_lon()
+    stem_lat = d.get_lat()
+    result = maskoceans(stem_lon, stem_lat, data)
+    return result
+
+
 class MapPanel(object):
     """class to create and populate a grid of maps, each with its own
     colorbar
@@ -166,7 +174,7 @@ def draw_anthro_maps():
     """
     maps_anthro = MapPanel(nrows=2, ncols=2)
 
-    #--------------------------------------------------
+    # --------------------------------------------------
     # parse and map anthropogenic surface fluxes
     fcos_andrew = get_anthro_fCOS('Anthro_Andrew')
     fcos_kettle = get_anthro_fCOS('Anthro_Kettle')
@@ -179,25 +187,25 @@ def draw_anthro_maps():
                          map_axis_idx=(0, 0),
                          vmin=vmin, vmax=vmax,
                          label_lat=True,
-                         midpoint=0.5,
-                         bands_above_mdpt=10,
-                         bands_below_mdpt=10,
-                         cmap=plt.get_cmap('PuOr'),
+                         midpoint=0.05,
+                         bands_above_mdpt=15,
+                         bands_below_mdpt=2,
+                         cmap=plt.get_cmap('BrBG_r'),
                          cbar_t_str='COS [pmol m$^{-2}$ s$^{-1}$]',
-                         extend='both',
+                         extend='max',
                          panel_lab='a')
     maps_anthro.draw_map(fcos_kettle,
                          map_axis_idx=(0, 1),
                          vmin=vmin, vmax=vmax,
-                         midpoint=0.5,
-                         bands_above_mdpt=10,
-                         bands_below_mdpt=10,
-                         cmap=plt.get_cmap('PuOr'),
+                         midpoint=0.05,
+                         bands_above_mdpt=15,
+                         bands_below_mdpt=2,
+                         cmap=plt.get_cmap('BrBG_r'),
                          cbar_t_str='COS [pmol m$^{-2}$ s$^{-1}$]',
-                         extend='both',
+                         extend='max',
                          panel_lab='b')
 
-    #--------------------------------------------------
+    # --------------------------------------------------
     # parse and map STEM-simulated anthropogenic COS drawdown
     aqc, dd_anthro_zumkehr, raw_data = get_COS_concentration('Anthro_Andrew')
     aqc, dd_anthro_kettle, raw_data = get_COS_concentration('Anthro_Kettle')
@@ -207,13 +215,17 @@ def draw_anthro_maps():
     vmin = -20
     vmax = np.array([dd_anthro_zumkehr.max(),
                      dd_anthro_kettle.max()]).max()
-    cb_midpt = np.mean((vmin, vmax))
+
+    import pdb; pdb.set_trace()
     maps_anthro.draw_map(dd_anthro_zumkehr,
                          map_axis_idx=(1, 0),
                          label_lat=True,
                          label_lon=True,
                          vmin=vmin, vmax=vmax,
-                         midpoint=cb_midpt,
+                         midpoint=0.0,
+                         bands_above_mdpt=3,
+                         bands_below_mdpt=8,
+                         cmap=plt.get_cmap('PuOr'),
                          cbar_t_str='COS [pptv]',
                          extend='min',
                          panel_lab='c')
@@ -221,7 +233,10 @@ def draw_anthro_maps():
                          map_axis_idx=(1, 1),
                          label_lon=True,
                          vmin=vmin, vmax=vmax,
-                         midpoint=cb_midpt,
+                         midpoint=0.0,
+                         bands_above_mdpt=3,
+                         bands_below_mdpt=8,
+                         cmap=plt.get_cmap('PuOr'),
                          cbar_t_str='COS [pptv]',
                          extend='min',
                          panel_lab='d')
@@ -306,30 +321,13 @@ def draw_soil_maps():
                                       'plots', 'map_soil.pdf'))
 
 
-
 if __name__ == "__main__":
 
     plt.close('all')
     draw_anthro_maps()
     # draw_soil_maps()
+    plt.close('all')
 
-#     aqc, dd, raw_data = get_COS_concentration('Fsoil_Hybrid5Feb')
-
-#     print('drawing map')
-#     cmap, norm = midpt_norm.get_discrete_midpt_cmap_norm(vmin=-10,
-#                                                          vmax=25,
-#                                                          midpoint=0.0,
-#                                                          bands_above_mdpt=3,
-#                                                          bands_below_mdpt=7)
-#     f_or_p = 'pretty'
-#     STEM_mapper.Mapper124x124(np.mean(dd[:], axis=0).squeeze()).draw_map(
-#         fast_or_pretty=f_or_p,
-#         t_str=('1 Jul - 31 Aug 2008 mean STEM drawdown, '
-#                'Whelan-Kettle "hybrid" Fsoil'),
-#         cmap=cmap,
-#         norm=norm)
-#     plt.gcf().savefig(os.path.join(os.getenv('HOME'),
-#                                    'plots', 'dd_map_Fsoil.png'))
 
 # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -356,6 +354,3 @@ if __name__ == "__main__":
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-    plt.close('all')
