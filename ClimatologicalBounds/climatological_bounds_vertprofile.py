@@ -207,7 +207,13 @@ class SiteClimMean(object):
         missing values outside that range are set to the
         higest/lowest (in altitude) observed value.
         """
-        return(self.z_obs_mean.ocs_interp.values[:, np.newaxis])
+        return self.z_obs_mean.ocs_interp.values[:, np.newaxis]
+
+    def get_minmax_cos(self):
+        """return the minimum [COS] value at the site
+        """
+        return (np.nanmin(self.z_obs_mean.ocs_interp.values),
+                np.nanmax(self.z_obs_mean.ocs_interp.values))
 
 
 class ClimatologicalTopBound(object):
@@ -424,7 +430,8 @@ def create_sites_dict(sites_list):
     return sites_dict
 
 
-def plot_vertical_profiles(sites_list, title_suffix=None, ax=None):
+def plot_vertical_profiles(sites_list, xmin, xmax, title_suffix=None, ax=None,
+                           panel_lab=None):
     """plot vertical profiles of each site in the argument sites_list
 
     ARGS:
@@ -447,6 +454,9 @@ def plot_vertical_profiles(sites_list, title_suffix=None, ax=None):
     bmap = brewer2mpl.get_map('Set2', 'qualitative', ncolors)
     colors = bmap.mpl_colors
     matplotlib.rcParams['axes.color_cycle'] = colors
+    markers = ['o', 's', 'v', '^', 'D', '*', 'p']
+    marker_handles = []
+    fakelines = []
     if ax is None:
         fig, ax = plt.subplots(figsize=(6, 6))
     for i, this_site in enumerate(sites_list):
@@ -454,17 +464,48 @@ def plot_vertical_profiles(sites_list, title_suffix=None, ax=None):
                 this_site.z_obs_mean.z_agl,
                 label=this_site.sitecode,
                 linewidth=2)
-        ax.scatter(this_site.z_obs_mean.analysis_value,
-                   this_site.z_obs_mean.z_agl,
-                   marker='o', s=60, c=colors[i % ncolors])
+        marker_handles.append(ax.scatter(this_site.z_obs_mean.analysis_value,
+                                         this_site.z_obs_mean.z_agl,
+                                         marker=markers[i % len(markers)],
+                                         label=this_site.sitecode,
+                                         s=60,
+                                         c=colors[i % ncolors]))
+        fakelines.append(plt.Line2D([0, 0], [0, 0],
+                                    color=colors[i % ncolors],
+                                    marker=markers[i % len(markers)],
+                                    linewidth=2,
+                                    linestyle='-'))
     # ax.set_title(('NOAA sites Jul-Aug climatological mean [COS],'
     #               ' {} m altitude bins\n{}'.format(
     #                   sites_list[0].alt_bin_size,
     #                   title_suffix)))
-    ax.set_ylabel('height above ground (m)')
+    if panel_lab == 'b':   # only label the middle vertical axis
+        ax.set_ylabel('meters above ground')
     ax.set_xlabel('[COS] (pptv)')
-    ax.set_ylim([0, 16000])
-    # ax.legend(loc='best')
+    ax.set_ylim([0, 16000])  # meters above ground level
+
+    max_yticks = 4
+    yloc = plt.MaxNLocator(max_yticks)
+    ax.yaxis.set_major_locator(yloc)
+
+    ax.set_xlim([xmin * 0.99, xmax * 1.01])
+    # shrink axis to 80% of current width to leave room for legend
+    # (thanks
+    # http://stackoverflow.com/questions/9651092/my-matplotlib-pyplot-legend-is-being-cut-off)
+    box = ax.get_position()
+    ax.set_position([box.x0 + (box.width * 0.1), box.y0,
+                     box.width * 0.75, box.height])
+    print "drawing legend"
+    ax.legend(fakelines,
+              [m.get_label() for m in marker_handles],
+              loc='upper left',
+              bbox_to_anchor=(1, 1),
+              bbox_transform=ax.transAxes,
+              fontsize=14,
+              labelspacing=0.1,
+              numpoints=1)
+    if panel_lab is not None:
+        ax.text(-0.35, 1.1, panel_lab, transform=ax.transAxes, fontsize=16)
     # ax.figure.tight_layout()
 
 
@@ -478,6 +519,15 @@ def top_bounds_QC(top_fname):
                cmap=plt.get_cmap('Blues'))
     m.map.fig.savefig('./top_bounds_ioapi_map.png')
     plt.close(m.map.fig)
+
+
+def get_minmax_cos_multisite(site_objs):
+    """returns a tuple containing the minimum and maximum COS values
+    for a list of SiteClimMean objects.
+    """
+    all_minmax = np.array([this.get_minmax_cos() for this in site_objs])
+    return (np.nanmin(all_minmax), np.nanmax(all_minmax))
+
 
 if __name__ == "__main__":
 
@@ -520,15 +570,25 @@ if __name__ == "__main__":
         top_bounds_QC('upbound_124x124-climatological_124x124.nc')
 
     fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(6, 6))
+    cos_minmax = get_minmax_cos_multisite(sites_dict.values())
     plot_vertical_profiles([sites_dict[k] for k in lateral_bounds_sites_list],
-                           'lateral bounds sites',
-                           ax=ax[0])
+                           xmin=cos_minmax[0],
+                           xmax=cos_minmax[1],
+                           title_suffix='lateral bounds sites',
+                           ax=ax[0],
+                           panel_lab='a')
     plot_vertical_profiles([sites_dict[k] for k in midcontinent_NS_site_list],
-                           'midcont NS sites',
-                           ax=ax[1])
+                           xmin=cos_minmax[0],
+                           xmax=cos_minmax[1],
+                           title_suffix='midcont NS sites',
+                           ax=ax[1],
+                           panel_lab='b')
     plot_vertical_profiles([sites_dict[k] for k in midcontinent_EW_site_list],
-                           'midcont EW sites',
-                           ax=ax[2])
+                           xmin=cos_minmax[0],
+                           xmax=cos_minmax[1],
+                           title_suffix='midcont EW sites',
+                           ax=ax[2],
+                           panel_lab='c')
     fig.savefig('vertical_profiles.pdf')
     # plot_vertical_profiles([sites_dict[k] for k in sites_list], 'all sites')
     # upper_midwest = ['OIL', 'HIL', 'WBI', 'AAO']
