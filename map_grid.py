@@ -74,7 +74,6 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
         umol_per_mol = 1e6
         g_per_kg = 1e3
         C_umol_per_kg = g_per_kg * C_mol_per_g * umol_per_mol
-        C_mol_per_kg = g_per_kg * C_mol_per_g
         Pg_per_kg = 1e-12
         t0 = Jul1
         t1 = Aug31
@@ -88,6 +87,12 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
         elif 'casa' in k:
             # CASA-GFED3 timestep is hourly; calculate seconds per 3 hours
             s_per_tstep = 3 * 60 * 60
+        elif k == 'Fsoil_Kettle':
+            # kettle soil fluxes are daily
+            s_per_tstep = 60 * 60 * 24
+        elif k == 'Fsoil_Hybrid5Feb':
+            # Whelan soil fluxes are 6-hourly
+            s_per_tstep = 60 * 60 * 6
         else:
             raise ValueError('don''t have timestep for {}'.format(k))
 

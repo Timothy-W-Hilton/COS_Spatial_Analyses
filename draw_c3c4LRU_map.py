@@ -54,6 +54,7 @@ def draw_c3c4_pct_map(map_axis=None, cb_axis=None,
                     label_lat=label_lat, label_lon=label_lon,
                     vmin=0, vmax=100, midpoint=50,
                     cmap=plt.get_cmap('Blues'),
+                    cb_t_str='percent',
                     panel_lab='b')
 
 
@@ -73,6 +74,7 @@ def draw_c3c4_LRU_map(map_axis=None, cb_axis=None,
                               label_lat=label_lat, label_lon=label_lon,
                               vmin=1.12, vmax=1.84, midpoint=1.61,
                               cmap=plt.get_cmap('PuOr'),
+                              cb_t_str='LRU',
                               panel_lab='a')
     return lru_map
 
@@ -83,6 +85,7 @@ def draw_map_common(data,
                     label_lat=False, label_lon=False,
                     vmin=None, vmax=None, midpoint=None,
                     cmap=plt.get_cmap('Blues'),
+                    cb_t_str=None,
                     panel_lab='a'):
     """
     returns: stem_pytools.na_map.NAMapFigure object containing the map
@@ -117,6 +120,8 @@ def draw_map_common(data,
     ticklabs = cbar.ax.get_xticklabels()
     tickvals = np.array([float(x.get_text()) for x in ticklabs])
     cbar.ax.set_xticklabels(tickvals, rotation=-45)
+    if cb_t_str is not None:
+        cbar.ax.set_title(cb_t_str)
     # place panel label in upper left
     map_axis.text(-0.2, 1.0, panel_lab, transform=map_axis.transAxes)
     return map_obj
