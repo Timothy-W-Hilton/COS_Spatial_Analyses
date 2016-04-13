@@ -75,23 +75,23 @@ for k in [aqcs.keys()[i] for i in [0, 1]]:
         dd = calc_STEM_COS_drawdown(aqdata,
                                     topo_fname=topo_file,
                                     wrfheight_fname=wrf_file)
-        del aqdata
         this_mean_dd = dd[:, :, x_site, y_site].mean(axis=0).squeeze()
-        del dd
-        gc.collect()
-        mean_dd.append(this_mean_dd)
-    # site_columns = [arr[:, :, x_site, y_site].mean(axis=0).squeeze()
+        mean_dd.append(np.float(this_mean_dd.data))
+        # site_columns = [arr[:, :, x_site, y_site].mean(axis=0).squeeze()
     #                 for arr in aqcs[k].data]
-    # aqcs[k].components = pd.DataFrame(dict(zip(aqcs[k].key.split('-'),
-    #                                            site_columns)))
+    aqcs[k].components = pd.DataFrame(dict(zip(aqcs[k].key.split('-'),
+                                               mean_dd)),
+                                      index=[0])
 
-    # this_aqc.sum()
-    # # this_aqc.calc_stats()
-    # this_aqc.calc_JA_midday_drawdown()
-    # this_aqc.calc_JA_midday_drawdown_stderr()
-    # this_aqc.extract_noaa_sites(
-    #     '/project/projectdirs/m2319/Data/NOAA_95244993/')
+    aqcs[k].sum()
+    # aqcs[k].calc_stats()
 
-# all = pd.concat([this_model.site_vals for this_model in aqcs.values()])
+    import pdb; pdb.set_trace()
+    aqcs[k].calc_JA_midday_drawdown()
+    aqcs[k].calc_JA_midday_drawdown_stderr()
+    aqcs[k].extract_noaa_sites(
+        '/project/projectdirs/m2319/Data/NOAA_95244993/')
+
+all = pd.concat([this_model.site_vals for this_model in aqcs.values()])
 # all.to_csv('./model_components_25Feb.csv')
 # print datetime.now() - t0
