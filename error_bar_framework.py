@@ -72,9 +72,7 @@ for k in [aqcs.keys()[i] for i in [0, 1]]:
     mean_dd = []
     for i, aqdata in enumerate(aqcs[k].data):
         print i
-        dd = calc_STEM_COS_drawdown(aqdata,
-                                    topo_fname=topo_file,
-                                    wrfheight_fname=wrf_file)
+        dd = calc_STEM_COS_drawdown(aqdata)
         this_mean_dd = dd[:, :, x_site, y_site].mean(axis=0).squeeze()
         mean_dd.append(np.float(this_mean_dd.data))
         # site_columns = [arr[:, :, x_site, y_site].mean(axis=0).squeeze()
@@ -86,12 +84,11 @@ for k in [aqcs.keys()[i] for i in [0, 1]]:
     aqcs[k].sum()
     # aqcs[k].calc_stats()
 
-    import pdb; pdb.set_trace()
     aqcs[k].calc_JA_midday_drawdown()
     aqcs[k].calc_JA_midday_drawdown_stderr()
     aqcs[k].extract_noaa_sites(
         '/project/projectdirs/m2319/Data/NOAA_95244993/')
 
-all = pd.concat([this_model.site_vals for this_model in aqcs.values()])
+# all = pd.concat([this_model.site_vals for this_model in aqcs.values()])
 # all.to_csv('./model_components_25Feb.csv')
 # print datetime.now() - t0
