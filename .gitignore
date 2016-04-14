@@ -11,4 +11,5 @@ dist/*
 *.mod
 *.csv
 
+error_bar_out.txt
 STEM_TestRuns/

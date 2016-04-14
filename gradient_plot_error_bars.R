@@ -242,7 +242,7 @@ myboot <- function(x) {
          R=5000)
 }
 
-df <- read.csv('./model_components_25Feb.csv')
+df <- read.csv('./model_components_13Apr.csv')
 df[['Fbounds']] <- 'CONST'
 df[['Fbounds']][grepl('climatological', df[['model']])] <- 'CLIM'
 components <- strsplit(x=as.character(df[['model']]), split='-')

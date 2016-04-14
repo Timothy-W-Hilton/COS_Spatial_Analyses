@@ -4,7 +4,6 @@ import pandas as pd
 from datetime import datetime
 import os.path
 import numpy as np
-import gc
 
 from stem_pytools import NERSC_data_paths as ndp
 from aqout_postprocess_spatial_paper import AqoutContainerSpatialPaper
@@ -61,36 +60,35 @@ aqcs_all = {"-".join(this_set): AqoutContainerSpatialPaper(
     key="-".join(this_set)) for this_set in all_combos}
 
 
-aqcs = dict((k, aqcs_all[k]) for k in aqcs_all.keys() if 'SiB' in k)
-
+# aqcs = dict((k, aqcs_all[k]) for k in aqcs_all.keys() if 'SiB' in k)
+aqcs = aqcs_all
 
 for k in aqcs.keys():
-    if "SiB" in k:
-        print "processing {}".format(k)
-        aqcs[k].parse(t0=datetime(2008, 7, 8),
-                      t1=datetime(2008, 8, 31, 0, 0, 0),
-                      verbose=True)
-        mean_dd = []
-        for i, aqdata in enumerate(aqcs[k].data):
-            dd = calc_STEM_COS_drawdown(aqdata)
-            this_mean_dd = dd[:, :, x_site, y_site].mean(axis=0).squeeze()
-            mean_dd.append(np.float(this_mean_dd.data))
-            print aqcs[k].aqout_paths[i], this_mean_dd
-            # site_columns = [arr[:, :, x_site, y_site].mean(axis=0).squeeze()
-        #                 for arr in aqcs[k].data]
-        print '-----'
-        aqcs[k].components = pd.DataFrame(dict(zip(aqcs[k].key.split('-'),
-                                                   mean_dd)),
-                                          index=[0])
+    print "processing {}".format(k)
+    aqcs[k].parse(t0=datetime(2008, 7, 8),
+                  t1=datetime(2008, 8, 31, 0, 0, 0),
+                  verbose=True)
+    mean_dd = []
+    for i, aqdata in enumerate(aqcs[k].data):
+        dd = calc_STEM_COS_drawdown(aqdata)
+        this_mean_dd = dd[:, :, x_site, y_site].mean(axis=0).squeeze()
+        mean_dd.append(np.float(this_mean_dd.data))
+        print aqcs[k].aqout_paths[i], this_mean_dd
+        # site_columns = [arr[:, :, x_site, y_site].mean(axis=0).squeeze()
+    #                 for arr in aqcs[k].data]
+    print '-----'
+    aqcs[k].components = pd.DataFrame(dict(zip(aqcs[k].key.split('-'),
+                                               mean_dd)),
+                                      index=[0])
 
-        aqcs[k].sum()
-        # aqcs[k].calc_stats()
+    aqcs[k].sum()
+    # aqcs[k].calc_stats()
 
-        aqcs[k].calc_JA_midday_drawdown()
-        aqcs[k].calc_JA_midday_drawdown_stderr()
-        aqcs[k].extract_noaa_sites(
-            '/project/projectdirs/m2319/Data/NOAA_95244993/')
+    aqcs[k].calc_JA_midday_drawdown()
+    aqcs[k].calc_JA_midday_drawdown_stderr()
+    aqcs[k].extract_noaa_sites(
+        '/project/projectdirs/m2319/Data/NOAA_95244993/')
 
 all = pd.concat([this_model.site_vals for this_model in aqcs.values()])
-all.to_csv('./model_components_13Apr.csv')
-# print datetime.now() - t0
+all.to_csv('./model_components_14Apr.csv')
+print 'time: ',  datetime.now() - t0
