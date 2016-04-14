@@ -67,6 +67,22 @@ def count_unique_dates(gb):
         unique_dates = np.unique(map(todate, x))
         print this_group[0], unique_dates.size
 
+
+def count_flask_samples(df, sites=None):
+    """count number of flask samples in df at the specifed sites
+    """
+    if sites is None:
+        sites = ['AAO', 'BNE', 'CAR', 'CMA', 'DND', 'ETL', 'HIL',
+                 'LEF', 'NHA', 'SCA', 'SGP', 'TGC', 'WBI', 'THD',
+                 'ESP', 'PFA']
+        df_mysites = df.ix[df['sample_site_code'].isin(sites), :]
+        n = df_mysites.shape[0]  # total number of flask samples
+        print 'number of sites: {}'.format(len(sites))
+        print 'total flask samples: {}'.format(n)
+        n_JulAug = df_mysites.ix[df_mysites.sample_month.isin([7, 8])].shape[0]
+        print 'total July/August flask samples: {}'.format(n_JulAug)
+
+
 if __name__ == "__main__":
 
     sites = noaa_ocs.get_all_NOAA_airborne_data(Consts().noaa_dir)
@@ -77,3 +93,5 @@ if __name__ == "__main__":
     # obs_count = jul_aug.groupby(by=('sample_site_code',)).agg(
     #     {'sample_site_code': np.size,
     #      'datet': lambda x: todate(x).date()})
+
+    count_flask_samples(sites.obs)
