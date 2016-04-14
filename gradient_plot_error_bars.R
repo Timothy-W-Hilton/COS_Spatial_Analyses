@@ -1,4 +1,4 @@
-library(plotrix)
+library(plotrix)  # for panes
 library(RColorBrewer)
 library(tidyr)  # could also use reshape2
 library(boot)
@@ -163,6 +163,10 @@ dummy_data <- function() {
 ##' @param norm_site (string): row label of a site to normalize the
 ##' data against.  If unspecified (default), no normalization is
 ##' performed.
+##' @param legend_loc (string): location for the legend (see "legend"
+##' documentation).  'none' results in no legend.
+##' @param panel_lab (string): panel label to appear in the upper-left
+##' corner of the panel
 ##' @return
 ##' @author Timothy W. Hilton
 ##' @export
@@ -173,7 +177,8 @@ gradient_CI_plot <- function(df,
                              t_str='gradient plot',
                              site_names=list(),
                              norm_site='',
-                             legend_loc='right') {
+                             legend_loc='right',
+                             panel_lab='') {
 
     n_sites <- length(site_names)
     models <- rev(sort(unique(df[['Fplant']])))
@@ -202,7 +207,7 @@ gradient_CI_plot <- function(df,
     row.names(this_df) <- this_df[['site']]
     this_df <- this_df[site_names, ]
 
-    xlim_max <- n_sites * 1.8
+    xlim_max <- n_sites * 2.5
     if (legend_loc == 'none') {
         xlim_max = n_sites + max(x_offset)
     }
@@ -238,6 +243,14 @@ gradient_CI_plot <- function(df,
                     pch=marker_sequence[[i]]))
     }
     mod_strs <- unlist(human_readable_model_names()[models])
+    # place panel legend in upper-left corner.  Thanks to
+    # http://stackoverflow.com/questions/19918566/relative-position-of-mtext-in-r
+    # for the "at" code.
+    mtext(panel_lab,
+          side=3,
+          line=-0.5,
+          cex=1.2,
+          at=par("usr")[1]-0.1*diff(par("usr")[1:2]))
     if (legend_loc != 'none') {
         legend(x=legend_loc, legend=mod_strs,
                pch=marker_sequence, col=pal, cex=1.2)
@@ -286,8 +299,8 @@ dfboot <- merge_obs(dfboot)
 if (TRUE) {
 
     norm_site <- ''
-    plot_width <- 6
-    plot_height <- 10
+    plot_width <- 3.5
+    plot_height <- 6
     if (nchar(norm_site) == 0){
         pdf(file='gradients_bootstrapCIs.pdf',
             width=plot_width, height=plot_height)
@@ -303,17 +316,20 @@ if (TRUE) {
     gradient_CI_plot(dfboot, t_str='East Coast North-South',
                      site_names=c('NHA', 'CMA', 'SCA'),
                      norm_site=norm_site,
-                     legend_loc='bottomright')
+                     legend_loc='bottomright',
+                     panel_lab='(a)')
 
     gradient_CI_plot(dfboot, t_str='Mid-Continent East-West',
                      site_names=c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'),
                      norm_site=norm_site,
-                     legend_loc='none')
+                     legend_loc='none',
+                     panel_lab='(b)')
 
     gradient_CI_plot(dfboot, t_str='Mid-Continent North-South',
                      site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP'),
                      norm_site=norm_site,
-                     legend_loc='none')
+                     legend_loc='none',
+                     panel_lab='(c)')
     par(oldpar)
     dev.off()
 
