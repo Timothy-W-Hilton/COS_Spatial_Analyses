@@ -1,3 +1,7 @@
+import matplotlib
+matplotlib.use('AGG')
+
+import sys
 import os
 import os.path
 import matplotlib.pyplot as plt
@@ -6,8 +10,9 @@ from datetime import datetime
 import socket
 import numpy as np
 import warnings
+from mpl_toolkits.basemap import maskoceans
 
-import stem_pytools.ecampbell300_data_paths as edp
+import stem_pytools.NERSC_data_paths as ndp
 from stem_pytools import STEM_parsers as sp
 from stem_pytools import aqout_postprocess as aq
 from stem_pytools.na_map import NAMapFigure
@@ -55,17 +60,42 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
     Jul1 = datetime(2008, 7, 1)
     Aug31 = datetime(2008, 8, 31, 23, 59, 59)
 
-    runs = edp.get_runs()
+    runs = ndp.get_runs()
 
     if models is None:
         models = runs.keys()
     # models.sort()
 
     flux_mean = {}
+    flux_total = {}
     for k in models:
 
+        C_mol_per_g = (1.0 / 12.0107)
+        umol_per_mol = 1e6
+        g_per_kg = 1e3
+        C_umol_per_kg = g_per_kg * C_mol_per_g * umol_per_mol
+        Pg_per_kg = 1e-12
         t0 = Jul1
         t1 = Aug31
+
+        if 'canibis' in k:
+            # Can-IBIS timestep is monthly; calculate seconds per month
+            s_per_tstep = 60 * 60 * 24 * (365 / 12)
+        elif 'SiB' in k:
+            # SiB timestep is hourly; calculate seconds per hour
+            s_per_tstep = 60 * 60
+        elif 'casa' in k:
+            # CASA-GFED3 timestep is hourly; calculate seconds per 3 hours
+            s_per_tstep = 3 * 60 * 60
+        elif k == 'Fsoil_Kettle':
+            # kettle soil fluxes are daily
+            s_per_tstep = 60 * 60 * 24
+        elif k == 'Fsoil_Hybrid5Feb':
+            # Whelan soil fluxes are 6-hourly
+            s_per_tstep = 60 * 60 * 6
+        else:
+            raise ValueError('don''t have timestep for {}'.format(k))
+
         if which_flux is 'GPP':
             gross_flux_varname = sp.get_CO2grossflux_varname(runs[k].gpp_path)
             print 'reading ', runs[k].gpp_path
@@ -73,12 +103,19 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
                                      varname=gross_flux_varname,
                                      t0=t0,
                                      t1=t1)
-            # convert GPP from Kg C m-2 s-1 to umol m-2 s-1
-            C_mol_per_g = (1.0 / 12.0107)
-            umol_per_mol = 1e6
-            g_per_kg = 1e3
-            C_umol_per_kg = g_per_kg * C_mol_per_g * umol_per_mol
-            flux['data'] = flux['data'] * C_umol_per_kg
+            gpp_mean = flux['data'].mean(axis=0).squeeze()
+            print 'mean GPP before units convert {} min: {}, max {}'.format(
+                k, gpp_mean.min(), gpp_mean.max())
+
+            if 'SiB' in k:
+                # SiB units are mol m-2 s-1; convert mol to umol now
+                flux['data'] = flux['data'] * umol_per_mol
+            else:
+                # convert GPP from Kg C m-2 s-1 to umol m-2 s-1
+                flux['data'] = flux['data'] * C_umol_per_kg
+            gpp_mean = flux['data'].mean(axis=0).squeeze()
+            print 'mean GPP after units convert {} min: {}, max {}'.format(
+                k, gpp_mean.min(), gpp_mean.max())
 
         elif which_flux is 'fCOS':
             gross_flux_varname = 'cos'
@@ -93,13 +130,22 @@ def get_JulAug_total_flux(which_flux='GPP', models=None):
             print('model: {}; mean fCOS: {}\n'.format(k,
                                                       np.mean(flux['data'])))
 
-
         flux_mean[k] = flux['data'].squeeze().mean(axis=0)
         # flux_mean[k] = ma.masked_less(flux_mean[k], -1e20)
+        # calculate total flux in Pg C month-1
+        m2_per_cell = 6e4 * 6e4  # STEM cells are 60 km per side
+        months_in_analysis = 2
+
+        flux_total[k] = (flux['data'].squeeze().sum(axis=0) *
+                         s_per_tstep *
+                         m2_per_cell *
+                         (1.0 / C_umol_per_kg) *
+                         Pg_per_kg *
+                         (1.0 / months_in_analysis))
+
         if flux_mean[k].sum() < 0:
             flux_mean[k] = flux_mean[k] * -1.0
-    return(flux_mean)
-
+    return (flux_mean, flux_total)
 
 def draw_map(t_str,
              ax,
@@ -107,15 +153,24 @@ def draw_map(t_str,
              vmin,
              vmax,
              cmap=plt.get_cmap('Blues'),
-             norm=plt.normalize):
+             norm=plt.normalize,
+             maskoceans_switch=True):
 
     map = NAMapFigure(t_str=t_str,
                       cb_axis=None,
                       map_axis=ax,
-                      fast_or_pretty='fast')
+                      fast_or_pretty='pretty',
+                      lat_0=49,
+                      lon_0=-97,
+                      mapwidth=5.8e6,
+                      mapheight=5.2e6)
 
     lon, lat, topo = sp.parse_STEM_coordinates(
         os.path.join(os.getenv('SARIKA_INPUT'), 'TOPO-124x124.nc'))
+
+    if maskoceans_switch:
+        data = maskoceans(lon, lat, data, inlands=False, resolution='f')
+
     cm = map.map.contourf(lon, lat,
                           data,
                           cmap=cmap,
@@ -127,6 +182,7 @@ def draw_map(t_str,
 
 
 def setup_panel_array(nrows=3, ncols=6):
+
     """
     create a figure containing a matrix of axes with nrows rows and
     ncols columns, and one additional column of axes on the right hand
@@ -176,6 +232,7 @@ def daily_to_JulAug(arr):
 
 def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True,
                   models=None):
+
     if get_dd:
 
         cos_conc_daily = aq.load_aqout_data(aqout_path)
@@ -192,19 +249,25 @@ def assemble_data(aqout_path=None, get_dd=True, get_GPP=True, get_fCOS=True,
         cos_conc = None
     try:
         if get_GPP:
-            gpp = get_JulAug_total_flux(which_flux='GPP', models=models)
+            gpp_mean, gpp_total = get_JulAug_total_flux(which_flux='GPP',
+                                                   models=models)
         else:
-            gpp = None
+            gpp_mean = None
+            gpp_total = None
         if get_fCOS:
-            fCOS = get_JulAug_total_flux(which_flux='fCOS', models=models)
+            fCOS, fCOS_total = get_JulAug_total_flux(which_flux='fCOS',
+                                                     models=models)
         else:
             fCOS = None
+            fCOS_total = None
     except:
-        print('Unable to read GPP or FCOS, returning placeholder')
-        gpp = cos_conc
-        fCOS = cos_conc
+        print('Unable to read GPP or FCOS', sys.exc_info()[0])
+        gpp_mean = None
+        gpp_total = None
+        fCOS = None
+        fCOS_total = None
 
-    return(cos_conc, gpp, fCOS)
+    return(cos_conc, gpp_mean, fCOS, gpp_total, fCOS_total)
 
 
 def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
@@ -245,12 +308,11 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
 
     gpp_cmap, gpp_norm = colormap_nlevs.setup_colormap(
         gpp_vmin, gpp_vmax,
-        nlevs=6,
+        nlevs=20,
         cmap=plt.get_cmap('Greens'),
         extend='max')
-    print('nlevs: {}'.format(5))
 
-    mod_objs = edp.get_runs()
+    mod_objs = ndp.get_runs()
     for i, this_mod in enumerate(models):
         # plot GPP drawdown maps
         print("plotting {model}({k}) GPP".format(model=models_str[i],
@@ -278,7 +340,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
 
     fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap(
         fcos_vmin, fcos_vmax,
-        nlevs=6,
+        nlevs=20,
         cmap=plt.get_cmap('Blues'),
         extend='neither')
     for i, this_mod in enumerate(models):
@@ -305,7 +367,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     cos_cmap, cos_norm = colormap_nlevs.setup_colormap(
         cos_vmin,
         cos_vmax,
-        nlevs=6,
+        nlevs=20,
         cmap=plt.get_cmap('Oranges'),
         extend='max')
     for i, this_mod in enumerate(models):
@@ -336,6 +398,15 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     return(fig, map_objs, cos_cmap, cos_norm)
 
 
+def write_NA_totals(gpp, fCOS):
+    """write total N American fluxes to stdout"""
+
+    print '=================================================='
+    for this_model, this_gpp in gpp.iteritems():
+        print "{}: {:0.2f} Pg C mon-1".format(this_model, this_gpp.sum())
+    print '=================================================='
+
+
 def map_grid_main(models=None, models_str=None, aqout_data=None):
 
     if aqout_data is None:
@@ -343,27 +414,26 @@ def map_grid_main(models=None, models_str=None, aqout_data=None):
             aqout_data = (os.path.join(os.getenv('HOME'), 'work', 'Data',
                                        'STEM', 'aq_out_data.cpickle'))
         else:
-            aqout_data = os.path.join(os.getenv('HOME'), 'thilton', 'Data',
-                                      'STEM', 'aq_out_data.cpickle')
-    cos_dd, gpp, fCOS = assemble_data(aqout_data, models=models)
+            aqout_data = os.path.join(os.getenv('HOME'),
+                                      'STEM_all_runs.cpickle')
 
-    fig, map_objs, cos_cmap, cos_norm = draw_all_panels(cos_dd, gpp, fCOS,
+    cos_dd, gpp_mean, fCOS, gpp_total, fCOS_total = assemble_data(
+        aqout_data, models=models)
+    write_NA_totals(gpp_total, fCOS_total)
+    fig, map_objs, cos_cmap, cos_norm = draw_all_panels(cos_dd, gpp_mean, fCOS,
                                                         models, models_str)
-    return(fig, map_objs, cos_cmap, cos_norm)
+    return(fig, map_objs, cos_cmap, cos_norm, gpp_mean, gpp_total)
 
 if __name__ == "__main__":
-    runs = edp.get_runs()
+    runs = ndp.get_runs()
     models = [k for k in runs.keys()]
     models_str = [v.model for v in runs.values()]
-    # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(models, models_str)
-    [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
-        models=['canibis_161', 'kettle_161', 'casa_m15_161',
-                'casa_gfed_161', 'casa_gfed_135', 'casa_gfed_187'],
-        models_str=['Can-IBIS', 'Kettle', 'CASA-m15',
-                    'CASA-GFED3', 'CASA-GFED3', 'CASA-GFED3'])
-    fig.savefig('/tmp/BASC_fig.pdf')
-    # [fig, map_objs, cos_cmap, cos_norm] = map_grid_main(
-    #     models=['kettle_C4pctLRU', 'casa_gfed_C4pctLRU', 'MPI_C4pctLRU',
-    #             'casa_m15_C4pctLRU', 'canibis_C4pctLRU'],
-    #     models_str=['Kettle', 'CASA-GFED3', 'MPI', 'CASA-m15', 'Can-IBIS'])
-    # fig.savefig('/tmp/BASC_fig.pdf')
+    [fig, map_objs, cos_cmap, cos_norm, gpp, gpp_total] = map_grid_main(
+        models=['SiB_mech', 'SiB_calc',
+                'canibis_161', 'canibis_C4pctLRU',
+                'casa_gfed_161', 'casa_gfed_C4pctLRU'],
+        models_str=['SiB - mechanistic', 'SiB',
+                    'Can-IBIS', 'Can-IBIS',
+                    'CASA-GFED3', 'CASA-GFED3'])
+    fig.savefig(os.path.join(os.getenv('SCRATCH'),
+                             'GPP_Fplant_maps_fig.pdf'))

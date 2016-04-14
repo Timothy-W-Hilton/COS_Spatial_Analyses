@@ -28,6 +28,38 @@ class AqoutContainerSpatialPaper(aqpp.aqout_container):
        size" adjusted for autocorrelation within the STEM [COS].  The
        number of effectively independent [COS] data points from STEM.
     """
+    def parse(self, const_bounds=4.5e-10, *args, **kwargs):
+        """Parse aqout data by calling parent class parse method.  Then apply:
+
+        (1) adjustments to climatic boundaries totals: substract the
+        constant bounds [COS] of 450 ppt from all non-boundary run
+        AQOUT files, then add the bounds STEM run [COS] to each, then
+        remove the bounds run AQOUT from self.
+
+        ARGS:
+        const_bounds (scalar): the constant [COS] (in pptv) used in
+           constant boundaries STEM runs
+        """
+        # call the parent class parse method
+        super(AqoutContainerSpatialPaper, self).parse(*args, **kwargs)
+
+        # clim_idx = None
+        # for i, this_key in enumerate(self.aq_keys):
+        #     if 'climatological_bnd' in this_key:
+        #         clim_idx = i
+        #         print 'adjusting {} for climatolotical bounds'.format(self.key)
+        #         for j in range(len(self.data)):
+        #             if (j != clim_idx):
+        #                 self.data[j] = (self.data[j] -
+        #                                 const_bounds + self.data[clim_idx])
+
+        # if clim_idx is not None:
+        #     # climatic mean [COS] is now added to all other [COS] fields.
+        #     # Remove it from self.data so that it isn't double counted
+        #     del(self.data[clim_idx])
+        #     del(self.aq_keys[clim_idx])
+
+
     def calc_JA_midday_drawdown(self):
         """calculates and populates fields dd_JA_midday (see
         AqoutContainerSpatialPaper docstring)
