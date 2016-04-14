@@ -65,6 +65,7 @@ def count_unique_dates(gb):
     for this_group in gb:
         x = list(this_group)[1].datet.values
         unique_dates = np.unique(map(todate, x))
+
         print this_group[0], unique_dates.size
 
 
@@ -83,13 +84,26 @@ def count_flask_samples(df, sites=None):
         print 'total July/August flask samples: {}'.format(n_JulAug)
 
 
+def count_mean_samples_per_flight(obs):
+    """count the mean number of samples per flight
+    """
+    gr = obs.groupby(('sample_site_code', 'sample_year',
+                      'sample_month', 'sample_day'))
+    print 'mean, min, max samples per flight: {}, {}, {}'.format(
+        gr.size().mean(),
+        gr.size().min(),
+        gr.size().max())
+    return gr
+
 if __name__ == "__main__":
 
     sites = noaa_ocs.get_all_NOAA_airborne_data(Consts().noaa_dir)
+    sites.obs.reset_index(inplace=True, drop=True)
     jul_aug = sites.obs.query('sample_month in [7, 8]')
     gb = jul_aug.groupby(by=('sample_site_code',))
     obs_count = gb.size
     count_unique_dates(gb)
+    gb_dates = count_mean_samples_per_flight(sites.obs)
     # obs_count = jul_aug.groupby(by=('sample_site_code',)).agg(
     #     {'sample_site_code': np.size,
     #      'datet': lambda x: todate(x).date()})
