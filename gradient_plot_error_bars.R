@@ -250,7 +250,7 @@ myboot <- function(x) {
          R=5000)
 }
 
-df <- read.csv('./model_components_25Feb.csv')
+df <- read.csv('./model_components_14Apr.csv')
 df[['Fbounds']] <- 'CONST'
 df[['Fbounds']][grepl('climatological', df[['model']])] <- 'CLIM'
 components <- strsplit(x=as.character(df[['model']]), split='-')
@@ -314,8 +314,9 @@ if (TRUE) {
                      site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP'),
                      norm_site=norm_site,
                      legend_loc='none')
-    dev.off()
     par(oldpar)
+    dev.off()
+
 
     ## write.csv(df[, c("site_code", "longitude",  "latitude",
     ##                  "dd", "Fbounds", "Fplant", "Fsoil", "Fanthro")],
