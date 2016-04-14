@@ -212,6 +212,7 @@ gradient_CI_plot <- function(df,
         xlim_max = n_sites + max(x_offset)
     }
 
+    cex_plt = 0.9
     with(this_df,
          plotCI(1:n_sites + x_offset[[1]],
                 dd, uiw=(ci_hi - dd), liw=(dd - ci_lo),
@@ -223,11 +224,11 @@ gradient_CI_plot <- function(df,
                 ylim=ylim,
                 xlim=c(1 + min(x_offset), xlim_max),
                 pch=marker_sequence[[1]],
-                cex=1.0,
-                cex.axis=1.2,
-                cex.main=1.2,
-                cex.lab=1.2))
-    axis(1, at=1:n_sites, labels=site_names, cex.axis=1.2)
+                cex=cex_plt,
+                cex.axis=cex_plt,
+                cex.main=cex_plt,
+                cex.lab=cex_plt))
+    axis(1, at=1:n_sites, labels=site_names, cex.axis=cex_plt)
 
     for (i in 2:n_models) {
         cat(paste('plotting models[', models[[i]], ']\n'))
@@ -250,10 +251,10 @@ gradient_CI_plot <- function(df,
           side=3,
           line=-0.5,
           cex=1.2,
-          at=par("usr")[1]-0.1*diff(par("usr")[1:2]))
+          at=par("usr")[1]-0.2*diff(par("usr")[1:2]))
     if (legend_loc != 'none') {
         legend(x=legend_loc, legend=mod_strs,
-               pch=marker_sequence, col=pal, cex=1.2)
+               pch=marker_sequence, col=pal, cex=cex_plt)
     }
 }
 
@@ -299,8 +300,8 @@ dfboot <- merge_obs(dfboot)
 if (TRUE) {
 
     norm_site <- ''
-    plot_width <- 3.5
-    plot_height <- 6
+    plot_width <- 3.425197  # 8.7 cm in inches, as per PNAS
+    plot_height <- 5.5
     if (nchar(norm_site) == 0){
         pdf(file='gradients_bootstrapCIs.pdf',
             width=plot_width, height=plot_height)
