@@ -11,6 +11,7 @@ import os.path
 
 import matplotlib.pyplot as plt
 import netCDF4
+import numpy as np
 from timutils import colormap_nlevs
 from stem_pytools.na_map import NAMapFigure
 from stem_pytools import domain
@@ -30,24 +31,26 @@ if __name__ == "__main__":
                                                nlevs=20,
                                                cmap=plt.get_cmap('Blues'),
                                                extend='neither')
-    fontsz = 14
+
+    d = domain.STEM_Domain()
+    d.get_STEMZ_height(wrfheight_fname='/Users/tim/work/Data/STEM/input/wrfheight-124x124-22levs.nc')
+    agl_perim = np.array([domain.get_2d_perimeter(d.agl[z, ...]).mean()
+                          for z in range(22)])
+
+    print "new settings"
+	fontsz = 14
     matplotlib.rcParams.update({'font.size': fontsz})
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
-    cm = ax.pcolormesh(cos, cmap=cmap, norm=norm,
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 6))
+    cm = ax.pcolormesh(np.arange(500), agl_perim, cos,
+                       cmap=cmap, norm=norm,
                        linewidth=0, rasterized=True)
     ax.set_xlim([0, 500])
-    ax.set_ylim([0, 22])
-    ax.set_ylabel('STEM Z level', fontdict={'fontsize': fontsz})
-    ax.set_xlabel('lateral boundary index',
-                  fontdict={'fontsize': fontsz})
-    # ax.set_title('climatological N American boundary',
-    #              fontdict={'fontsize': fontsz})
-    cb = plt.colorbar(cm, cmap=cmap, norm=norm, ax=ax, format='%d')
-    cb.set_label('[COS] (pptv)', fontdict={'fontsize': fontsz})
-    cb.ax.tick_params(labelsize=fontsz)
-    cb.solids.set_rasterized(True)
+    ax.set_ylim([agl_perim.min(), agl_perim.max()])
+    ax.set_ylabel('meters above ground', fontdict={'fontsize': fontsz})
+    ax.set_xlabel('lateral boundary index', fontdict={'fontsize': fontsz})
+    ax_cb = plt.colorbar(cm, cmap=cmap, norm=norm, ax=ax)
+    ax_cb.set_label('[COS] (pptv)', fontdict={'fontsize': fontsz})
+    ax_cb.solids.set_rasterized(True)
 
-    fig.savefig(os.path.join(os.getenv('HOME'),
-                             'plots',
-                             'climatological_bounds.pdf'))
+    fig.savefig('/Users/tim/Desktop/climatological_bounds.pdf')
     plt.close(fig)
