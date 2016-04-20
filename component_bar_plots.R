@@ -1,6 +1,7 @@
 library(lattice)
 library(latticeExtra)
 library(tidyr)
+library(plotrix)  ## for std.error
 
 parse_components <- function() {
     df <- read.csv('ocs_dd_renamed.csv')
@@ -78,18 +79,71 @@ class.subset <- function(df, class.name) {
 df0 <- parse_components()
 df <- reformat_components(df0)
 
+dd_mean <- aggregate(x=df['drawdown'],
+                     by=df[, c('component', 'type')],
+                     FUN=mean)
+dd_se <- aggregate(x=df['drawdown'],
+                   by=df[, c('component', 'type')],
+                   FUN=std.error)
+dd <- merge(dd_mean, dd_se, by=c('component', 'type'),
+            suffixes=c('.mean', '.se'))
+dd[['CI95']] <- dd[['drawdown.se']] * 1.96
 
-plt_plant <- bwplot(component ~ drawdown|type,
-                    data=class.subset(df, 'COS plant flux'))
-plt_soil <- bwplot(component ~ drawdown|type,
-                   data=class.subset(df, 'COS soil flux'))
-plt_anthro <- bwplot(component ~ drawdown|type,
-                     data=class.subset(df, 'COS anthropogenic flux'))
-plt_bounds <- bwplot(component ~ drawdown|type,
-                     data=class.subset(df, 'boundary conditions'),
-                     xlab='COS drawdown (pptv)')
+## adapted from
+## http://stackoverflow.com/questions/19975390/add-error-bars-seperately-in-lattice-line-plot
+panel.errorbars <- function(x, y, lx, ux, ...) {
+                        panel.xyplot(x, y, col='black', pch='x', cex=1.5, ...)
+                        panel.arrows(x0 = lx, x1 = ux,
+                                     y0 = y, y1 = y,
+                                     col = "black",
+                                     ends='both',
+                                     angle=90,
+                                     length=0.05,
+                                     ...)
+                    }
+full_xlim <- c(with(dd, min(drawdown.mean - CI95)),
+               with(dd, max(drawdown.mean + CI95)))
 
-pls <- c(plt_bounds, plt_anthro, plt_soil, plt_plant, x.same=TRUE, layout=c(1, 4))
+this_subset <- class.subset(dd, 'COS plant flux')
+plt_plant <- xyplot(component ~ drawdown.mean | type,
+                    data=this_subset,
+                    ylab='',
+                    scales = list(y=list(rot=0)),
+                    xlim=c(-10, 60),
+                    lx = this_subset$drawdown.mean - this_subset$CI95,
+                    ux = this_subset$drawdown.mean + this_subset$CI95,
+                    panel=panel.errorbars)
+this_subset <- class.subset(dd, 'COS soil flux')
+plt_soil <- xyplot(component ~ drawdown.mean | type,
+                   data=this_subset,
+                   ylab='',
+                   scales = list(y=list(rot=0)),
+                   xlim=c(-10, 60),
+                   lx = this_subset$drawdown.mean - this_subset$CI95,
+                   ux = this_subset$drawdown.mean + this_subset$CI95,
+                   panel=panel.errorbars)
+this_subset <- class.subset(dd, 'COS anthropogenic flux')
+plt_anthro <- xyplot(component ~ drawdown.mean | type,
+                     data=this_subset,
+                     scales = list(y=list(rot=0)),
+                     ylab='',
+                     xlim=c(-10, 60),
+                     lx = this_subset$drawdown.mean - this_subset$CI95,
+                     ux = this_subset$drawdown.mean + this_subset$CI95,
+                     panel=panel.errorbars)
+this_subset <- class.subset(dd, 'boundary conditions')
+plt_bounds <- xyplot(component ~ drawdown.mean | type,
+                     data=this_subset,
+                     xlab='COS drawdown (pptv)',
+                     ylab='',
+                     scales = list(y=list(rot=0)),
+                     xlim=c(-10, 60),
+                     lx = this_subset$drawdown.mean - this_subset$CI95,
+                     ux = this_subset$drawdown.mean + this_subset$CI95,
+                     panel=panel.errorbars)
+
+pls <- c(plt_bounds, plt_anthro, plt_soil, plt_plant, layout=c(1, 4))
+
 pdf('/tmp/model_components.pdf')
 print(pls)
 dev.off()
