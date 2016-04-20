@@ -106,7 +106,10 @@ theme.nopadding <-
                   key.ylab.padding = 0,
                   ylab.axis.padding = 0,
                   axis.key.padding = 0,
-                  right.padding = 1))
+                  right.padding = 1),
+         fontsize=list(text=10, points=10),
+         xlab.text=list(cex=3),
+         axis.text=list(cex=1))
 
 
 ## Panel function to plot points with errorbars. Adapted from
@@ -118,7 +121,7 @@ panel.errorbars <- function(x, y, lx, ux, ...) {
                                      col = "black",
                                      ends='both',
                                      angle=90,
-                                     length=0.05,
+                                     length=0.1,
                                      ...)
                     }
 full_xlim <- c(with(dd, min(drawdown.mean - CI95)),
