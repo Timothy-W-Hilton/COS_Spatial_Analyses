@@ -89,7 +89,27 @@ dd <- merge(dd_mean, dd_se, by=c('component', 'type'),
             suffixes=c('.mean', '.se'))
 dd[['CI95']] <- dd[['drawdown.se']] * 1.96
 
-## adapted from
+
+## Remove whitespace padding around the sides of the figure. Adapted
+## from https://stat.ethz.ch/pipermail/r-help/2007-January/123556.html
+theme.nopadding <-
+    list(layout.heights =
+             list(top.padding = 0,
+                  main.key.padding = 0,
+                  key.axis.padding = 0,
+                  axis.xlab.padding = 0,
+                  xlab.key.padding = 0,
+                  key.sub.padding = 0,
+                  bottom.padding = 1),
+         layout.widths =
+             list(left.padding = 0,
+                  key.ylab.padding = 0,
+                  ylab.axis.padding = 0,
+                  axis.key.padding = 0,
+                  right.padding = 1))
+
+
+## Panel function to plot points with errorbars. Adapted from
 ## http://stackoverflow.com/questions/19975390/add-error-bars-seperately-in-lattice-line-plot
 panel.errorbars <- function(x, y, lx, ux, ...) {
                         panel.xyplot(x, y, col='black', pch='x', cex=1.5, ...)
@@ -108,8 +128,9 @@ this_subset <- class.subset(dd, 'COS plant flux')
 plt_plant <- xyplot(component ~ drawdown.mean | type,
                     data=this_subset,
                     ylab='',
-                    scales = list(y=list(rot=0)),
+                    scales = list(y=list(rot=50)),
                     xlim=c(-10, 60),
+                    par.settings=theme.nopadding,
                     lx = this_subset$drawdown.mean - this_subset$CI95,
                     ux = this_subset$drawdown.mean + this_subset$CI95,
                     panel=panel.errorbars)
@@ -117,7 +138,8 @@ this_subset <- class.subset(dd, 'COS soil flux')
 plt_soil <- xyplot(component ~ drawdown.mean | type,
                    data=this_subset,
                    ylab='',
-                   scales = list(y=list(rot=0)),
+                   scales = list(y=list(rot=50)),
+                   par.settings=theme.nopadding,
                    xlim=c(-10, 60),
                    lx = this_subset$drawdown.mean - this_subset$CI95,
                    ux = this_subset$drawdown.mean + this_subset$CI95,
@@ -125,7 +147,8 @@ plt_soil <- xyplot(component ~ drawdown.mean | type,
 this_subset <- class.subset(dd, 'COS anthropogenic flux')
 plt_anthro <- xyplot(component ~ drawdown.mean | type,
                      data=this_subset,
-                     scales = list(y=list(rot=0)),
+                     scales = list(y=list(rot=50)),
+                     par.settings=theme.nopadding,
                      ylab='',
                      xlim=c(-10, 60),
                      lx = this_subset$drawdown.mean - this_subset$CI95,
@@ -136,14 +159,19 @@ plt_bounds <- xyplot(component ~ drawdown.mean | type,
                      data=this_subset,
                      xlab='COS drawdown (pptv)',
                      ylab='',
-                     scales = list(y=list(rot=0)),
+                     scales = list(y=list(rot=50)),
+                     par.settings=theme.nopadding,
                      xlim=c(-10, 60),
                      lx = this_subset$drawdown.mean - this_subset$CI95,
                      ux = this_subset$drawdown.mean + this_subset$CI95,
                      panel=panel.errorbars)
 
 pls <- c(plt_bounds, plt_anthro, plt_soil, plt_plant, layout=c(1, 4))
-
-pdf('/tmp/model_components.pdf')
+pls <- resizePanels(pls, h=c(1, 1, 1, 2.4))
+cm_per_in <- 2.54  ## centimeters per inch
+PNAS_column <- 8.7  ## width of one PNAS column in cm
+PNAS_two_columns <- 17.8  ## width of two PNAS columns in cm
+width_cm <- (PNAS_column / cm_per_in)
+pdf('/tmp/model_components.pdf', width=width_cm, height=width_cm * 1.3)
 print(pls)
 dev.off()
