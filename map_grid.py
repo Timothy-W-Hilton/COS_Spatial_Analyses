@@ -11,6 +11,7 @@ import socket
 import numpy as np
 import warnings
 from mpl_toolkits.basemap import maskoceans
+from matplotlib.colors import from_levels_and_colors
 
 import stem_pytools.NERSC_data_paths as ndp
 from stem_pytools import STEM_parsers as sp
@@ -312,6 +313,21 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
         cmap=plt.get_cmap('Greens'),
         extend='max')
 
+    color_band_edges = [0.0, 3.5, 6.5, 12.0, 13.0]
+    color_band_edges = [0.0, 3.25, 6.5, 9.75, 13.0]
+    gpp_base_cmap = plt.cm.Greens(np.linspace(0.05,
+                                              0.95,
+                                              len(color_band_edges * 10)))
+    gpp_base_cmap_small = plt.cm.Greens(np.linspace(0.05,
+                                                    0.95,
+                                                    len(color_band_edges)))
+    gpp_base_cmap = gpp_base_cmap[[0, 10, 40, 45, 49], :]
+    print 'gpp_base_cmap ', gpp_base_cmap
+    print 'gpp_base_cmap_small ', gpp_base_cmap_small
+    gpp_cmap, gpp_norm = from_levels_and_colors(color_band_edges,
+                                                gpp_base_cmap_small,
+                                                extend='max')
+
     mod_objs = ndp.get_runs()
     for i, this_mod in enumerate(models):
         # plot GPP drawdown maps
@@ -340,12 +356,12 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
 
     fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap(
         fcos_vmin, fcos_vmax,
-        nlevs=20,
+        nlevs=6,
         cmap=plt.get_cmap('Blues'),
         extend='neither')
     for i, this_mod in enumerate(models):
         # plot fCOS drawdown maps
-        print("plotting {model}({k}) GPP".format(model=models_str[i],
+        print("plotting {model}({k}) fCOS".format(model=models_str[i],
                                                  k=models[i]))
         map_objs[1, i], cm = draw_map(t_str=None,
                                       ax=ax[1, i],
@@ -367,12 +383,12 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     cos_cmap, cos_norm = colormap_nlevs.setup_colormap(
         cos_vmin,
         cos_vmax,
-        nlevs=20,
+        nlevs=7,
         cmap=plt.get_cmap('Oranges'),
         extend='max')
     for i, this_mod in enumerate(models):
         # plot [COS] drawdown maps
-        print("plotting {model}({k}) GPP".format(model=models_str[i],
+        print("plotting {model}({k}) COS DD".format(model=models_str[i],
                                                  k=models[i]))
         this_cos = cos[this_mod]
         if any(this_cos.flatten() < 0):
