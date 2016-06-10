@@ -330,20 +330,24 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
 
     mod_objs = ndp.get_runs()
     for i, this_mod in enumerate(models):
-        # plot GPP drawdown maps
-        print("plotting {model}({k}) GPP".format(model=models_str[i],
-                                                 k=models[i]))
+        if np.mod(i, 2) == 0:
+            # the GPP maps are duplicates within each GPP model, so
+            # only plot every other one
+            # plot GPP drawdown maps
+            print("plotting {model}({k}) GPP".format(model=models_str[i],
+                                                     k=models[i]))
 
-        map_objs[0, i], cm = draw_map(
-            t_str='{}, LRU={}'.format(models_str[i],
-                                      mod_objs[this_mod].LRU),
-            ax=ax[0, i],   # axis 0 is left-most on row 3
-            data=gpp[this_mod],
-            vmin=gpp_vmin,
-            vmax=gpp_vmax,
-            cmap=gpp_cmap,
-            norm=gpp_norm)
-
+            map_objs[0, i], cm = draw_map(
+                t_str='{}, LRU={}'.format(models_str[i],
+                                          mod_objs[this_mod].LRU),
+                ax=ax[0, i],   # axis 0 is left-most on row 3
+                data=gpp[this_mod],
+                vmin=gpp_vmin,
+                vmax=gpp_vmax,
+                cmap=gpp_cmap,
+                norm=gpp_norm)
+        else:
+            fig.delaxes(ax[0, i])
     all_gpp = np.dstack([v for v in gpp.values()]).flatten()
     cb = colorbar_from_cmap_norm(gpp_cmap,
                                  gpp_norm,
