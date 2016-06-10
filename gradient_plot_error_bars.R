@@ -1,6 +1,49 @@
 library(plotrix)
 library(RColorBrewer)
 library(tidyr)  # could also use reshape2
+library(boot)
+
+get_obs_CI <- function(fname='./site_daily_dd.csv') {
+    data <- read.csv(fname)
+
+    sites <- split(data[['ocs_dd']],
+                   f=data[, 'sample_site_code'])
+
+    site_means <- lapply(sites, mean, na.rm=TRUE)
+    site_stderr <- lapply(sites, std.error, na.rm=TRUE)
+    obs <- data.frame(Fplant='NOAA obs',
+                      site=names(site_means),
+                      dd=unlist(site_means))
+    obs[['ci_lo']] <- obs[['dd']] - unlist(site_stderr) * 1.96
+    obs[['ci_hi']] <- obs[['dd']] + unlist(site_stderr) * 1.96
+    row.names(obs) <- paste(row.names(obs), '.obs', sep='')
+    return(obs)
+}
+
+
+merge_obs <- function(dfboot) {
+    obs <- get_obs_CI()
+    return(rbind(dfboot, obs))
+}
+
+
+##' human-readable names for COS Fplant models
+##'
+##' The data frame column names are more machine-oriented: no spaces, caps, etc.  These are nicer-looking strings for e.g. plot labels.
+##' @title
+##' @return list of strings. The data frame column labels are the list
+##' names and the human-readble strings are the list elements.
+##' @author Timothy W. Hilton
+##' @export
+human_readable_model_names <- function() {
+    return(list(canibis_161='Can-IBIS, LRU=1.61',
+                canibis_C4pctLRU= 'Can-IBIS, LRU=C3/C4',
+                casa_gfed_161='CASA-GFED3, LRU=1.61',
+                casa_gfed_C4pctLRU='CASA-GFED3, LRU=C3/C4',
+                SiB_calc='SiB, LRU=1.61',
+                SiB_mech='SiB, mechanistic',
+                'NOAA obs'='observed'))
+}
 
 ##' offsets are calculated from an arbitrary center
 ##'
@@ -18,6 +61,7 @@ calculate_hoffset <- function(npoints, gapwidth) {
                    length.out=npoints)
     return(offsets)
 }
+
 ##' Normalize all rows in a data frame to the row with label
 ##' norm_site.  Helper function for ci_normalizer -- should not be
 ##' called by user.
@@ -32,9 +76,10 @@ calculate_hoffset <- function(npoints, gapwidth) {
 ##' @author Timothy W. Hilton
 ##' @export
 row_normalizer <- function(dd, norm_site='NHA') {
-    norm_data <- dd[norm_site, ]
+    num_idx = unlist(lapply(dd, is.numeric))
+    norm_data <- dd[norm_site, num_idx]
     for (i in seq(1, nrow(dd))) {
-        dd[i, ] <- dd[i, ] / norm_data
+        dd[i, num_idx] <- dd[i, num_idx] / norm_data
     }
     return(dd)
 }
@@ -99,28 +144,6 @@ dummy_data <- function() {
     return(list(dd=dd, ci=ci))
 }
 
-##' .. Helper function for gradient_CI_plot
-##'
-##' adds points with error bars to an existing gradient model
-##' component plot.
-##' @title
-##' @param dd (data frame): NOAA sites in rows, model component
-##' drawdowns (pptv) in columns
-##' @param ci (data frame): NOAA sites in rows, model component
-##' drawdowns standard errors (pptv) in columns
-##' @param col color sequence for plotting; one color per model
-##' component
-##' @param x_offset (float): horizontal offset for the points/error
-##' bars.
-##' @return
-##' @author Timothy W. Hilton
-##' @export
-CI_plotter <- function(dd, ci_hi, ci_lo, col, x_offset, marker) {
-    n_sites <- length(dd)
-    plotCI(1:n_sites + x_offset, dd, uiw=ci_hi, liw=ci_lo,
-           col=col, pch=marker, add=TRUE)
-}
-
 ##' .. produce a scatter plot with error bars of STEM model component
 ##' drawdowns at NOAA sites.
 ##'
@@ -130,78 +153,163 @@ CI_plotter <- function(dd, ci_hi, ci_lo, col, x_offset, marker) {
 ##' drawdowns (pptv) in columns
 ##' @param dd_col (string): name of the column in df containing
 ##' drawdown values
-##' @param se_col (string): name of the column in df containing
-##' standard errors
+##' @param ci_hi_col (string): name of the column in df containing
+##' upper confidence interval widths
+##' @param ci_lo_col (string): name of the column in df containing
+##' lower confidence interval widths
+##' @param t_str (string): Main title string for the plot
+##' @param site_names (vector of strings): Three letter site codes;
+##' the gradient will be plotted in this order from left to right.
+##' @param norm_site (string): row label of a site to normalize the
+##' data against.  If unspecified (default), no normalization is
+##' performed.
 ##' @return
 ##' @author Timothy W. Hilton
 ##' @export
-gradient_CI_plot <- function(df, dd_col='dd', se_col='dd_se_neff', norm=FALSE,
-                             site_names=list()) {
-    n_sites <- nlevels(df[['site_code']])
-    n_models <- nlevels(df[['model']])
-    models <- levels(df[['model']])
-    pal <- brewer.pal(n_models, 'Dark2')
-    marker_sequence <- c(0, 1, 3, 4, 5)
+gradient_CI_plot <- function(df,
+                             dd_col='dd',
+                             ci_hi_col='ci_hi',
+                             ci_lo_col='ci_lo',
+                             t_str='gradient plot',
+                             site_names=list(),
+                             norm_site='',
+                             legend_loc='right') {
 
-    if (length(site_names) == 0) {
-        site_names <- levels(df[['site_code']])
-    }
-
-    ## dfw_dd: "data frame, wide; drawdown"
-    dfw_dd <- spread(df[, c('model', 'site_code', 'dd')],
-                     model, dd)
-    row.names(dfw_dd) <- dfw_dd[['site_code']]
-    dfw_dd <- dfw_dd[, !names(dfw_dd) %in% "site_code"]
-    ## make sure sites are in the requested order
-    dfw_dd <- dfw_dd[site_names, ]
-
-    dfw_se <- spread(df[, c('model', 'site_code', 'dd_se_neff')],
-                     model, dd_se_neff)
-    row.names(dfw_se) <- dfw_se[['site_code']]
-    dfw_se <- dfw_se[, !names(dfw_se) %in% "site_code"]
-    ## make sure sites are in the requested order
-    dfw_se <- dfw_se[site_names, ]
-    ## dfw_dd: "data frame, wide; confidence interval"
-    dfw_ci <- dfw_se * 1.96 ## 95% confidence interval
-
-    if (norm) {
-        dd_list <- ci_normalizer(dfw_dd, dfw_ci, 'NHA')
-        t_str <- "normalized drawdown with 95% confidence intervals"
-    } else {
-        dd_list <- list(dd=dfw_dd, ci_hi=dfw_ci, ci_lo=dfw_ci)
-        t_str <- "drawdown with 95% confidence intervals"
-    }
-
+    n_sites <- length(site_names)
+    models <- rev(sort(unique(df[['Fplant']])))
+    idx <- which(models=='NOAA obs')
+    models <- c(models[idx], models[-idx])
+    n_models <- length(models)
+    pal <- c("#000000", brewer.pal(n_models-1, 'Paired'))
+    marker_sequence <- c(8, seq(0, n_models-1))
     x_offset <- calculate_hoffset(n_models, 0.075)
-    plotCI(1:n_sites + x_offset[[1]],
-           dd_list[['dd']][[1]],
-           uiw=dfw_ci[['ci_hi']][[1]],
-           liw=dfw_ci[['ci_lo']][[1]],
-           xaxt='n',
-           main=t_str,
-           ylab='Drawdown  (pptv)',
-           xlab='site',
-           col=pal[[1]],
-           ylim=range(cbind(dd_list[['dd']] + dd_list[['ci_hi']],
-                            dd_list[['dd']] - dd_list[['ci_lo']])),
-           xlim=c(1 + min(x_offset), n_sites + max(x_offset)),
-           pch=marker_sequence[[1]])
-    ## points(x, y, col=pal[[1]], type='l')
-    axis(1, at=1:n_sites, labels=site_names)
+    ylab_str <- 'Drawdown  (pptv)'
 
-    mapply(CI_plotter, dd_list[['dd']], dd_list[['ci_hi']], dd_list[['ci_lo']],
-           pal, x_offset, marker_sequence[1:n_models])
+    if (nchar(norm_site) > 0) {
+        ylab_str <- paste("Drawdown normalized to", norm_site)
+        df_norm <- by(df, df[['Fplant']], function(x) {
+            orig_row_names <- row.names(x)
+            row.names(x) <- x[['site']]
+            x <- row_normalizer(x, 'NHA')
+            row.names(x) <- orig_row_names
+            return(x)})
+        df_norm <- do.call(rbind, df_norm)
+        df <- df_norm
+    }
+    ylim <- range(df[df[['site']] %in% site_names, c('ci_lo', 'ci_hi')])
+    idx = (df[['site']] %in% site_names) & (df[['Fplant']]==models[[1]])
+    this_df <- df[idx, ]
+    row.names(this_df) <- this_df[['site']]
+    this_df <- this_df[site_names, ]
 
-    legend(x='right', legend=models, pch=marker_sequence, col=pal)
-    return(list(dd=dfw_dd, ci=dfw_ci))
+    with(this_df,
+         plotCI(1:n_sites + x_offset[[1]],
+                dd, uiw=(ci_hi - dd), liw=(dd - ci_lo),
+                xaxt='n',
+                main=t_str,
+                ylab=ylab_str,
+                xlab=NA,
+                col=pal[[1]],
+                ylim=ylim,
+                xlim=c(1 + min(x_offset), n_sites * 1.6),
+                pch=marker_sequence[[1]],
+                cex=1.0,
+                cex.axis=1.2,
+                cex.main=1.2,
+                cex.lab=1.2))
+    axis(1, at=1:n_sites, labels=site_names, cex.axis=1.2)
+
+    for (i in 2:n_models) {
+        cat(paste('plotting models[', models[[i]], ']\n'))
+        idx = (df[['site']] %in% site_names) & (df[['Fplant']]==models[[i]])
+        this_df <- df[idx, ]
+        row.names(this_df) <- this_df[['site']]
+        this_df <- this_df[site_names, ]
+        with(this_df,
+             plotCI(x=1:n_sites + x_offset[[i]],
+                    y=dd, uiw=ci_hi - dd, liw=dd - ci_lo,
+                    add=TRUE,
+                    col=pal[[i]],
+                    pch=marker_sequence[[i]]))
+    }
+    mod_strs <- unlist(human_readable_model_names()[models])
+    legend(x=legend_loc, legend=mod_strs, pch=marker_sequence, col=pal, cex=1.2)
 }
 
-df <- read.csv('./model_components_18Feb.csv')
-fig3a_data <- df[df[['site_code']] %in% c('NHA', 'CMA', 'SCA') &
-                     df[['model']] %in% c('casa_gfed_161', 'SiB_calc',
-                                          'SiB_mech', 'canibis_C4pctLRU'),
-                 c('model', 'site_code', 'dd', 'dd_se_neff')]
-fig3a_data <- droplevels(fig3a_data)
-pdf('ECoast_gradient_with_std_error_norm.pdf')
-data <- gradient_CI_plot(fig3a_data, norm=FALSE, site_names=c('NHA', 'CMA', 'SCA'))
-dev.off()
+myboot <- function(x) {
+    boot(x[['dd']],
+         statistic=function(data, ind) return(mean(data[ind])),
+         R=5000)
+}
+
+df <- read.csv('./model_components_25Feb.csv')
+df[['Fbounds']] <- 'CONST'
+df[['Fbounds']][grepl('climatological', df[['model']])] <- 'CLIM'
+components <- strsplit(x=as.character(df[['model']]), split='-')
+df[['Fplant']] <- unlist(lapply(components, function(x) x[[1]]))
+df[['Fsoil']] <- unlist(lapply(components, function(x) x[[2]]))
+df[['Fanthro']] <- unlist(lapply(components, function(x) x[[3]]))
+
+dfl <- split(df[, c('site_code', 'Fplant', 'Fsoil', 'Fanthro',
+                    'Fbounds', 'dd')],
+             f=df[, c('site_code', 'Fplant')], drop=TRUE)
+
+boot_results <- lapply(dfl,
+                       FUN=myboot)
+boot_ci_results <- lapply(boot_results, boot.ci,
+                          type=c("norm","basic", "perc", "bca"))
+dfboot <- data.frame(row.names=names(boot_results),
+                     dd=rep(NA, length(boot_results)),
+                     ci_lo=rep(NA, length(boot_results)),
+                     ci_hi=rep(NA, length(boot_results)),
+                     Fplant=rep(NA, length(boot_results)),
+                     site=rep(NA, length(boot_results)))
+for (this_set in names(boot_results)) {
+    dfboot[[this_set, 'dd']] <- boot_results[[this_set]][['t0']]
+    dfboot[[this_set, 'ci_lo']] <- boot_ci_results[[this_set]][['basic']][[4]]
+    dfboot[[this_set, 'ci_hi']] <- boot_ci_results[[this_set]][['basic']][[5]]
+    dfboot[[this_set, 'site']] <- unlist(strsplit(this_set, '\\.'))[[1]]
+    dfboot[[this_set, 'Fplant']] <- unlist(strsplit(this_set, '\\.'))[[2]]
+}
+
+dfboot_orig <- dfboot
+dfboot <- merge_obs(dfboot)
+
+if (TRUE) {
+
+    norm_site <- ''
+    plot_width <- 6 # inches
+    plot_height <- 10 # inches
+    if (nchar(norm_site) == 0){
+        pdf(file='gradients_bootstrapCIs.pdf',
+            width=plot_width, height=plot_height)
+        cat('writing gradients_bootstrapCIs.pdf\n')
+    } else {
+        pdf(file='gradients_bootstrapCIs_norm.pdf',
+            width=plot_width, height=plot_height)
+        cat('writing gradients_bootstrapCIs_norm.pdf\n')
+    }
+    oldpar<-panes(matrix(1:3,nrow=3,byrow=TRUE))
+    # par(mar=c(bottom, left, top, right)’)
+    par(mar=c(2,5,1.6,1))
+    gradient_CI_plot(dfboot, t_str='East Coast',
+                     site_names=c('NHA', 'CMA', 'SCA'),
+                     norm_site=norm_site,
+                     legend_loc='bottomright')
+
+    gradient_CI_plot(dfboot, t_str='mid-continent West to East (Dry to Wet)',
+                     site_names=c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'),
+                     norm_site=norm_site,
+                     legend_loc='bottomright')
+
+    gradient_CI_plot(dfboot, t_str='mid-continent North to South',
+                     site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC'),
+                     norm_site=norm_site,
+                     legend_loc='topright')
+    dev.off()
+    par(oldpar)
+
+    ## write.csv(df[, c("site_code", "longitude",  "latitude",
+    ##                  "dd", "Fbounds", "Fplant", "Fsoil", "Fanthro")],
+    ##           file='model_components_26Feb.csv')
+}
