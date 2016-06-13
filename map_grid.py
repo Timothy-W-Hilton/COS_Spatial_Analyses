@@ -196,7 +196,7 @@ def setup_panel_array(nrows=3, ncols=6):
     cbar_ax: nrows by 1 numpy array of
         matplotlib.axes._subplots.AxesSubplot objects (for colorbars)
     """
-    fig = plt.figure(figsize=(30, 15))
+    fig = plt.figure(figsize=(7, 3.5))
     # two gridspects - one for maps, one for colorbars
     gs_maps = gridspec.GridSpec(nrows, ncols)
     gs_maps.update(hspace=0.01, wspace=0.0, left=0.0, right=0.87)
@@ -415,6 +415,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     t = cbar_ax[2, 0].set_title('STEM [COS] drawdown (ppt)')
     t.set_y(1.09)
     t.set_fontsize(20)
+    # fig.tight_layout()
     return(fig, map_objs, cos_cmap, cos_norm)
 
 
