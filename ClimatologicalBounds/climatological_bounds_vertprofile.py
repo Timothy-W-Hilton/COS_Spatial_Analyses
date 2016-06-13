@@ -18,6 +18,7 @@ from stem_pytools import noaa_ocs
 from stem_pytools import domain
 from stem_pytools import STEM_mapper
 from stem_pytools.STEM_parsers import parse_STEM_var
+from timutils import colormap_nlevs
 
 
 def rm_nan(arr):
@@ -207,13 +208,7 @@ class SiteClimMean(object):
         missing values outside that range are set to the
         higest/lowest (in altitude) observed value.
         """
-        return self.z_obs_mean.ocs_interp.values[:, np.newaxis]
-
-    def get_minmax_cos(self):
-        """return the minimum [COS] value at the site
-        """
-        return (np.nanmin(self.z_obs_mean.ocs_interp.values),
-                np.nanmax(self.z_obs_mean.ocs_interp.values))
+        return(self.z_obs_mean.ocs_interp.values[:, np.newaxis])
 
 
 class ClimatologicalTopBound(object):
@@ -328,20 +323,57 @@ class ClimatologicalTopBound(object):
         stem_lon = self.d.get_lon()
         stem_lat = self.d.get_lat()
 
+        top_cmap, top_norm = colormap_nlevs.setup_colormap(
+            np.floor(self.top_bnd.min()),
+            np.ceil(self.top_bnd.max()),
+            nlevs=6,
+            cmap=plt.get_cmap('Oranges'),
+            extend='neither')
+
         m = STEM_mapper.Mapper124x124(self.top_bnd).draw_map(
             fast_or_pretty='pretty',
-            cmap=plt.get_cmap('Blues'),
-            t_str='NOAA sites Jul-Aug climatological mean [COS] top bounds')
-        m.map.fig.set_figheight(30)
-        m.map.fig.set_figwidth(30)
-        x, y = m.map.map(stem_lon, stem_lat)
-        for i in range(0, stem_lon.shape[0], 5):
-            for j in range(0, stem_lon.shape[1], 5):
-                m.map.ax_map.text(x[i, j],
-                                  y[i, j],
-                                  self.sites_summary.site_code[
-                                      self.idx[0][i, j]])
-        m.map.fig.savefig('top_bnd.pdf', fontsize=1)
+            cmap=top_cmap,
+            norm=top_norm,
+            t_str='',
+            cbar_fmt_str='%d')
+        m.map.fig.set_figheight(8)
+        m.map.fig.set_figwidth(8)
+
+        sites_col = "#1b9e77"  # http://colorbrewer2.org dark2[1]
+        fontsz = 14
+        for this_site in np.unique(self.nearest_site_array):
+            idx = np.where(self.sites_summary.site_code == this_site)[0][0]
+            this_x, this_y = m.map.map(self.sites_summary.longitude[idx],
+                                       self.sites_summary.latitude[idx])
+            m.map.ax_map.text(this_x,
+                              this_y,
+                              this_site,
+                              fontsize=fontsz,
+                              color=sites_col,
+                              horizontalalignment='center',
+                              verticalalignment='center')
+        # draw bounds between NOAA sites' regions of top bound
+        vals = np.unique(self.top_bnd)
+        levs = vals[0:-1] + (np.diff(vals) / 2.0)
+        m.map.map.contour(stem_lon, stem_lat, self.top_bnd,
+                          levels=levs, latlon=True, colors=sites_col)
+
+        # plot lateral bounds cell indices on map
+        lat_bounds_col = "#7570b3"  # http://colorbrewer2.org dark2[2]
+        lat = domain.get_2d_perimeter(d.get_lat())
+        lon = domain.get_2d_perimeter(d.get_lon())
+        x, y = m.map.map(lon, lat)
+        for i in (0, 62, 186, 330, 434):
+            m.map.ax_map.text(x[i], y[i],  str(i),
+                              color="black",
+                              size=fontsz,
+                              bbox={"color": "black", "facecolor": "white"})
+
+        # label the color bar
+        m.map.ax_cmap.set_title('[COS] (pptv)\n',
+                                fontdict={'fontsize': fontsz})
+        m.map.ax_cmap.tick_params(labelsize=fontsz)
+        m.map.fig.savefig('top_bnd.pdf')
 
 
 class ClimatologicalLateralBoundNAmerica(object):
@@ -430,8 +462,7 @@ def create_sites_dict(sites_list):
     return sites_dict
 
 
-def plot_vertical_profiles(sites_list, xmin, xmax, title_suffix=None, ax=None,
-                           panel_lab=None):
+def plot_vertical_profiles(sites_list, title_suffix=None):
     """plot vertical profiles of each site in the argument sites_list
 
     ARGS:
@@ -443,70 +474,30 @@ def plot_vertical_profiles(sites_list, xmin, xmax, title_suffix=None, ax=None,
     RETURNS:
     None
     """
-
-    font = {'family': 'normal',
-            'size': 14}
-
-    matplotlib.rc('font', **font)
-
     # ax.set_color_cycle(palettable.colorbrewer.qualitative.Dark2_8.mpl_colors)
     ncolors = 8
     bmap = brewer2mpl.get_map('Set2', 'qualitative', ncolors)
     colors = bmap.mpl_colors
     matplotlib.rcParams['axes.color_cycle'] = colors
-    markers = ['o', 's', 'v', '^', 'D', '*', 'p']
-    marker_handles = []
-    fakelines = []
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(6, 6))
+    fig, ax = plt.subplots(figsize=(10, 10))
     for i, this_site in enumerate(sites_list):
         ax.plot(this_site.z_obs_mean.ocs_interp,
                 this_site.z_obs_mean.z_agl,
                 label=this_site.sitecode,
                 linewidth=2)
-        marker_handles.append(ax.scatter(this_site.z_obs_mean.analysis_value,
-                                         this_site.z_obs_mean.z_agl,
-                                         marker=markers[i % len(markers)],
-                                         label=this_site.sitecode,
-                                         s=60,
-                                         c=colors[i % ncolors]))
-        fakelines.append(plt.Line2D([0, 0], [0, 0],
-                                    color=colors[i % ncolors],
-                                    marker=markers[i % len(markers)],
-                                    linewidth=2,
-                                    linestyle='-'))
-    # ax.set_title(('NOAA sites Jul-Aug climatological mean [COS],'
-    #               ' {} m altitude bins\n{}'.format(
-    #                   sites_list[0].alt_bin_size,
-    #                   title_suffix)))
-    if panel_lab == 'b':   # only label the middle vertical axis
-        ax.set_ylabel('meters above ground')
+        ax.scatter(this_site.z_obs_mean.analysis_value,
+                   this_site.z_obs_mean.z_agl,
+                   marker='o', s=60, c=colors[i % ncolors])
+    ax.set_title(('NOAA sites Jul-Aug climatological mean [COS],'
+                  ' {} m altitude bins\n{}'.format(
+                      sites_list[0].alt_bin_size,
+                      title_suffix)))
+    ax.set_ylabel('height above ground (m)')
     ax.set_xlabel('[COS] (pptv)')
-    ax.set_ylim([0, 16000])  # meters above ground level
-
-    max_yticks = 4
-    yloc = plt.MaxNLocator(max_yticks)
-    ax.yaxis.set_major_locator(yloc)
-
-    ax.set_xlim([xmin * 0.99, xmax * 1.01])
-    # shrink axis to 80% of current width to leave room for legend
-    # (thanks
-    # http://stackoverflow.com/questions/9651092/my-matplotlib-pyplot-legend-is-being-cut-off)
-    box = ax.get_position()
-    ax.set_position([box.x0 + (box.width * 0.1), box.y0,
-                     box.width * 0.75, box.height])
-    print "drawing legend"
-    ax.legend(fakelines,
-              [m.get_label() for m in marker_handles],
-              loc='upper left',
-              bbox_to_anchor=(1, 1),
-              bbox_transform=ax.transAxes,
-              fontsize=14,
-              labelspacing=0.1,
-              numpoints=1)
-    if panel_lab is not None:
-        ax.text(-0.35, 1.1, panel_lab, transform=ax.transAxes, fontsize=16)
-    # ax.figure.tight_layout()
+    ax.set_ylim([0, 16000])
+    ax.legend(loc='best')
+    fig.savefig('jul_aug_column_profiles0.pdf')
+    plt.close(fig)
 
 
 def top_bounds_QC(top_fname):
@@ -519,15 +510,6 @@ def top_bounds_QC(top_fname):
                cmap=plt.get_cmap('Blues'))
     m.map.fig.savefig('./top_bounds_ioapi_map.png')
     plt.close(m.map.fig)
-
-
-def get_minmax_cos_multisite(site_objs):
-    """returns a tuple containing the minimum and maximum COS values
-    for a list of SiteClimMean objects.
-    """
-    all_minmax = np.array([this.get_minmax_cos() for this in site_objs])
-    return (np.nanmin(all_minmax), np.nanmax(all_minmax))
-
 
 if __name__ == "__main__":
 
@@ -545,55 +527,27 @@ if __name__ == "__main__":
     # drop OIL because of weird-looking column profile from only two
     # days of data, with three nearby sites (AAO, WBI, HIL) with much
     # more data and very different column means.
-    if 'AAO' in sites_list:
-        sites_list.remove('AAO')
+    if 'OIL' in sites_list:
+        sites_list.remove('OIL')
     lateral_bounds_sites_list = ['THD', 'PFA', 'ESP',
                                  'TGC', 'NHA', 'SCA', 'CMA']
-    east_coast_site_list = ['NHA', 'SCA', 'CMA']
-    midcontinent_NS_site_list = ['ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP']
-    midcontinent_EW_site_list = ['CAR', 'WBI', 'OIL', 'HIL', 'CMA']
     sites_dict = create_sites_dict(sites_list)
 
-    create_ioapi_files = False
-    if create_ioapi_files:
-        # --
-        # create the lateral boundary file for N America
-        lat_bnd = ClimatologicalLateralBoundNAmerica(sites_dict)
-        lat_bnd.write_bounds_ioapi_file()
+    # --
+    # create the lateral boundary file for N America
+    lat_bnd = ClimatologicalLateralBoundNAmerica(sites_dict)
+    lat_bnd.write_bounds_ioapi_file()
 
-        # --
-        # create a top boundary file
-        top_bnd = ClimatologicalTopBound(d, sites_list, sites_dict)
-        top_bnd.write_ioapi(
-            fname_bdy='upbound_124x124-climatological_124x124.nc')
-        top_bnd.map_nearest_noaa_site()
-        top_bounds_QC('upbound_124x124-climatological_124x124.nc')
+    # --
+    # create a top boundary file
+    top_bnd = ClimatologicalTopBound(d, sites_list, sites_dict)
+    top_bnd.write_ioapi(fname_bdy='upbound_124x124-climatological_124x124.nc')
+    top_bnd.map_nearest_noaa_site()
+    # top_bounds_QC('upbound_124x124-climatological_124x124.nc')
 
-    fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(6, 6))
-    cos_minmax = get_minmax_cos_multisite(sites_dict.values())
-    plot_vertical_profiles([sites_dict[k] for k in lateral_bounds_sites_list],
-                           xmin=cos_minmax[0],
-                           xmax=cos_minmax[1],
-                           title_suffix='lateral bounds sites',
-                           ax=ax[0],
-                           panel_lab='a')
-    plot_vertical_profiles([sites_dict[k] for k in midcontinent_NS_site_list],
-                           xmin=cos_minmax[0],
-                           xmax=cos_minmax[1],
-                           title_suffix='midcont NS sites',
-                           ax=ax[1],
-                           panel_lab='b')
-    plot_vertical_profiles([sites_dict[k] for k in midcontinent_EW_site_list],
-                           xmin=cos_minmax[0],
-                           xmax=cos_minmax[1],
-                           title_suffix='midcont EW sites',
-                           ax=ax[2],
-                           panel_lab='c')
-    fig.savefig('vertical_profiles.pdf')
+    # plot_vertical_profiles([sites_dict[k] for k in lateral_bounds_sites_list],
+    #                        'lateral bounds sites')
     # plot_vertical_profiles([sites_dict[k] for k in sites_list], 'all sites')
-    # upper_midwest = ['OIL', 'HIL', 'WBI', 'AAO']
+    upper_midwest = ['OIL', 'HIL', 'WBI', 'AAO']
     # plot_vertical_profiles([sites_dict[k] for k in upper_midwest],
     #                        'Upper Midwest')
-
-    # plot_vertical_profiles([sites_dict[k] for k in sites_dict.keys()],
-    #                        'all sites')
