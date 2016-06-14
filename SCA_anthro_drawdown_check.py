@@ -37,7 +37,7 @@ def plot_site_dd(dd, sitename, x, y):
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(15, 8))
     ax.plot(this_dd)
     ax.set_xlabel('hours since 1 July 2008 00:00')
-    ax.set_ylabel('surface [COS] drawdown, pptv')
+    ax.set_ylabel('surface [COS] drawdown, ppt')
     ax.text(1200, 0.9 * this_dd.max(),
             'mean (10 Jul - 31 Aug): {:0.1f}'.format(
                 this_dd[240:].squeeze().mean()))
@@ -61,8 +61,8 @@ cma_y = 60
 sca_x = 23
 sca_y = 44
 
-molecules_m3_to_pptv = 1e12
-cos_sca = cos_clim['data'][:, :, sca_x, sca_y] * molecules_m3_to_pptv
+molecules_m3_to_ppt = 1e12
+cos_sca = cos_clim['data'][:, :, sca_x, sca_y] * molecules_m3_to_ppt
 
 cmap, norm = colormap_nlevs.setup_colormap(vmin=cos_sca.min() - 1,
                                            vmax=cos_sca.max() + 1,
@@ -79,7 +79,7 @@ ax.set_ylabel('STEM Z level')
 ax.set_xlabel('hours since 1 July 2008 00:00')
 ax.set_title('SCA [COS], climatological bounds STEM run')
 ax_cb = plt.colorbar(cm, cmap=cmap, norm=norm, ax=ax)
-ax_cb.set_label('[COS] (pptv)')
+ax_cb.set_label('[COS] (ppt)')
 ax_cb.solids.set_rasterized(True)
 fig.savefig('/global/homes/t/twhilton/plots/SCA_COS.png')
 plt.close(fig)

@@ -31,10 +31,10 @@ class Consts(object):
         file.  Default is $SARIKA_INPUT/TOPO-124x124.nc
     wrf_height_fname (string): full path to the Models-3 I/O API WRF height
         file.  Default is $SARIKA_INPUT/wrfheight-124x124-22levs.nc
-    pptv_2_molecules_m3 (real) = conversion factor for converting
-        parts per trillion by volume (pptv) to molecules per m^3
-    pptv_2_ppbv = conversion factor for converting parts per trillion
-        by volume (pptv) to parts per billion by volume (ppbv)
+    ppt_2_molecules_m3 (real) = conversion factor for converting
+        parts per trillion by volume (ppt) to molecules per m^3
+    ppt_2_ppbv = conversion factor for converting parts per trillion
+        by volume (ppt) to parts per billion by volume (ppbv)
     """
 
     def __init__(self,
@@ -50,8 +50,8 @@ class Consts(object):
                                        'TOPO-124x124.nc')
         self.wrfheight_fname = os.path.join(os.getenv('SARIKA_INPUT'),
                                             'wrfheight-124x124-22levs.nc')
-        self.pptv_2_molecules_m3 = 1e-12
-        self.pptv_2_ppbv = 1e-3
+        self.ppt_2_molecules_m3 = 1e-12
+        self.ppt_2_ppbv = 1e-3
 
 
 def todate(x):

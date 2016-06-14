@@ -59,10 +59,10 @@ class Consts(object):
         file.  Default is $SARIKA_INPUT/TOPO-124x124.nc
     wrf_height_fname (string): full path to the Models-3 I/O API WRF height
         file.  Default is $SARIKA_INPUT/wrfheight-124x124-22levs.nc
-    pptv_2_molecules_m3 (real) = conversion factor for converting
-        parts per trillion by volume (pptv) to molecules per m^3
-    pptv_2_ppbv = conversion factor for converting parts per trillion
-        by volume (pptv) to parts per billion by volume (ppbv)
+    ppt_2_molecules_m3 (real) = conversion factor for converting
+        parts per trillion by volume (ppt) to molecules per m^3
+    ppt_2_ppbv = conversion factor for converting parts per trillion
+        by volume (ppt) to parts per billion by volume (ppbv)
     """
 
     def __init__(self,
@@ -78,8 +78,8 @@ class Consts(object):
                                        'TOPO-124x124.nc')
         self.wrfheight_fname = os.path.join(os.getenv('SARIKA_INPUT'),
                                             'wrfheight-124x124-22levs.nc')
-        self.pptv_2_molecules_m3 = 1e-12
-        self.pptv_2_ppbv = 1e-3
+        self.ppt_2_molecules_m3 = 1e-12
+        self.ppt_2_ppbv = 1e-3
 
 
 class SiteClimMean(object):
@@ -312,7 +312,7 @@ class ClimatologicalTopBound(object):
         # place the climatological bounds in the dummy boundary file
         nc = netCDF4.Dataset(fname_bdy, 'a')
         nc.variables['CO2_TRACER1'][...] = (
-            self.top_bnd[np.newaxis, np.newaxis, ...] * Consts().pptv_2_ppbv)
+            self.top_bnd[np.newaxis, np.newaxis, ...] * Consts().ppt_2_ppbv)
         nc.close()
 
     def map_nearest_noaa_site(self):
@@ -370,7 +370,7 @@ class ClimatologicalTopBound(object):
                               bbox={"color": "black", "facecolor": "white"})
 
         # label the color bar
-        m.map.ax_cmap.set_title('[COS] (pptv)\n',
+        m.map.ax_cmap.set_title('[COS] (ppt)\n',
                                 fontdict={'fontsize': fontsz})
         m.map.ax_cmap.tick_params(labelsize=fontsz)
         m.map.fig.savefig('top_bnd.pdf')
@@ -427,7 +427,7 @@ class ClimatologicalLateralBoundNAmerica(object):
                  "(which shouldn't matter).")
         # delete_if_exists(fname_csv)
         # np.savetxt(fname_csv,
-        #            bounds.reshape([-1, 1]) * pptv_2_molecules_m3,
+        #            bounds.reshape([-1, 1]) * ppt_2_molecules_m3,
         #            delimiter=',')
 
         # write a "dummy" boundary file filled with 0.0
@@ -438,7 +438,7 @@ class ClimatologicalLateralBoundNAmerica(object):
         # place the climatological bounds in the dummy boundary file
         nc = netCDF4.Dataset(fname_bdy, 'a')
         nc.variables['CO2_TRACER1'][...] = (self.bounds[np.newaxis, ...] *
-                                            Consts().pptv_2_ppbv)
+                                            Consts().ppt_2_ppbv)
         nc.close()
 
 
@@ -493,7 +493,7 @@ def plot_vertical_profiles(sites_list, title_suffix=None):
                       sites_list[0].alt_bin_size,
                       title_suffix)))
     ax.set_ylabel('height above ground (m)')
-    ax.set_xlabel('[COS] (pptv)')
+    ax.set_xlabel('[COS] (ppt)')
     ax.set_ylim([0, 16000])
     ax.legend(loc='best')
     fig.savefig('jul_aug_column_profiles0.pdf')

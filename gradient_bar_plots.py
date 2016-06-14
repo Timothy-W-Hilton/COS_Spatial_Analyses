@@ -102,10 +102,10 @@ def assemble_bar_plot_data(
 def calculate_GCbounds_cos(stem_ocs_dd, const_bounds=4.5e-10, verbose=False):
     """Calculate drawdown enhancement or reduction because of dynamic
      boundaries relative to static boundary conditions.  Subtract out
-     the 450 pptv static boundary condition from the dynamic
+     the 450 ppt static boundary condition from the dynamic
      boundaries STEM [COS] to isolate the impact of the dynamic
-     boundaries vs static boundaries.  Static boundary of 450 pptv
-     coupled with no surface COS flux must result in [COS] = 450 pptv
+     boundaries vs static boundaries.  Static boundary of 450 ppt
+     coupled with no surface COS flux must result in [COS] = 450 ppt
      at all places, times.
 
     ARGS:

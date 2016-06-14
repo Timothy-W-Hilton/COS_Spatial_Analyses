@@ -226,7 +226,7 @@ def draw_anthro_maps():
                          bands_above_mdpt=3,
                          bands_below_mdpt=8,
                          cmap=plt.get_cmap('PuOr'),
-                         cbar_t_str='COS [pptv]',
+                         cbar_t_str='COS [ppt]',
                          extend='min',
                          panel_lab='c')
     maps_anthro.draw_map(dd_anthro_kettle,
@@ -237,7 +237,7 @@ def draw_anthro_maps():
                          bands_above_mdpt=3,
                          bands_below_mdpt=8,
                          cmap=plt.get_cmap('PuOr'),
-                         cbar_t_str='COS [pptv]',
+                         cbar_t_str='COS [ppt]',
                          extend='min',
                          panel_lab='d')
 
@@ -300,7 +300,7 @@ def draw_soil_maps():
                        bands_above_mdpt=5,
                        bands_below_mdpt=5,
                        cmap=plt.get_cmap('PuOr'),
-                       cbar_t_str='COS [pptv]',
+                       cbar_t_str='COS [ppt]',
                        extend='both',
                        panel_lab='c')
     maps_soil.draw_map(dd_soil_whelan,
@@ -313,7 +313,7 @@ def draw_soil_maps():
                        bands_above_mdpt=5,
                        bands_below_mdpt=5,
                        cmap=plt.get_cmap('PuOr'),
-                       cbar_t_str='COS [pptv]',
+                       cbar_t_str='COS [ppt]',
                        extend='both',
                        panel_lab='d')
 

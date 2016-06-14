@@ -37,7 +37,7 @@ class AqoutContainerSpatialPaper(aqpp.aqout_container):
         remove the bounds run AQOUT from self.
 
         ARGS:
-        const_bounds (scalar): the constant [COS] (in pptv) used in
+        const_bounds (scalar): the constant [COS] (in ppt) used in
            constant boundaries STEM runs
         """
         # call the parent class parse method
@@ -92,7 +92,7 @@ class AqoutContainerSpatialPaper(aqpp.aqout_container):
 
         populates field noaa_site_vals with a Pandas data frame
         indexed by three-letter NOAA site code, with columns dd
-        (drawdown, pptv) and se (standard error, pptv)
+        (drawdown, ppt) and se (standard error, ppt)
 
         ARGS:
         noaa_dir (string): fully path the to the directory containing

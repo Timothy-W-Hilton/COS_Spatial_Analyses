@@ -31,7 +31,7 @@ def map_init(cos):
 
     ARGS:
     cos (numpy.ndarray): 4-D array of [COS] values in parts per
-       trillion by volume (pptv).  The dimensions are [t, Z, X, Y].
+       trillion by volume (ppt).  The dimensions are [t, Z, X, Y].
 
     RETURNS:
     four-element tuple containing:
@@ -109,7 +109,7 @@ def map_update(i, m, fig, ax, cbar_ax, t_idx, cos, map_data):
     t_idx (numpy.ndarray): array of datetime.datetime objects
        containing the sequence of model timesteps in the animation
     cos (numpy.ndarray): array of [COS] concentrations in parts per
-       trillion by volume (pptv), indexed by [t, Z, X, Y].
+       trillion by volume (ppt), indexed by [t, Z, X, Y].
     map_data (matplotlib.collections.QuadMesh): QuadMesh object
        containing the patches on the map.  This is part of the output of
        map_init()

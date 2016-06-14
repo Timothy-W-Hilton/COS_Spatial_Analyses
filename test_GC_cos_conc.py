@@ -59,9 +59,9 @@ if __name__ == "__main__":
         data = get_cos_conc()
 
         d = data['casa_gfed_161'] - data['casa_gfed_161, GC']
-        molecules_cm3_2_pptv = 1e12
-        fig = draw_histogram(d * molecules_cm3_2_pptv,
-                             xlab_str='[COS], pptv',
+        molecules_cm3_2_ppt = 1e12
+        fig = draw_histogram(d * molecules_cm3_2_ppt,
+                             xlab_str='[COS], ppt',
                              ylab_str='number of grid cells',
                              title_str=r'$\Delta$[COS]: CASA GFED3 - CASA GFED3, GC')
         fig.savefig(os.path.join(os.getenv('HOME'), 'plots', 'GC_diff.png'))
@@ -71,7 +71,7 @@ if __name__ == "__main__":
                 calc_STEM_COS_drawdown(data['casa_gfed_161, GC']))
 
         fig = draw_histogram(d_dd,
-                             xlab_str='COS vertical drawdown (pptv)',
+                             xlab_str='COS vertical drawdown (ppt)',
                              ylab_str='number of grid cells',
                              title_str=r'$\Delta$drawdown: CASA GFED3 - CASA GFED3, GC')
         fig.savefig(os.path.join(os.getenv('HOME'),
