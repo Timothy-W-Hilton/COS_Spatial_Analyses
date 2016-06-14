@@ -33,14 +33,15 @@ if __name__ == "__main__":
                                                extend='neither')
 
     d = domain.STEM_Domain()
-    d.get_STEMZ_height(wrfheight_fname='/Users/tim/work/Data/STEM/input/wrfheight-124x124-22levs.nc')
+    d.get_STEMZ_height(wrfheight_fname=os.path.join(os.getenv('SARIKA_INPUT'),
+                                                    'wrfheight-124x124-22levs.nc'))
     agl_perim = np.array([domain.get_2d_perimeter(d.agl[z, ...]).mean()
                           for z in range(22)])
 
     print "new settings"
-	fontsz = 14
+    fontsz = 14
     matplotlib.rcParams.update({'font.size': fontsz})
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 6))
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 6))
     cm = ax.pcolormesh(np.arange(500), agl_perim, cos,
                        cmap=cmap, norm=norm,
                        linewidth=0, rasterized=True)
@@ -52,5 +53,8 @@ if __name__ == "__main__":
     ax_cb.set_label('[COS] (pptv)', fontdict={'fontsize': fontsz})
     ax_cb.solids.set_rasterized(True)
 
-    fig.savefig('/Users/tim/Desktop/climatological_bounds.pdf')
+    fig.tight_layout()
+    fig.savefig(os.path.join(os.getenv('HOME'),
+                             'plots',
+                             'climatological_bounds_NEW.pdf'))
     plt.close(fig)
