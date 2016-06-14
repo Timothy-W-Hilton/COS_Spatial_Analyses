@@ -196,7 +196,7 @@ def setup_panel_array(nrows=3, ncols=6):
     cbar_ax: nrows by 1 numpy array of
         matplotlib.axes._subplots.AxesSubplot objects (for colorbars)
     """
-    fig = plt.figure(figsize=(30, 15))
+    fig = plt.figure(figsize=(7, 3.5))
     # two gridspects - one for maps, one for colorbars
     gs_maps = gridspec.GridSpec(nrows, ncols)
     gs_maps.update(hspace=0.01, wspace=0.0, left=0.0, right=0.87)
@@ -315,29 +315,39 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
 
     color_band_edges = [0.0, 3.5, 6.5, 12.0, 13.0]
     color_band_edges = [0.0, 3.25, 6.5, 9.75, 13.0]
-    gpp_basemap = plt.cm.Greens(np.linspace(0.05,
-                                            0.95,
-                                            len(color_band_edges)))
+    gpp_base_cmap = plt.cm.Greens(np.linspace(0.05,
+                                              0.95,
+                                              len(color_band_edges * 10)))
+    gpp_base_cmap_small = plt.cm.Greens(np.linspace(0.05,
+                                                    0.95,
+                                                    len(color_band_edges)))
+    gpp_base_cmap = gpp_base_cmap[[0, 10, 40, 45, 49], :]
+    print 'gpp_base_cmap ', gpp_base_cmap
+    print 'gpp_base_cmap_small ', gpp_base_cmap_small
     gpp_cmap, gpp_norm = from_levels_and_colors(color_band_edges,
-                                                gpp_basemap,
+                                                gpp_base_cmap_small,
                                                 extend='max')
 
     mod_objs = ndp.get_runs()
     for i, this_mod in enumerate(models):
-        # plot GPP drawdown maps
-        print("plotting {model}({k}) GPP".format(model=models_str[i],
-                                                 k=models[i]))
+        if np.mod(i, 2) == 0:
+            # the GPP maps are duplicates within each GPP model, so
+            # only plot every other one
+            # plot GPP drawdown maps
+            print("plotting {model}({k}) GPP".format(model=models_str[i],
+                                                     k=models[i]))
 
-        map_objs[0, i], cm = draw_map(
-            t_str='{}, LRU={}'.format(models_str[i],
-                                      mod_objs[this_mod].LRU),
-            ax=ax[0, i],   # axis 0 is left-most on row 3
-            data=gpp[this_mod],
-            vmin=gpp_vmin,
-            vmax=gpp_vmax,
-            cmap=gpp_cmap,
-            norm=gpp_norm)
-
+            map_objs[0, i], cm = draw_map(
+                t_str='{}, LRU={}'.format(models_str[i],
+                                          mod_objs[this_mod].LRU),
+                ax=ax[0, i],   # axis 0 is left-most on row 3
+                data=gpp[this_mod],
+                vmin=gpp_vmin,
+                vmax=gpp_vmax,
+                cmap=gpp_cmap,
+                norm=gpp_norm)
+        else:
+            fig.delaxes(ax[0, i])
     all_gpp = np.dstack([v for v in gpp.values()]).flatten()
     cb = colorbar_from_cmap_norm(gpp_cmap,
                                  gpp_norm,
@@ -350,7 +360,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
 
     fcos_cmap, fcos_norm = colormap_nlevs.setup_colormap(
         fcos_vmin, fcos_vmax,
-        nlevs=20,
+        nlevs=6,
         cmap=plt.get_cmap('Blues'),
         extend='neither')
     for i, this_mod in enumerate(models):
@@ -377,7 +387,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     cos_cmap, cos_norm = colormap_nlevs.setup_colormap(
         cos_vmin,
         cos_vmax,
-        nlevs=20,
+        nlevs=7,
         cmap=plt.get_cmap('Oranges'),
         extend='max')
     for i, this_mod in enumerate(models):
@@ -405,6 +415,7 @@ def draw_all_panels(cos, gpp, fCOS, models=None, models_str=None):
     t = cbar_ax[2, 0].set_title('STEM [COS] drawdown (ppt)')
     t.set_y(1.09)
     t.set_fontsize(20)
+    # fig.tight_layout()
     return(fig, map_objs, cos_cmap, cos_norm)
 
 
