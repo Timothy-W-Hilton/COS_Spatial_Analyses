@@ -43,21 +43,21 @@ class AqoutContainerSpatialPaper(aqpp.aqout_container):
         # call the parent class parse method
         super(AqoutContainerSpatialPaper, self).parse(*args, **kwargs)
 
-        clim_idx = None
-        for i, this_key in enumerate(self.aq_keys):
-            if 'climatological_bnd' in this_key:
-                clim_idx = i
-                print 'adjusting {} for climatolotical bounds'.format(self.key)
-                for j in range(len(self.data)):
-                    if (j != clim_idx):
-                        self.data[j] = (self.data[j] -
-                                        const_bounds + self.data[clim_idx])
+        # clim_idx = None
+        # for i, this_key in enumerate(self.aq_keys):
+        #     if 'climatological_bnd' in this_key:
+        #         clim_idx = i
+        #         print 'adjusting {} for climatolotical bounds'.format(self.key)
+        #         for j in range(len(self.data)):
+        #             if (j != clim_idx):
+        #                 self.data[j] = (self.data[j] -
+        #                                 const_bounds + self.data[clim_idx])
 
-        if clim_idx is not None:
-            # climatic mean [COS] is now added to all other [COS] fields.
-            # Remove it from self.data so that it isn't double counted
-            del(self.data[clim_idx])
-            del(self.aq_keys[clim_idx])
+        # if clim_idx is not None:
+        #     # climatic mean [COS] is now added to all other [COS] fields.
+        #     # Remove it from self.data so that it isn't double counted
+        #     del(self.data[clim_idx])
+        #     del(self.aq_keys[clim_idx])
 
 
     def calc_JA_midday_drawdown(self):

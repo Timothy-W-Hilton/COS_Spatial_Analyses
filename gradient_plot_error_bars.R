@@ -1,4 +1,4 @@
-library(plotrix)
+library(plotrix)  # for panes
 library(RColorBrewer)
 library(tidyr)  # could also use reshape2
 library(boot)
@@ -42,7 +42,7 @@ human_readable_model_names <- function() {
                 casa_gfed_C4pctLRU='CASA-GFED3, LRU=C3/C4',
                 SiB_calc='SiB, LRU=1.61',
                 SiB_mech='SiB, mechanistic',
-                'NOAA obs'='observed'))
+                'NOAA obs'='Observed'))
 }
 
 ##' offsets are calculated from an arbitrary center
@@ -163,6 +163,10 @@ dummy_data <- function() {
 ##' @param norm_site (string): row label of a site to normalize the
 ##' data against.  If unspecified (default), no normalization is
 ##' performed.
+##' @param legend_loc (string): location for the legend (see "legend"
+##' documentation).  'none' results in no legend.
+##' @param panel_lab (string): panel label to appear in the upper-left
+##' corner of the panel
 ##' @return
 ##' @author Timothy W. Hilton
 ##' @export
@@ -173,7 +177,8 @@ gradient_CI_plot <- function(df,
                              t_str='gradient plot',
                              site_names=list(),
                              norm_site='',
-                             legend_loc='right') {
+                             legend_loc='right',
+                             panel_lab='') {
 
     n_sites <- length(site_names)
     models <- rev(sort(unique(df[['Fplant']])))
@@ -183,10 +188,10 @@ gradient_CI_plot <- function(df,
     pal <- c("#000000", brewer.pal(n_models-1, 'Paired'))
     marker_sequence <- c(8, seq(0, n_models-1))
     x_offset <- calculate_hoffset(n_models, 0.075)
-    ylab_str <- 'Drawdown  (pptv)'
+    ylab_str <- 'COS Drawdown (pptv)'
 
     if (nchar(norm_site) > 0) {
-        ylab_str <- paste("Drawdown normalized to", norm_site)
+        ylab_str <- paste("COS Drawdown normalized to", norm_site)
         df_norm <- by(df, df[['Fplant']], function(x) {
             orig_row_names <- row.names(x)
             row.names(x) <- x[['site']]
@@ -202,6 +207,12 @@ gradient_CI_plot <- function(df,
     row.names(this_df) <- this_df[['site']]
     this_df <- this_df[site_names, ]
 
+    xlim_max <- n_sites * 2.5
+    if (legend_loc == 'none') {
+        xlim_max = n_sites + max(x_offset)
+    }
+
+    cex_plt = 0.9
     with(this_df,
          plotCI(1:n_sites + x_offset[[1]],
                 dd, uiw=(ci_hi - dd), liw=(dd - ci_lo),
@@ -211,13 +222,13 @@ gradient_CI_plot <- function(df,
                 xlab=NA,
                 col=pal[[1]],
                 ylim=ylim,
-                xlim=c(1 + min(x_offset), n_sites * 1.6),
+                xlim=c(1 + min(x_offset), xlim_max),
                 pch=marker_sequence[[1]],
-                cex=1.0,
-                cex.axis=1.2,
-                cex.main=1.2,
-                cex.lab=1.2))
-    axis(1, at=1:n_sites, labels=site_names, cex.axis=1.2)
+                cex=cex_plt,
+                cex.axis=cex_plt,
+                cex.main=cex_plt,
+                cex.lab=cex_plt))
+    axis(1, at=1:n_sites, labels=site_names, cex.axis=cex_plt)
 
     for (i in 2:n_models) {
         cat(paste('plotting models[', models[[i]], ']\n'))
@@ -233,7 +244,18 @@ gradient_CI_plot <- function(df,
                     pch=marker_sequence[[i]]))
     }
     mod_strs <- unlist(human_readable_model_names()[models])
-    legend(x=legend_loc, legend=mod_strs, pch=marker_sequence, col=pal, cex=1.2)
+    # place panel legend in upper-left corner.  Thanks to
+    # http://stackoverflow.com/questions/19918566/relative-position-of-mtext-in-r
+    # for the "at" code.
+    mtext(panel_lab,
+          side=3,
+          line=-0.5,
+          cex=1.2,
+          at=par("usr")[1]-0.2*diff(par("usr")[1:2]))
+    if (legend_loc != 'none') {
+        legend(x=legend_loc, legend=mod_strs,
+               pch=marker_sequence, col=pal, cex=cex_plt)
+    }
 }
 
 myboot <- function(x) {
@@ -242,7 +264,7 @@ myboot <- function(x) {
          R=5000)
 }
 
-df <- read.csv('./model_components_25Feb.csv')
+df <- read.csv('./model_components_14Apr.csv')
 df[['Fbounds']] <- 'CONST'
 df[['Fbounds']][grepl('climatological', df[['model']])] <- 'CLIM'
 components <- strsplit(x=as.character(df[['model']]), split='-')
@@ -278,8 +300,8 @@ dfboot <- merge_obs(dfboot)
 if (TRUE) {
 
     norm_site <- ''
-    plot_width <- 6 # inches
-    plot_height <- 10 # inches
+    plot_width <- 3.425197  # 8.7 cm in inches, as per PNAS
+    plot_height <- 5.5
     if (nchar(norm_site) == 0){
         pdf(file='gradients_bootstrapCIs.pdf',
             width=plot_width, height=plot_height)
@@ -292,22 +314,26 @@ if (TRUE) {
     oldpar<-panes(matrix(1:3,nrow=3,byrow=TRUE))
     # par(mar=c(bottom, left, top, right)’)
     par(mar=c(2,5,1.6,1))
-    gradient_CI_plot(dfboot, t_str='East Coast',
+    gradient_CI_plot(dfboot, t_str='East Coast North-South',
                      site_names=c('NHA', 'CMA', 'SCA'),
                      norm_site=norm_site,
-                     legend_loc='bottomright')
+                     legend_loc='bottomright',
+                     panel_lab='(a)')
 
-    gradient_CI_plot(dfboot, t_str='mid-continent West to East (Dry to Wet)',
+    gradient_CI_plot(dfboot, t_str='Mid-Continent East-West',
                      site_names=c('CAR', 'WBI', 'AAO', 'HIL', 'CMA'),
                      norm_site=norm_site,
-                     legend_loc='bottomright')
+                     legend_loc='none',
+                     panel_lab='(b)')
 
-    gradient_CI_plot(dfboot, t_str='mid-continent North to South',
-                     site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP', 'TGC'),
+    gradient_CI_plot(dfboot, t_str='Mid-Continent North-South',
+                     site_names=c('ETL', 'DND', 'LEF', 'WBI', 'BNE', 'SGP'),
                      norm_site=norm_site,
-                     legend_loc='topright')
-    dev.off()
+                     legend_loc='none',
+                     panel_lab='(c)')
     par(oldpar)
+    dev.off()
+
 
     ## write.csv(df[, c("site_code", "longitude",  "latitude",
     ##                  "dd", "Fbounds", "Fplant", "Fsoil", "Fanthro")],
