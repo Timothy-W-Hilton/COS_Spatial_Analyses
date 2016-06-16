@@ -1,0 +1,90 @@
+"""plot color map image of Jul/Aug climatological boundary [COS]
+
+horizontal axis: boundary ring cell number (`see models-3 I/O API
+documentation
+<https://www.cmascenter.org/ioapi/documentation/3.1/html/DATATYPES.html#bndary>`_)
+vertical axis: meters above ground level
+
+Uses pre-computed July/August climatological boundary [COS] calculated
+by climatological_bounds_vertprofile.py.  These [COS] data are assumed
+to be in
+./ClimatologicalBounds/climatological_COS_bdy_22levs_124x124.nc
+"""
+
+import matplotlib
+matplotlib.use('AGG')
+
+import os
+import os.path
+
+import matplotlib.pyplot as plt
+import netCDF4
+import numpy as np
+from timutils import colormap_nlevs
+from stem_pytools.na_map import NAMapFigure
+from stem_pytools import domain
+
+if __name__ == "__main__":
+
+    # plot the boundary ring cell number vs. vertical cell number
+    nc = netCDF4.Dataset(
+        os.path.join(os.getcwd(),
+                     'ClimatologicalBounds',
+                     'climatological_COS_bdy_22levs_124x124.nc'))
+<<<<<<< HEAD
+    ppb_2_ppt = 1e3  # unit conversion factor
+    cos = nc.variables['CO2_TRACER1'][:].squeeze() * ppb_2_ppt
+=======
+    ppbv_2_pptv = 1e3
+    cos = nc.variables['CO2_TRACER1'][:].squeeze() * ppbv_2_pptv
+>>>>>>> clim_bounds
+
+    cmap, norm = colormap_nlevs.setup_colormap(vmin=cos.min() - 1,
+                                               vmax=cos.max() + 1,
+                                               nlevs=20,
+                                               cmap=plt.get_cmap('Blues'),
+                                               extend='neither')
+
+    d = domain.STEM_Domain()
+<<<<<<< HEAD
+    d.get_STEMZ_height(wrfheight_fname=os.path.join(os.getenv('SARIKA_INPUT'),
+                                                    'wrfheight-124x124-22levs.nc'))
+    agl_perim = np.array([domain.get_2d_perimeter(d.agl[z, ...]).mean()
+                          for z in range(22)])
+
+    fontsz = 14
+    matplotlib.rcParams.update({'font.size': fontsz})
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 6))
+=======
+    d.get_STEMZ_height(wrfheight_fname='/Users/tim/work/Data/STEM/input/wrfheight-124x124-22levs.nc')
+    agl_perim = np.array([domain.get_2d_perimeter(d.agl[z, ...]).mean()
+                          for z in range(22)])
+
+    print "new settings"
+	fontsz = 14
+    matplotlib.rcParams.update({'font.size': fontsz})
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 6))
+>>>>>>> clim_bounds
+    cm = ax.pcolormesh(np.arange(500), agl_perim, cos,
+                       cmap=cmap, norm=norm,
+                       linewidth=0, rasterized=True)
+    ax.set_xlim([0, 500])
+    ax.set_ylim([agl_perim.min(), agl_perim.max()])
+    ax.set_ylabel('meters above ground', fontdict={'fontsize': fontsz})
+    ax.set_xlabel('lateral boundary index', fontdict={'fontsize': fontsz})
+    ax_cb = plt.colorbar(cm, cmap=cmap, norm=norm, ax=ax)
+<<<<<<< HEAD
+    ax_cb.set_label('[COS] (ppt)', fontdict={'fontsize': fontsz})
+    ax_cb.solids.set_rasterized(True)
+
+    fig.tight_layout()
+    fig.savefig(os.path.join(os.getenv('HOME'),
+                             'plots',
+                             'climatological_bounds.pdf'))
+=======
+    ax_cb.set_label('[COS] (pptv)', fontdict={'fontsize': fontsz})
+    ax_cb.solids.set_rasterized(True)
+
+    fig.savefig('/Users/tim/Desktop/climatological_bounds.pdf')
+>>>>>>> clim_bounds
+    plt.close(fig)
